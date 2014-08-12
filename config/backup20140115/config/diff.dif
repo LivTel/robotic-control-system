@@ -1,0 +1,799 @@
+
+Checking agent.properties 
+-----------------------
+
+
+Checking agfocus_calib.properties 
+-----------------------
+
+
+Checking all_blanks.cat 
+-----------------------
+
+
+Checking background_ops.properties 
+-----------------------
+
+7a8
+> catalog = config/bg_std.cat
+11c12
+< #ag.mandatory
+---
+> ag.mandatory
+21,23d21
+< # this line is needed for now till I change the config() method
+< catalog = none
+< 
+29,30c27
+< primary.catalog 		= config/ratcam_std.cat
+< 
+---
+> primary.catalog = config/ratcam_std.cat
+43c40
+< # enable secondary
+---
+> # do NOT enable secondary
+46,47c43
+< secondary.catalog = config/io:o_std.cat
+< secondary.upper.beam.element	= Clear
+---
+> secondary.upper.beam.element 	= Clear
+49,50c45,46
+< 
+< secondary.config.0.ID           = SDSS-R
+---
+> secondary.catalog = config/io:o_std.cat
+> secondary.config.0.ID           = IO-SDSS-R
+55c51
+< secondary.config.1.ID           = SDSS-Z
+---
+> secondary.config.1.ID           = IO-SDSS-Z
+
+Checking bg_std.cat 
+-----------------------
+
+
+Checking calib_day_ops.properties 
+-----------------------
+
+
+Checking calib_night_ops.properties 
+-----------------------
+
+
+Checking calib_ops.properties 
+-----------------------
+
+17,18c17
+< #focus.instrument.config.file = config/telfocus_RATCAM.properties
+< focus.instrument.config.file = config/telfocus_IO.properties
+---
+> focus.instrument.config.file = config/telfocus_inst.properties
+21a21,22
+> meaburn.blank.catalog = config/all_blanks.cat
+> ringo.blank.catalog = config/all_blanks.cat
+27,44c28
+< # set sun level to control evening flats 
+< evening.skyflats.min.solar.elevation = -10.0
+< evening.skyflats.max.solar.elevation = -1.0 
+< evening.skyflats.min.duration = 480000L
+< # using 8 minutes as minumum time for flats
+< 
+< # set sun levels to control morning flats
+< morning.skyflats.min.solar.elevation = -14.0
+< morning.skyflats.max.solar.elevation = -3.0
+< morning.skyflats.min.duration = 480000L
+< # using 8 minutes as minimum time for flats
+< 
+< 
+< # Calib skyflats weighting
+< calib.weight.same     = 2.0
+< calib.weight.other    = 0.0
+< calib.weight.random   = 5.0
+< calib.weight.priority = 1.0
+---
+> evening.skyflats.latest.start.offset  = 1800000L
+45a30,31
+> morning.skyflats.earliest.start.offset	= 3000000L
+> morning.skyflats.latest.start.offset  	= 600000L
+46a33,37
+> morning.skyflats.min.solar.elevation = -8.8
+> #morning.skyflats.max.solar.elevation= -5.2
+> # 2009-05-27 Changed from 5.2 to 2.5 as experiment. RJS. Bug 1518
+> morning.skyflats.max.solar.elevation= -2.5
+> morning.skyflats.minimum.duration     	= 480000L
+
+Checking callout.config 
+-----------------------
+
+
+Checking callout.properties 
+-----------------------
+
+
+Checking daytime_calib.properties 
+-----------------------
+
+
+Checking daytime_ops.properties 
+-----------------------
+
+
+Checking diff.dif 
+-----------------------
+
+diff: ../../devtest/config/diff.dif: No such file or directory
+
+Checking diffy 
+-----------------------
+
+diff: ../../devtest/config/diffy: No such file or directory
+
+Checking filters.properties 
+-----------------------
+
+132d131
+< FILTER F_DUST  READS SS_DUST  AVER 1
+
+Checking filtersX.properties 
+-----------------------
+
+
+Checking focus_std.cat 
+-----------------------
+
+
+Checking io_o_flats.cat 
+-----------------------
+
+1,15c1,13
+<  ioo_blank00	23:48:11.9 00:56:51 J2000
+<  ioo_blank03	02:57:49.8 -00:08:42 J2000
+<  ioo_blank04N   04:29:48.2 54:15:22 J2000
+<  ioo_wfsblank1  08:00:32.0 49:56:49 J2000
+<  ioo_blank09    09:11:56.6 -07:52:16 J2000
+<  ioo_wfsblank2  12:00:14.1 40:55:01 J2000
+<  ioo_blank13Na  13:36:06.6 62:14:18 J2000
+<  ioo_wfcblank1  15:01:55.0 29:56:23 J2000
+<  ioo_blank15    15:15:40.7 -00:42:16 J2000
+<  ioo_blank17    16:52:31.0 -15:30:29 J2000
+<  ioo_blank19    19:21:25.3 12:29:28 J2000
+<  ioo_blank23    23:15:49.5 11:25:24 J2000
+<  ioo_wfcblank2  22:57:40.9 00:06:32 J2000
+< 
+< 
+---
+> ioo_blank00    23:48:11.9  00:56:51 J2000	0 Attach:ioo_blank00.jpg     
+> ioo_blank03    02:57:49.8 -00:08:42 J2000 	2 Attach:ioo_blank03.jpg     
+> ioo_blank04N   04:29:48.2  54:15:22 J2000 	0 Attach:ioo_blank04N.jpg    Dust cloud(10' dia). Just enough for IO:O?
+> ioo_wfsblank1  08:00:32.0  49:56:49 J2000 	2 Attach:ioo_wfsblank1.jpg   Not very blank
+> ioo_blank09    09:11:56.6 -07:52:16 J2000 	1 Attach:ioo_blank09.jpg     
+> ioo_wfsblank2  12:00:14.1  40:55:01 J2000 	4 Attach:ioo_wfsblank2.jpg   Not very blank
+> ioo_blank13Na  13:36:06.6  62:14:18 J2000 	1 Attach:ioo_blank13Na.jpg   
+> ioo_wfcblank1  15:01:55.0  29:56:23 J2000 	0 Attach:ioo_wfcblank1.jpg   Note 1
+> ioo_blank15    15:15:40.7 -00:42:16 J2000 	3 Attach:ioo_blank15.jpg     Not very blank
+> ioo_blank17    16:52:31.0 -15:30:29 J2000 	0 Attach:ioo_blank17.jpg     Many faint stars, but none R<14
+> ioo_blank19    19:21:25.3  12:29:28 J2000 	3 Attach:ioo_blank19.jpg     Dust cloud, marginally too small for IO:O
+> ioo_blank23    23:15:49.5  11:25:24 J2000 	2 Attach:ioo_blank23.jpg     
+> ioo_wfcblank2  22:57:40.9  00:06:32 J2000 	2 Attach:ioo_wfcblank2.jpg   
+
+Checking io:o_std.cat 
+-----------------------
+
+
+Checking iss.properties 
+-----------------------
+
+
+Checking lt_dgw_args 
+-----------------------
+
+
+Checking lt_exec_DEFAULT 
+-----------------------
+
+
+Checking lt_focus_FOCUS.properties 
+-----------------------
+
+
+Checking lt_instruments 
+-----------------------
+
+
+Checking lt_oss_monitor_gen_args 
+-----------------------
+
+
+Checking lt_rcs_args 
+-----------------------
+
+
+Checking lt_rcw_args 
+-----------------------
+
+
+Checking lt_site 
+-----------------------
+
+
+Checking lt_sys_gen_args 
+-----------------------
+
+
+Checking met_sim.properties 
+-----------------------
+
+
+Checking monitors.properties 
+-----------------------
+
+90c90
+< RULE t_MOI_HI THRESH WHEN F_MOISTURE > 0.15
+---
+> RULE t_MOI_HI THRESH WHEN F_MOISTURE > 0.10
+95c95
+< RULE d_MOI_LO DELINV WHEN F_MOISTURE < 0.14 INVERT 0.145 DELTA 900000
+---
+> RULE d_MOI_LO DELINV WHEN F_MOISTURE < 0.09 INVERT 0.095 DELTA 1800000
+367c367
+< RULE d_CLOUD_HI DELINV WHEN F_CLOUD > -18.0 INVERT -18.05 DELTA 600000
+---
+> RULE d_CLOUD_HI DELINV WHEN F_CLOUD > -20.0 INVERT -20.05 DELTA 600000
+372c372
+< RULE d_CLOUD_LO DELINV WHEN F_CLOUD < -21.0 INVERT -20.0 DELTA 600000
+---
+> RULE d_CLOUD_LO DELINV WHEN F_CLOUD < -23.0 INVERT -21.0 DELTA 600000
+377,393d376
+< 
+< #---------------------------------------------------------------
+< # Setup rules for DUST
+< # 
+< #
+< #---------------------------------------------------------------
+< 
+< 
+< RULE t_DUST_HI THRESH WHEN F_DUST > 95.0
+< RULESET RS_DUST_HI SIMPLE t_DUST_HI
+< 
+< RULE d_DUST_LO DELINV WHEN F_DUST < 55.0 INVERT 65.0 DELTA 5000000
+< RULESET RS_DUST_LO SIMPLE d_DUST_LO
+< 
+< WEATHER_2 ASSOC RS_DUST_LO fires DUST_CLEAR
+< WEATHER_2 ASSOC RS_DUST_HI fires DUST_ALERT
+< 
+
+Checking network.properties 
+-----------------------
+
+1c1
+< 
+---
+> d
+6c6
+< ratcam.host = 192.168.1.31
+---
+> ratcam.host = localhost
+9,10c9,10
+< ringo3.host = 192.168.1.24
+< ringo3.port = 8251
+---
+> ringo3.host = localhost
+> ringo3.port = 1112
+12,13c12,13
+< rise.host = 192.168.1.27
+< rise.port = 6783
+---
+> rise.host =  localhost
+> rise.port = 6777
+15c15
+< frodo.host = 192.168.1.26
+---
+> frodo.host =  localhost
+18c18
+< #frodo_red.host = 192.168.1.26
+---
+> #frodo_red.host = localhost
+21c21
+< #frodo_blue.host = 192.168.1.26
+---
+> #frodo_blue.host =  localhost
+24c24
+< io\:thor.host	= 192.168.1.62
+---
+> io\:thor.host	=  localhost
+27c27
+< io\:o.host = 192.168.1.33
+---
+> io\:o.host = localhost
+29a30,32
+> #io\:i.host = localhost
+> #io\:i.port = 8475
+> 
+
+Checking network.properties.bak 
+-----------------------
+
+diff: ../../devtest/config/network.properties.bak: No such file or directory
+
+Checking oss_monitor.properties 
+-----------------------
+
+2,4c2,4
+< base.model.url 	   =  rmi://oss.lt.com
+< synoptic.model.url =  rmi://occ.lt.com/SynopticModelProvider
+< scheduler.url      =  rmi://occ.lt.com/ScheduleDespatcher
+---
+> base.model.url 	   =  rmi://ltdev1
+> synoptic.model.url =  rmi://ltdev1/SynopticModelProvider
+> scheduler.url      =  rmi://ltdev1/ScheduleDespatcher
+\ No newline at end of file
+
+Checking planetarium_ops.properties 
+-----------------------
+
+
+Checking pointing_calib.properties 
+-----------------------
+
+
+Checking ratcam_flats.cat 
+-----------------------
+
+
+Checking ratcam_std.cat 
+-----------------------
+
+
+Checking README 
+-----------------------
+
+
+Checking recovery.properties 
+-----------------------
+
+
+Checking schedule.properties 
+-----------------------
+
+
+Checking science_ops.properties 
+-----------------------
+
+
+Checking scm.properties 
+-----------------------
+
+9,13c9,13
+< network.resource.03	= X_CLOUD_NET
+< network.resource.04     = X_AGTEMP_NET
+< network.resource.05	= X_TNGDUST_NET
+< network.resource.06	= X_OCR_NET
+< network.resource.07	= X_SYSTEM_NET
+---
+> network.resource.03	= X_SYSTEM_NET
+> network.resource.04	= X_OSS_NET
+> network.resource.05	= X_CLOUD_NET
+> #network.resource.06     = X_AGTEMP_NET
+> network.resource.06	= X_TNGDUST_NET
+17,27d16
+< status.monitor.01.ID		= X_M_WEATHER
+< X_M_WEATHER.client.class 	= ngat.rcs.scm.collation.TCSStatusClient
+< X_M_WEATHER.config.file		= config/x_mt_weather.properties
+< X_M_WEATHER.network.resource.id	= X_TCS_NET
+< X_M_WEATHER.enabled 		= true
+< X_M_WEATHER.polling.interval	= 30000
+< X_M_WEATHER.timeout		= 60000
+< X_M_WEATHER.description		= Xperimental Weather gathering node
+< X_M_WEATHER.monitor.name	= X_MM_WEATHER
+< X_M_WEATHER.log.formatter.class	= ngat.rcs.scm.collation.TCSStatusLogFormatter
+< #X_M_WEATHER.log.output
+39c28,38
+< status.monitor.03.ID		= X_CLOUD
+---
+> status.monitor.03.ID		= X_SYSTEM
+> X_SYSTEM.client.class		= ngat.rcs.scm.collation.URLStatusClient
+> X_SYSTEM.config.file		= config/x_system.properties
+> X_SYSTEM.network.resource.id 	= X_SYSTEM_NET
+> X_SYSTEM.enabled 		= true
+> X_SYSTEM.polling.interval	= 60000
+> X_SYSTEM.timeout		= 30000
+> X_SYSTEM.description		= Xperimental System Data gathering node
+> X_SYSTEM.monitor.name		= X_M_SYS
+> 
+> status.monitor.07.ID		= X_CLOUD
+49,57c48,56
+< status.monitor.04.ID		= X_AGTEMP
+< X_AGTEMP.client.class		= ngat.rcs.scm.collation.URLStatusClient
+< X_AGTEMP.config.file             = config/x_agtemp.properties
+< X_AGTEMP.network.resource.id     = X_AGTEMP_NET
+< X_AGTEMP.enabled                 = true
+< X_AGTEMP.polling.interval        = 60000
+< X_AGTEMP.timeout                 = 120000
+< X_AGTEMP.description             = Ag temp monitor
+< X_AGTEMP.monitor.name            = X_M_AGTEMP
+---
+> #status.monitor.08.ID		= X_AGTEMP
+> #X_AGTEMP.client.class		= ngat.rcs.scm.collation.URLStatusClient
+> #X_AGTEMP.config.file             = config/x_agtemp.properties
+> #X_AGTEMP.network.resource.id     = X_AGTEMP_NET
+> #X_AGTEMP.enabled                 = true
+> #X_AGTEMP.polling.interval        = 60000
+> #X_AGTEMP.timeout                 = 120000
+> #X_AGTEMP.description             = agtemp monitor
+> #X_AGTEMP.monitor.name            = X_M_AGTEMP
+59c58
+< status.monitor.05.ID           = X_TNGDUST
+---
+> status.monitor.08.ID           = X_TNGDUST
+68,87d66
+< 
+< status.monitor.06.ID		= X_OCR
+< X_OCR.client.class		= ngat.rcs.scm.collation.URLStatusClient
+< X_OCR.config.file		= config/x_ocr.properties
+< X_OCR.network.resource.id	= X_OCR_NET
+< X_OCR.enabled 			= true
+< X_OCR.polling.interval 		= 120000
+< X_OCR.timeout 			= 60000
+< X_OCR.description 		= OCR Monitor
+< X_OCR.monitor.name 		= X_M_OCR
+< 
+< status.monitor.07.ID            = X_SYSTEM
+< X_SYSTEM.client.class        = ngat.rcs.scm.collation.URLStatusClient
+< X_SYSTEM.config.file         = config/x_system.properties
+< X_SYSTEM.network.resource.id = X_SYSTEM_NET
+< X_SYSTEM.enabled             = true
+< X_SYSTEM.polling.interval    = 120000
+< X_SYSTEM.timeout             = 10000
+< X_SYSTEM.description         = Xperimental Disk usage node
+< X_SYSTEM.monitor.name        = X_M_SYSTEM
+
+Checking sensors.properties 
+-----------------------
+
+111d110
+< SENSOR SS_DUST                  D       X_TNGDUST       dust
+
+Checking sensorX.properties 
+-----------------------
+
+
+Checking site.properties 
+-----------------------
+
+9,10c9,10
+< longitude	= -17.8792
+< tzoffset	= 0
+---
+> longitude	= 155
+> tzoffset	= 10
+
+Checking skyflat_calib.properties 
+-----------------------
+
+
+Checking soca_ops.properties 
+-----------------------
+
+
+Checking standards.config 
+-----------------------
+
+
+Checking standards.properties 
+-----------------------
+
+
+Checking standards_RAT_calib.properties 
+-----------------------
+
+
+Checking standards.txt 
+-----------------------
+
+
+Checking state_model.properties 
+-----------------------
+
+
+Checking state_network.properties 
+-----------------------
+
+
+Checking state_variable.properties 
+-----------------------
+
+
+Checking status_log.properties 
+-----------------------
+
+
+Checking status_monitor.properties 
+-----------------------
+
+
+Checking system.properties 
+-----------------------
+
+5,10d4
+< 
+< # Which mode to sue when calculating remaining runtime for rotator calculations
+< # Default: normal, Alt: fraction
+< rotator.runtime.calculator.mode = fraction
+< 
+< # Base offset for rotator mount to sky angle conversion (degs)
+13,14c7
+< # Which command to send to move the science fold deployment (defunct?)
+< # Default: RETRACT, Alt: INLINE
+---
+> # This can either be INLINE or RETRACT anything else is assumed RETRACT 
+18c11
+< #science.fold.simulation
+---
+> science.fold.simulation
+35c28
+< # Where do we get scheduled data from (defunct?)
+---
+> # Where do we get scheduled data from (SPARE.lt.com)
+36a30
+> experimental.scheduler.host = l50.204.240.126
+38c32
+< # New Science mode (always?/ defunct?)
+---
+> # New Science mode
+
+Checking task.properties 
+-----------------------
+
+11a12
+> 
+14d14
+< 
+26,42c26,28
+< #tmm.manager.InitializeTask focus.function.zero  = 28.226
+< #Following line (28.348) RJS 2011-09-20. Derived from 9 focus runs since 2011-08-20  SMF uLynx work
+< #tmm.manager.InitializeTask focus.function.zero  = 28.348
+< #2011-09-27 updated to 28.379 on bases if four focus runs
+< #tmm.manager.InitializeTask focus.function.zero  = 28.379
+< #2011-11-16 following O installation
+< #tmm.manager.InitializeTask focus.function.zero  = 28.319
+< #2012-04-28 following spacer installation
+< #tmm.manager.InitializeTask focus.function.zero  = 22.07
+< #2012-06-22 Very small (0.05mm) tweak based on a month's worth of nightly telfocus runs.
+< #tmm.manager.InitializeTask focus.function.zero  = 22.12
+< #2013-06-04 Tweak due to primary realuminisation
+< #tmm.manager.InitializeTask focus.function.zero  = 22.35
+< #2013-07-15 Update by +0.08mm on basis of nightly telfocus
+< #tmm.manager.InitializeTask focus.function.zero  = 22.43
+< #2013-08-07 RJS Update by -0.09mm on basis of nightly telfocus
+< tmm.manager.InitializeTask focus.function.zero  = 22.34
+---
+> tmm.manager.InitializeTask focus.function.zero  = 28.226
+> 
+> 
+44c30
+< tmm.manager.InitializeTask initial.instrument	= RATCAM
+---
+> tmm.manager.InitializeTask initial.instrument	= IO:O
+54,64c40,41
+< # set by IAS 29/9/10 (this date looks wrong?) for new autoguider mounting
+< # tmm.manager.InitializeTask ag.focus	= 8.3 
+< # set by IAS 31/5/12 after shift in to allow RINGO2 defocus
+< #  tmm.manager.InitializeTask ag.focus	= 13.2
+< 
+< # set by JMM 04/06/13 after primary realuminisation and shift of default focus
+< # instrument to IO:O
+< tmm.manager.InitializeTask ag.focus  = 12.17
+< 
+< 
+< 
+---
+> # set by IAS 29/9/10 for new autoguider mounting
+> tmm.manager.InitializeTask ag.focus	= 8.3
+
+Checking task.properties.20130604 
+-----------------------
+
+diff: ../../devtest/config/task.properties.20130604: No such file or directory
+
+Checking tcs_cil_handler.properties 
+-----------------------
+
+
+Checking telescope_calib_history.dat 
+-----------------------
+
+Binary files telescope_calib_history.dat and ../../devtest/config/telescope_calib_history.dat differ
+
+Checking telescope_calib.properties 
+-----------------------
+
+14,19c14,15
+< # TELFOCUS calib range. Range * 0.5 either side of nominal
+< #Default telfocus.focus.range 	= 1.0
+< # RJS 2011-11-22
+< #telfocus.focus.range 	= 0.6
+< # RJS 2012-05-21 reduced from 0.6 to 0.5mm
+< telfocus.focus.range 	= 0.5
+---
+> # TELFOCUS calib maximum focus
+> telfocus.focus.range 	= 1.0
+22,24c18,19
+< #Default telfocus.focus.step 	= 0.1
+< #RJS 2011-10-14
+< telfocus.focus.step	= 0.05
+---
+> #telfocus.focus.step	= 0.05
+> telfocus.focus.step 	= 0.1
+26c21
+< # TELFOCUS calib signal-noise ratio NOTUSED
+---
+> # TELFOCUS calib signal-noise ratio
+29,31c24,25
+< # TELFOCUS calib instrument selection 
+< #telfocus.instrument	= RATCAM
+< telfocus.instrument	= IO:O
+---
+> # TELFOCUS calib instrument selection
+> telfocus.instrument	= RATCAM
+33c27
+< # TELFOCUS EXPOSURE (ms) 
+---
+> # TELFOCUS EXPOSURE (ms)
+
+Checking telfocus_calib.properties 
+-----------------------
+
+36c36
+< telfocus.instrument	= RATCAM
+---
+> telfocus.instrument	= IO:O
+41c41
+< telfocus.inst.config	= config/telfocus_IO.properties
+---
+> telfocus.inst.config	= config/telfocus_inst.properties
+
+Checking telfocus_IO.properties 
+-----------------------
+
+diff: ../../devtest/config/telfocus_IO.properties: No such file or directory
+
+Checking telfocus_RATCAM.properties 
+-----------------------
+
+diff: ../../devtest/config/telfocus_RATCAM.properties: No such file or directory
+
+Checking test_state_model.properties 
+-----------------------
+
+
+Checking test_state_model_topic.properties 
+-----------------------
+
+
+Checking test_state_model_variable.properties 
+-----------------------
+
+16a17,18
+>  # The rain sensor is deliberately set this way as the real sensor is back to front !
+>  #THREAT ALERT RAIN_CLEAR
+23,24c25
+< # THREAT ALERT CLOUD_ALERT
+< # THREAT ALERT DUST_ALERT
+---
+>  THREAT ALERT CLOUD_ALERT
+25a27
+> #THREAT CLEAR RAIN_ALERT             CANCELS RAIN_CLEAR
+32,33c34,35
+< # THREAT CLEAR CLOUD_CLEAR            CANCELS CLOUD_ALERT
+< # THREAT CLEAR DUST_CLEAR             CANCELS DUST_ALERT
+---
+>  THREAT CLEAR CLOUD_CLEAR            CANCELS CLOUD_ALERT
+> 
+
+Checking to_ops.properties 
+-----------------------
+
+1d0
+< 
+53c52
+< microlens.service.user                = Hundertmark.Markus
+---
+> microlens.service.user                = Horne.Keith
+55,57c54
+< #microlens.service.proposal            = PL12B12
+< #microlens.service.proposal            = PL13A07a
+< microlens.service.proposal	      = PL14A17
+---
+> microlens.service.proposal            = PL11A13
+91c88
+< grb.post.1hour.proposal 		= PL13B11
+---
+> grb.post.1hour.proposal 		= PL11B22
+98,107c95,104
+< #lofar.transient.ID 			= LOFARTransient
+< #lofar.transient.priority		= 4
+< #lofar.transient.session.allocation       = 3600000
+< #lofar.transient.period.allocation        = 7200000
+< 
+< #lofar.transient.tag			= JMU
+< #lofar.transient.user			= Bersier.David
+< #lofar.transient.program 		= XJL09A06 
+< #lofar.transient.proposal		= JQ12A01
+< #lofar.transient.group			= lofar-transient
+---
+> lofar.transient.ID 			= LOFARTransient
+> lofar.transient.priority		= 4
+> lofar.transient.session.allocation       = 3600000
+> lofar.transient.period.allocation        = 7200000
+> 
+> lofar.transient.tag			= JMU
+> lofar.transient.user			= Bersier.David
+> lofar.transient.program 		= XJL09A06 
+> lofar.transient.proposal		= JL11B07
+> lofar.transient.group			= lofar-transient
+
+Checking tweaks.dat 
+-----------------------
+
+
+Checking x_agtemp.properties 
+-----------------------
+
+
+Checking x_cloud.properties 
+-----------------------
+
+
+Checking x_mech.properties 
+-----------------------
+
+
+Checking x_mt_weather.properties 
+-----------------------
+
+
+Checking x_ocr.properties 
+-----------------------
+
+diff: ../../devtest/config/x_ocr.properties: No such file or directory
+
+Checking x_ops.properties 
+-----------------------
+
+
+Checking x_oss_net.properties 
+-----------------------
+
+
+Checking x_rdimm.properties 
+-----------------------
+
+
+Checking x_state.properties 
+-----------------------
+
+
+Checking x_system.properties 
+-----------------------
+
+52c52
+< pos.9.keyword	= free.space.ringo3-2
+---
+> pos.9.keyword	= free.space.ringo
+54c54
+< pos.9.desc	= Ringo3-2 Disk Free Space
+---
+> pos.9.desc	= Ringo Disk Free Space
+57c57
+< pos.10.keyword	= disk.usage.ringo3-2
+---
+> pos.10.keyword	= disk.usage.ringo
+59c59
+< pos.10.desc	= Ringo3-2 Disk Usage
+---
+> pos.10.desc	= Ringo Disk Usage
+
+Checking x_tngdust.properties 
+-----------------------
+

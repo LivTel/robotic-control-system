@@ -1,0 +1,271 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs;
+
+import ngat.net.*;
+import ngat.fits.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+import ngat.astrometry.*;
+import ngat.util.logging.*;
+import ngat.message.RCS_TCS.*;
+
+/** This Task creates a series of Inst_TelFocus_Tasks to carry out the
+ * Telescope Focus calibration.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: TelFocus_Task.java.NOMAKE,v 1.1 2006/05/17 06:31:23 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/TelFocus_Task.java.NOMAKE,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class TelFocus_Task extends ParallelTaskImpl implements Logging {
+
+    /** ERROR_BASE for this Task type.*/
+    public static final int ERROR_BASE = 800;
+
+    public static final int CONFIG_ERROR         = 600801;
+
+    //RCS_Controller.ERROR_BASE + ERROR_BASE + CONFIG_ERROR;
+
+    public static final int ILLEGAL_SOURCE_ERROR = 600802;
+
+    /** The start value for the range of Tel-Focus settings to try (mm).*/
+    protected double focusStart;
+    
+    /** The focus increment to use (mm).*/
+    protected double focusIncrement;
+    
+    /** The final value for the range of Tel-Focus settings to try (mm).*/
+    protected double focusStop;
+    
+    /** The exposure time to use (millis).*/
+    protected int    exposeTime;
+
+    /** The InstrumentConfig to set up for the calibration run.*/
+    protected InstrumentConfig instConfig;
+    
+    /** The Source used for the focussing task.*/
+    protected ExtraSolarSource   calibSource;
+
+    /** The magnitude of the calibration source.*/
+    protected double calibMagnitude;
+
+    protected Slew_Task          slewTask;
+
+    protected InstConfig_Task    instConfigTask;
+    
+    protected Inst_TelFocus_Task instTelFocusTask;
+    
+    /** Create a TelFocus_Task using the supplied settings. 
+     * @param focusStart The start value of the range of AG-focus settings to use (mm).
+     * @param focusStop The final value of the range of AG-focus settings to use (mm).
+     * @param focusIncrement The focus increment to use (mm).
+     * @param name The unique name/id for this TaskImpl - 
+     * should be based on the COMMAND_ID.
+     * @param manager The Task's manager.
+     */
+    public TelFocus_Task(String name,
+			 TaskManager manager,
+			 double focusStart,
+			 double focusStop,
+			 double focusIncrement,
+			 InstrumentConfig instConfig) {
+	super(name, manager);
+	this.focusStart     = focusStart;
+	this.focusStop      = focusStop;
+	this.focusIncrement = focusIncrement;
+	this.instConfig     = instConfig;
+    }
+    
+    public void onSubTaskAborted(Task task) {
+	super.onSubTaskAborted(task);
+    }
+       
+    public void onSubTaskDone(Task task) {	
+	super.onSubTaskDone(task);
+	if ( task instanceof Inst_TelFocus_Task ) {
+	    // If we are aborting then a TelFocus cannot be aborted it SHOULD fail but a
+	    // slight timing glitch might mean it manages to just complete before the ABORT..
+	    // Here we just increment the denyDone counter.
+	    if (aborting) {
+		denyDone++;
+		return;
+	    }
+	} else if
+	    ( task instanceof Abort_Task ) { 
+	    // If we are aborting then we expect the exposure to be aborted -
+	    // make sure the extraDone counter is incremented for this task.
+	    if (aborting) {
+		extraDone++;
+		return;
+	    }
+	}	    
+    }
+
+    public void onSubTaskFailed(Task task) {	
+	super.onSubTaskFailed(task);	
+	if ( task instanceof Inst_TelFocus_Task ) {	
+	    // If we are aborting then a TelFocus cannot be aborted it SHOULD fail.
+	    // Here we just increment the denyDone counter.
+	    if (aborting) {
+		denyDone++;
+		return;
+	    }
+	}
+    }
+    
+   /** THIS IS JUST FOR TEST, MAY WELL BE WRONG, DOES worker.interrupt() 
+    * after inserting an AbortTask. */
+    public void onAborting() {
+	synchronized (taskList) {
+	    super.onAborting();
+	    taskList.addTask(new Abort_Task(name+"-(TelFocusAbort)", this, Instruments.RAT_CAM));
+	    extraCount++;
+	}
+	worker.interrupt();
+    }   
+        
+    public void onDisposal()   {}
+        
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Telescope-Focus Calibration.");
+    }
+    
+    /** Overwritten to choose the best calibration source, just before the task runs.
+     * Note: We also get the exposure time for this source using the Standards property
+     * standard.src.magnitud.
+     */
+    public void preInit() {
+	super.preInit();
+	
+	Standards.pickHighestField();
+	calibSource    = Standards.getCurrentHighestFocusStar();
+	calibMagnitude = Standards.getCurrentHighestSourceMag();
+    }
+
+    /** Overridden to carry out specific work after the TaskList is created.
+    */
+    public void onInit() {
+	super.onInit();
+	if (calibSource == null) return;	
+	
+	taskLog.log(ENTER, 3, CLASS, name, "onInit", "Setting FITS headers.");
+	opsLog.log(1, "Starting Telescope-Focus Calibration.");
+
+	FITS_HeaderInfo.current_GROUPID.setValue ("LT-TEL-FOCUS-GROUP");	 
+	FITS_HeaderInfo.current_OBSID.setValue   ("LT-TEL-FOCUS-OBS");   
+	FITS_HeaderInfo.current_COMPRESS.setValue("NONE");	
+    
+	FITS_HeaderInfo.current_RADECSYS.setValue("FK5");
+	
+	FITS_HeaderInfo.current_EQUINOX.setValue (""+calibSource.getEquinoxLetter()+calibSource.getEquinox());
+	FITS_HeaderInfo.current_CAT_RA.setValue  (FITS_HeaderInfo.toHMSString(calibSource.getRA()));
+	FITS_HeaderInfo.current_CAT_DEC.setValue (FITS_HeaderInfo.toDMSString(calibSource.getDec()));
+	FITS_HeaderInfo.current_CAT_EPOC.setValue(new Double(calibSource.getEpoch()));
+	FITS_HeaderInfo.current_CAT_NAME.setValue(calibSource.getName());
+	FITS_HeaderInfo.current_OBJECT.setValue  (calibSource.getName());
+	
+	FITS_HeaderInfo.current_PM_RA.setValue   (new Double(calibSource.getPmRA()));
+	FITS_HeaderInfo.current_PM_DEC.setValue  (new Double(calibSource.getPmDec()));
+	FITS_HeaderInfo.current_PARALLAX.setValue(new Double(calibSource.getParallax()));
+	//FITS_HeaderInfo.current_RADVEL   = calibSource.getRadialVelocity();
+	FITS_HeaderInfo.current_RATRACK.setValue (new Double(0.0));
+	FITS_HeaderInfo.current_DECTRACK.setValue(new Double(0.0));	 
+    }
+ 
+    
+    /** Creates the TaskList for this TaskManager. 
+     */
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+	
+	// 1. Setup the Instrument.
+	// Save the focus-offset as it will be needed to fix subsequent focus-offsets
+	// by subtracting the value used during the Tel-Focus from the observation's
+	// requested focus-offset. 
+	
+	ISS_Server.setExpectTelFocusOffsetSoon(true);
+
+	instConfigTask = 
+	    new InstConfig_Task(name+"/IC", this, 
+				instConfig);
+	taskList.addTask(instConfigTask);
+	
+	// 2. Slew to the Calibration source.
+	if (calibSource == null) {
+	    //Major error !	   
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed setting source for Tel-Focus calibration: No suitable source.");
+	    failed = true;
+	    errorIndicator.setErrorCode(ILLEGAL_SOURCE_ERROR);
+	    errorIndicator.setErrorString("Failed setting source for Tel-Focus calibration: No suitable source.");
+	    return null;	    
+	}
+
+	slewTask = 
+	    new Slew_Task(name+"/Slew", this,
+			  calibSource);
+	taskList.addTask(slewTask);
+		
+	// 3. Request instrument to carry out Tel-Focus calibration.
+	instTelFocusTask = 
+	    new Inst_TelFocus_Task(name+"/RAT_CAM_Focus",this,
+				   Instruments.RAT_CAM,
+				   focusStart, 
+				   focusStop, 
+				   focusIncrement, 
+				   calibMagnitude);
+	taskList.addTask(instTelFocusTask);
+	
+	
+	// Setup sequence. = (IC + Slew) & ITFocus
+	try {
+	    taskList.sequence(instConfigTask, instTelFocusTask);
+	    taskList.sequence(slewTask,       instTelFocusTask);
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for Tel-Focus calibration:"+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Tel-Focus calibration.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}
+
+	return taskList;
+    }  
+    
+}
+
+/** $Log: TelFocus_Task.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/**
+/** Revision 1.2  2001/06/08 16:27:27  snf
+/** Changed to PArallel impl.
+/**
+/** Revision 1.1  2001/04/27 17:14:32  snf
+/** Initial revision
+/** */

@@ -1,0 +1,834 @@
+<system>
+
+  <!-- **************************  -->
+  <!--      SOLAR CYCLE STATE      -->
+  <!-- **************************  -->
+
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_SOLAR_STATE" class = "SOLAR">
+    <source> ASTRO </source>
+    <category> SOL </category>
+    <item> cycle.state </item>
+    <!-- oper on  22 mins before sunset -->
+    <preSunset unit = "mins"> 22 </preSunset>
+    <!-- oper off 8 mins before sunrise -->
+    <preSunrise unit = "mins"> 8 </preSunrise>
+  </filter>
+
+  <rule name = "SOLAR_DAY" class = "timed">
+    <period unit = "mins"> 2 </period>
+    <criterion name = "C_SOLAR_DAY" class = "DEQ">
+      <equals> 1 </equals>
+      <filter> A_SOLAR_STATE </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "SOLAR_NIGHT" class = "timed">
+    <period unit = "mins"> 2 </period>
+    <criterion name = "C_SOLAR_NIGHT" class = "DEQ">
+      <equals> 2 </equals>
+      <filter> A_SOLAR_STATE </filter>
+    </criterion>
+  </rule>
+
+  <!-- **************************  -->
+  <!--      POWER CYCLE STATE      -->
+  <!-- **************************  -->
+
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_POWER_STATE" class = "POWER">
+    <source> POWER </source>
+    <category> PWR </category>
+    <item> power.state </item>
+    <!-- Reboot at 13:30 UTC -->
+    <rebootOffset unit = "hours"> 13.5 </rebootOffset>  
+  </filter>
+
+  <rule name = "POWER_ON" class = "timed">
+    <period unit = "mins"> 2 </period>
+    <criterion name = "C_POWER_ON" class = "DEQ">
+      <equals> 1 </equals>
+      <filter> A_POWER_STATE </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "POWER_OFF" class = "timed">
+    <period unit = "secs"> 1 </period>
+    <criterion name = "C_POWER_OFF" class = "DEQ">
+      <equals> 2 </equals>
+      <filter> A_POWER_STATE </filter>
+    </criterion>
+  </rule>
+
+
+  <!-- **********************  -->
+  <!--      WEATHER STATE      -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "M_HUM_FAST" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> humidity </item>
+    <period unit = "secs"> 10 </period>
+  </filter>
+
+  <filter name = "M_HUM_SLOW" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> humidity </item>
+    <period unit = "mins"> 5 </period>
+  </filter>
+
+  <filter name = "M_WS_FAST" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> wind.speed </item>
+    <period unit = "secs"> 10 </period>
+  </filter>
+
+  <filter name = "M_WS_SLOW" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> wind.speed </item>
+    <period unit = "mins"> 5 </period>
+  </filter>
+
+  <filter name = "M_MOIST_FAST" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> moisture </item>
+    <period unit = "secs"> 10 </period>
+  </filter>
+
+  <filter name = "M_MOIST_SLOW" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> moisture </item>
+    <period unit = "mins"> 5 </period>
+  </filter>
+
+
+  <filter name = "M_TEMP_FAST" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> temperature </item>
+    <period unit = "secs"> 10 </period>
+  </filter>
+
+  <filter name = "M_TEMP_SLOW" class = "AVERAGE">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> temperature </item>
+    <period unit = "mins"> 5 </period>
+  </filter>
+
+  <filter name = "M_WMS_STATE" class = "ACTUAL">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> state </item>
+  </filter>
+
+  <filter name = "M_RAIN_STATE" class = "ACTUAL">
+    <source> METEO </source>
+    <category> WMS </category>
+    <item> rain </item>
+  </filter>
+
+  <filter name = "B_SKYAMB" class = "AVERAGE">
+    <source> METEO </source>
+    <category> CLOUD </category>
+    <item> skyamb </item>
+    <period unit = "mins"> 2 </period>
+  </filter>
+
+  <filter name = "T_DUST" class = "AVERAGE">
+    <source> METEO </source>
+    <category> DUST </category>
+    <item> dust </item>
+    <period unit = "mins"> 2 </period>
+  </filter>
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "METEO_ALERT" class = "DISJUNCT">
+
+    <rule name = "COLD_AND_DRY" class = "CONJUNCT">
+      <!-- Hum < 50 -->
+	   <rule name = "X1_0" class = "timed">
+	     <period unit = "secs"> 30 </period>
+	     <criterion name = "CX1_0" class = "LESS">
+               <maximum> 0.5 </maximum>
+               <filter> M_HUM_FAST </filter>
+	     </criterion>
+	   </rule>  
+	   <!-- Temp < -3.0 -->
+		<rule name = "X3_0" class = "timed">
+		  <period unit = "secs"> 30 </period>
+		  <criterion name = "CX3_0" class = "LESS">
+		    <maximum> -3.0 </maximum>
+		    <filter> M_TEMP_FAST </filter>
+		  </criterion>
+		</rule>  
+    </rule>
+
+    <rule name = "COLD_AND_WET" class = "CONJUNCT">
+
+      <!-- Hum > 60 -->
+      <rule name = "X2_0" class = "timed">
+	<period unit = "secs"> 30 </period>
+	<criterion name = "CX2_0" class = "GREATER">
+          <minimum> 0.6 </minimum>
+          <filter> M_HUM_FAST </filter>
+	</criterion>
+      </rule>  
+      <!-- Temp < 0.0 -->
+	   <rule name = "X4_0" class = "timed">
+	     <period unit = "secs"> 30 </period>
+	     <criterion name = "CX4_0" class = "LESS">
+               <maximum> 0.0 </maximum>
+               <filter> M_TEMP_FAST </filter>
+	     </criterion>
+	   </rule>  
+    </rule>
+
+    <rule name = "HUM_HI" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_HUM_HI" class = "GREATER">
+        <minimum> 0.8 </minimum>
+        <filter> M_HUM_FAST </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "WS_HI" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_WS_HI" class = "GREATER">
+        <minimum> 15.0 </minimum>
+        <filter> M_WS_FAST </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "RAIN_ALERT" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_RAIN_ALERT" class = "DEQ">
+        <equals>791</equals>
+        <filter> M_RAIN_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "MOIST_HI" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_MOIST_HI" class = "GREATER">
+        <minimum> 0.1 </minimum>
+        <filter> M_MOIST_FAST </filter>
+      </criterion>
+    </rule>
+
+
+    <rule name = "WMS_ALERT" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_WMS_ALERT" class = "ONE">
+        <any>463</any>
+        <any>465</any>
+        <any>461</any>
+        <any>462</any>
+        <filter> M_WMS_STATE </filter>
+      </criterion>
+    </rule>
+
+    <!--
+       <rule name = "TEMP_LO" class = "timed">
+	 <period unit = "secs"> 30 </period>
+	 <criterion name = "C_TEMP_LO" class = "LESS">
+           <maximum> 0.0 </maximum>
+           <filter> M_TEMP_FAST </filter>
+	 </criterion>
+       </rule>
+       -->
+
+    <!-- <rule name = "CLOUD_HI" class = "timed">
+      <period unit = "mins"> 10 </period>
+      <criterion name = "C_CLOUD_HI" class = "GREATER">
+        <minimum> -8.0 </minimum>
+        <filter> B_SKYAMB </filter>
+      </criterion>
+    </rule> -->
+    
+    <!-- <rule name = "DUST_HI" class = "timed">
+      <period unit = "mins"> 5 </period>
+      <criterion name = "C_DUST_HI" class = "GREATER">
+        <minimum> 55.0 </minimum>
+        <filter> T_DUST </filter>
+      </criterion>
+    </rule> -->
+
+
+  </rule>
+
+
+  <rule name = "METEO_CLEAR" class = "CONJUNCT">
+
+    <rule name = "HOT" class = "DISJUNCT">
+
+      <rule name = "HOT_AND_DRY" class = "CONJUNCT">
+	<!-- Hum < 50 -->
+	     <rule name = "X1_30" class = "timed">
+	       <period unit = "mins"> 30 </period>
+	       <criterion name = "CX1_30" class = "LESS">
+		 <maximum> 0.5 </maximum>
+		 <filter> M_HUM_SLOW </filter>
+	       </criterion>
+	     </rule>  
+	     <!-- Temp > -2.5 -->
+	     <rule name = "X5_30" class = "timed">
+	       <period unit = "secs"> 30 </period>
+	       <criterion name = "CX5_30" class = "GREATER">
+		 <minimum> -2.5 </minimum>
+		 <filter> M_TEMP_SLOW </filter>
+	       </criterion>
+	     </rule>  
+      </rule>
+
+
+      <rule name = "HOT_AND_WET" class = "CONJUNCT">
+	<!-- Hum > 60 -->
+	<rule name = "X2_30" class = "timed">
+	  <period unit = "mins"> 30 </period>
+	  <criterion name = "CX2_30" class = "GREATER">
+            <minimum> 0.5 </minimum>
+            <filter> M_HUM_SLOW </filter>
+	  </criterion>
+	</rule>  
+	<!-- Temp > 0.1 -->
+	<rule name = "X6_30" class = "timed">
+	  <period unit = "mins"> 30 </period>
+	  <criterion name = "CX6_30" class = "GREATER">
+            <minimum> 0.1 </minimum>
+            <filter> M_TEMP_SLOW </filter>
+	  </criterion>
+	</rule>  
+      </rule>
+
+      <rule name = "HOT_AND_NORMAL" class = "CONJUNCT">
+	<!-- Hum < 80  -->
+	     <rule name = "X8_30" class = "timed">
+	       <period unit = "mins"> 30 </period>
+	       <criterion name = "CX8_30" class = "LESS">
+		 <maximum> 0.8 </maximum>
+		 <filter> M_HUM_SLOW </filter>
+	       </criterion>
+	     </rule>  
+
+	     <rule name = "HUM_LO_2" class = "timed">
+	       <period unit = "mins"> 30  </period>
+	       <criterion name = "C_HUM_LO2" class = "LESS">
+		 <maximum> 0.75 </maximum>
+		 <filter> M_HUM_SLOW </filter>
+	       </criterion>
+	     </rule>
+
+	     <!-- Temp > 0.1 -->
+	     <rule name = "X7_30" class = "timed">
+	       <period unit = "mins"> 30 </period>
+	       <criterion name = "CX7_30" class = "GREATER">
+		 <minimum> 0.1 </minimum>
+		 <filter> M_TEMP_SLOW </filter>
+	       </criterion>
+	     </rule>  
+      </rule>
+
+
+    </rule>
+
+    
+    <rule name = "WS_LO" class = "timed">
+      <period unit = "mins"> 30 </period>
+      <criterion name = "C_WS_LO" class = "LESS">
+        <maximum> 15.0 </maximum>
+        <filter> M_WS_SLOW </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "RAIN_CLEAR" class = "timed">
+      <period unit = "mins"> 20 </period>
+      <criterion name = "C_RAIN_CLEAR" class = "DEQ">
+        <equals>790</equals>
+        <filter> M_RAIN_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "WMS_CLEAR" class = "timed">
+      <period unit = "mins"> 20 </period>
+      <criterion name = "C_WMS_CLEAR" class = "ONE">
+        <any>460</any>
+        <any>464</any>
+        <filter> M_WMS_STATE </filter>
+      </criterion>
+    </rule>
+
+
+    <rule name = "MOIST_LO" class = "timed">
+      <period unit = "mins"> 30 </period>
+      <criterion name = "C_MOIST_LO" class = "LESS">
+        <maximum> 0.09 </maximum>
+        <filter> M_MOIST_SLOW </filter>
+      </criterion>
+    </rule>
+
+    <!--
+       <rule name = "TEMP_HI" class = "timed">
+	 <period unit = "mins"> 30 </period>
+	 <criterion name = "C_TEMP_HI" class = "GREATER">
+           <minimum> 0.05 </minimum>
+           <filter> M_TEMP_SLOW </filter>
+	 </criterion>
+       </rule>
+       -->
+
+    <!-- <rule name = "CLOUD_LO_1" class = "timed">
+      <period unit = "mins"> 15 </period>
+      <criterion name = "C_CLOUD_LO1" class = "LESS">
+        <maximum> -9.0 </maximum>
+        <filter> B_SKYAMB </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "CLOUD_LO_2" class = "timed">
+      <period unit = "mins"> 10 </period>
+      <criterion name = "C_CLOUD_LO2" class = "LESS">
+        <maximum> -11.0 </maximum>
+        <filter> B_SKYAMB </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "DUST_LO" class = "timed">
+      <period unit = "mins"> 10 </period>
+      <criterion name = "C_DUST_LO" class = "LESS">
+        <maximum> 55.0 </maximum>
+        <filter> T_DUST </filter>
+      </criterion>
+    </rule> -->
+
+  </rule>
+
+
+
+
+  <!-- **********************  -->
+  <!--       AXES STATE        -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_AZM_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> AZM </category>
+    <item> axis.state </item>
+  </filter>
+
+  <filter name = "A_ALT_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> ALT </category>
+    <item> axis.state </item>
+  </filter>
+
+  <filter name = "A_ROT_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> ROT </category>
+    <item> axis.state </item>
+  </filter>
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "AXES_ALERT" class = "DISJUNCT">
+
+    <rule name = "AZM_FAIL" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_AZM_FAIL" class = "ONE">
+        <any>227</any>
+        <any>225</any>
+        <filter> A_AZM_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "ALT_FAIL" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_ALT_FAIL" class = "ONE">
+        <any>227</any>
+        <any>225</any>
+        <filter> A_ALT_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "ROT_FAIL" class = "timed">
+      <period unit = "secs"> 30 </period>
+      <criterion name = "C_ROT_FAIL" class = "ONE">
+        <any>227</any>
+        <any>225</any>
+        <filter> A_ROT_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+  <rule name = "AXES_CLEAR" class = "CONJUNCT">
+
+    <rule name = "AZM_OKAY" class = "timed">
+      <period unit = "mins"> 2 </period>
+      <criterion name = "C_AZM_OK" class = "ONE">
+        <any>220</any>
+        <any>221</any>
+        <any>222</any>
+        <any>223</any>
+        <any>224</any>
+        <any>226</any>
+        <any>234</any>
+        <filter> A_AZM_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "ALT_OKAY" class = "timed">
+      <period unit = "mins"> 2 </period>
+      <criterion name = "C_ALT_OK" class = "ONE">
+        <any>220</any>
+        <any>221</any>
+        <any>222</any>
+        <any>223</any>
+        <any>224</any>
+        <any>226</any>
+        <any>234</any>
+        <filter> A_ALT_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "ROT_OKAY" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_ROT_OK" class = "ONE">
+        <any>220</any>
+        <any>221</any>
+        <any>222</any>
+        <any>223</any>
+        <any>224</any>
+        <any>226</any>
+        <any>234</any>
+        <filter> A_ROT_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+  <!-- **********************  -->
+  <!--      SYSTEM STATE       -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_SYS_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> TCS </category>
+    <item> tcs.system.state </item>
+  </filter>
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "SYS_OKAY" class = "timed">
+    <period unit = "mins"> 2 </period>
+    <criterion name = "C_SYS_OKAY" class = "ONE">
+      <any>460</any>
+      <any>464</any>
+      <filter> A_SYS_STATE </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "SYS_STBY" class = "timed">
+    <period unit = "mins"> 2 </period>
+    <criterion name = "C_SYS_STBY" class = "DEQ">
+      <equals>462</equals>
+      <filter> A_SYS_STATE </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "SYS_SUSP" class = "timed">
+    <period unit = "secs"> 30 </period>
+    <criterion name = "C_SYS_SUSP" class = "DEQ">
+      <equals>463</equals>
+      <filter> A_SYS_STATE </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "SYS_FAIL" class = "timed">
+    <period unit = "secs"> 30 </period>
+    <criterion name = "C_SYS_FAIL" class = "DEQ">
+      <equals>465</equals>
+      <filter> A_SYS_STATE </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "SYS_INIT" class = "timed">
+    <period unit = "secs"> 30 </period>
+    <criterion name = "C_SYS_INIT" class = "DEQ">
+      <equals>461</equals>
+      <filter> A_SYS_STATE </filter>
+    </criterion>
+  </rule>
+
+
+
+  <!-- **********************  -->
+  <!--      CONTROL STATE       -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_NETCTRL_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> TCS </category>
+    <item> tcs.network.state </item>
+  </filter>
+
+  <filter name = "A_ENG_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> TCS </category>
+    <item> tcs.engineering.state </item>
+  </filter>
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "CONTROL_CLEAR" class = "CONJUNCT">
+
+    <rule name = "CTRL_ENAB" class = "timed">
+      <period unit = "mins"> 2 </period>
+      <criterion name = "C_CTRL_ENAB" class = "DEQ">
+        <equals>473</equals>        
+        <filter> A_NETCTRL_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "ENG_DISAB" class = "timed">
+      <period unit = "mins"> 2 </period>
+      <criterion name = "C_ENG_DISAB" class = "DEQ">
+        <equals>472</equals>    
+        <filter> A_ENG_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+  <rule name = "CONTROL_ALERT" class = "DISJUNCT">
+
+    <rule name = "CTRL_DISAB" class = "timed">
+      <period unit = "mins"> 2 </period>
+      <criterion name = "C_CTRL_DISAB" class = "DEQ">
+        <equals>472</equals>        
+        <filter> A_NETCTRL_STATE </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "ENG_ENGAGE" class = "timed">
+      <period unit = "mins"> 2 </period>
+      <criterion name = "C_ENG_ENGAGE" class = "DEQ">
+        <equals>474</equals>    
+        <filter> A_ENG_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+
+  <!-- **********************  -->
+  <!--      NETWORK STATE      -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_NET" class = "ACTUAL">
+    <source> TEL </source>
+    <category> CIL_NET </category>
+    <item> network.state </item>
+    <period unit = "secs"> 30 </period>
+  </filter>
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "NETW_CLEAR" class = "timed">
+    <period unit = "mins"> 1 </period>
+    <criterion name = "C_NETW_CLEAR" class = "DEQ">
+      <equals>1</equals>
+      <filter> A_NET </filter>
+    </criterion>
+  </rule>
+
+  <rule name = "NETW_ALERT" class = "timed">
+    <period unit = "mins"> 2 </period>
+    <criterion name = "C_NETW_ALERT" class = "DEQ">
+      <equals>2</equals>
+      <filter> A_NET </filter>
+    </criterion>
+  </rule>
+
+  <!-- **********************  -->
+  <!--    ENCLOSURE STATE      -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_EN1_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> EN1 </category>
+    <item> axis.state </item>
+  </filter>
+
+  <filter name = "A_EN2_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> EN2 </category>
+    <item> axis.state </item>
+  </filter>
+
+  <filter name = "A_EN1_POS" class = "ACTUAL">
+    <source> TEL </source>
+    <category> EN1 </category>
+    <item> axis.position </item>
+  </filter>
+
+  <filter name = "A_EN2_POS" class = "ACTUAL">
+    <source> TEL </source>
+    <category> EN2 </category>
+    <item> axis.position </item>
+  </filter>
+
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "ENC_OPEN" class = "CONJUNCT">
+
+    <rule name = "EN1_OPEN" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN1_OPEN" class = "DEQ">
+        <equals>343</equals>
+        <filter> A_EN1_POS </filter>
+      </criterion>
+    </rule>
+    <rule name = "EN2_OPEN" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN2_OPEN" class = "DEQ">
+        <equals>343</equals>
+        <filter> A_EN2_POS </filter>
+      </criterion>
+    </rule>
+    <rule name = "EN1_IN_POSN" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN1_IN_POSN" class = "DEQ">
+        <equals>221</equals>
+        <filter> A_EN1_STATE </filter>
+      </criterion>
+    </rule>
+    <rule name = "EN2_IN_POSN" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN2_IN_POSN" class = "DEQ">
+        <equals>221</equals>
+        <filter> A_EN2_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+
+  <rule name = "ENC_CLOSED" class = "CONJUNCT">
+
+    <rule name = "EN1_CLOSED" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN1_CLOSED" class = "DEQ">
+        <equals>342</equals>
+        <filter> A_EN1_POS </filter>
+      </criterion>
+    </rule>
+    <rule name = "EN2_CLOSED" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN2_CLOSED" class = "DEQ">
+        <equals>342</equals>
+        <filter> A_EN2_POS </filter>
+      </criterion>
+    </rule>
+    <rule name = "EN1_IN_POSNC" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN1_IN_POSNC" class = "DEQ">
+        <equals>221</equals>
+        <filter> A_EN1_STATE </filter>
+      </criterion>
+    </rule>
+    <rule name = "EN2_IN_POSNC" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_EN2_IN_POSNC" class = "DEQ">
+        <equals>221</equals>
+        <filter> A_EN2_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+  <!-- **********************  -->
+  <!--          PMC STATE      -->
+  <!-- **********************  -->
+
+  <!-- FILTER SOURCES -->
+
+  <filter name = "A_PMC_STATE" class = "ACTUAL">
+    <source> TEL </source>
+    <category> PMC </category>
+    <item> axis.state </item>
+  </filter>
+
+  <filter name = "A_PMC_POS" class = "ACTUAL">
+    <source> TEL </source>
+    <category> PMC </category>
+    <item> axis.position </item>
+  </filter>
+
+  <!-- RULES and CRITERIA -->
+
+  <rule name = "PMC_OPEN" class = "CONJUNCT">
+
+    <rule name = "PMC_POS_OPEN" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_PMC_POS_OPEN" class = "DEQ">
+        <equals>343</equals>
+        <filter> A_PMC_POS </filter>
+      </criterion>
+    </rule>
+    <rule name = "PMC_IN_POSN" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_PMC_IN_POSN" class = "DEQ">
+        <equals>221</equals>
+        <filter> A_PMC_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+  <rule name = "PMC_CLOSED" class = "CONJUNCT">
+
+    <rule name = "PMC_POS_CLOSED" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_PMC_POS_CLOSED" class = "DEQ">
+        <equals>342</equals>
+        <filter> A_PMC_POS </filter>
+      </criterion>
+    </rule>
+
+    <rule name = "PMC_IN_POSNC" class = "timed">
+      <period unit = "mins"> 1 </period>
+      <criterion name = "C_PMC_IN_POSNC" class = "DEQ">
+        <equals>221</equals>
+        <filter> A_PMC_STATE </filter>
+      </criterion>
+    </rule>
+
+  </rule>
+
+
+</system>

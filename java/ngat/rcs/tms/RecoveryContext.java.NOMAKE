@@ -1,0 +1,90 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs;
+
+import java.util.*;
+
+/** RecoveryContext contains information about how to handle recovery of
+* a failed task by a manager task.
+*
+* <dl>	
+* <dt><b>RCS:</b>
+* <dd>$Id: RecoveryContext.java.NOMAKE,v 1.1 2006/05/17 06:32:59 snf Exp $
+* <dt><b>Source:</b>
+* <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/tmm/RCS/RecoveryContext.java.NOMAKE,v $
+* </dl>
+* @author $Author: snf $
+* @version $Revision: 1.1 $
+*/
+public class RecoveryContext {
+	
+    protected Map contextMap;
+
+    /** Create a RecoveryContext.*/
+    public RecoveryContext(String taskClass, ) {
+	contextMap = new HashMap();
+
+    }
+
+    /** Creates a context entry for the given task subclass and error code.
+     * If the entry already exists, does nothing.
+     */
+    public List addContextEntry(Task subtask, int code) {
+	String key = null;
+	if (subtask != null) {
+	    key = subtask.getClass().getName()+":"+code;
+	    if (contextMap.containsKey(key))
+		return (List)contextMap.get(key);
+	}
+	List list = new Vector();
+	contextMap.put(key, list);	
+	return list;
+    }
+
+    /** Appends a RecoveryAction to the context for a given 
+     * subtask/errorcode combination.
+     */
+    public void addContextAction(Task subtask, int code, RecoveryAction action) {
+	List list = addContextEntry(subtask, code);
+
+	if (list == null)
+	    return;
+
+	list.add(action);
+	
+    }
+
+    /** Returns the List of actions for the given subtask/errorcode combination.*/
+    public List getContextEntry(Task subtask, int code) {
+	String key = null;
+	if (subtask != null) {
+	    key = subtask.getClass().getName()+":"+code;
+	    if (contextMap.containsKey(key))
+		return (List)contextMap.get(key);
+	}
+	return null;
+    }
+
+}
+
+/** $Log: RecoveryContext.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:32:59  snf
+/** Initial revision
+/** */

@@ -1,0 +1,187 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.phase2.nonpersist.*;
+import ngat.message.RCS_TCS.*;
+
+import java.util.*;
+
+/** This Task creates a series of AG_Focus and AG_Centroid tasks
+ * to determine the optimum focus position for the Autoguider.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: AG_Focus_Sequence_Task.java,v 1.1 2006/12/12 08:25:56 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/AG_Focus_Sequence_Task.java,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class AG_Focus_Sequence_Task extends ParallelTaskImpl {
+    
+    /** The AG-focus setting to use (mm).*/
+    protected double focus;
+    
+    /** The Autoguider FWHM recieved as a result of the AGCENTROID operation.*/
+    protected double fwhm;
+    
+    AG_Centroid_Task currentAG_Centroid_Task;
+
+    AG_Focus_Task    currentAG_Focus_Task;
+
+    AutoGuide_Task   currentAutoGuide_Task;
+
+    int recCount;
+    
+    /** Create an Observation_Task using the supplied Observation and settings.
+     * @param focus The AG-focus setting to use (mm).
+     * @param name The unique name/id for this TaskImpl - 
+     * should be based on the COMMAND_ID.
+     * @param manager The Task's manager.
+     */
+    public AG_Focus_Sequence_Task(String name,
+				  TaskManager manager,
+				  double focus) {
+	super(name, manager);
+	this.focus = focus;
+    }
+    
+    public void onSubTaskFailed(Task task) {
+	taskList.skip(task);
+    }
+    
+    
+    public void onSubTaskAborted(Task task) {
+    }
+    
+    public void onSubTaskDone(Task task) {
+	super.onSubTaskDone(task);
+	// Done - save the focus info.
+	if (task == currentAG_Centroid_Task) {
+	    fwhm = currentAG_Centroid_Task.getFwhm();
+	}
+
+    }
+    
+    public void onAborting() {
+
+    }
+    
+    
+    public void onDisposal() {
+	
+    }
+    
+  
+    public void onCompletion() {
+	
+    }
+    
+    /** Overridden to carry out specific work after the init() method is called.*/
+    public void onInit() {
+	FITS_HeaderInfo.current_OBSID.setValue   ("LT-AG-FOCUS-"+focus+"mm");   
+    }
+    
+    /** Creates the TaskList for this TaskManager. AutoGuide_Task,
+     * AG_Focus_Task and AG_Centroid_Task.*/
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+	// Setup a default TelescopeConfig to determine the AG_MODE.
+	TelescopeConfig teleconfig = new TelescopeConfig(name+"-teleconfig");
+	teleconfig.setAutoGuiderStarSelectionMode(TelescopeConfig.STAR_SELECTION_RANK);	
+	teleconfig.setAutoGuiderStarSelection1(1);
+
+	currentAutoGuide_Task = new AutoGuide_Task(name+"/AutoGuide", this, teleconfig, AUTOGUIDE.ON);
+	taskList.addTask(currentAutoGuide_Task);
+	
+	currentAG_Focus_Task = new AG_Focus_Task(name+"/AG_Focus_"+focus, this, focus);
+	taskList.addTask(currentAG_Focus_Task);
+	
+	currentAG_Centroid_Task = new AG_Centroid_Task(name+"/AG_Centroid", this);
+	taskList.addTask(currentAG_Centroid_Task);
+	
+	try {
+	    taskList.sequence(currentAutoGuide_Task, currentAG_Focus_Task);
+	    taskList.sequence(currentAG_Focus_Task,  currentAG_Centroid_Task);
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for AG-Focus calibration:"+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for AG-Focus calibration.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}  
+	
+	return taskList;
+    }
+    
+    /** Returns the Autoguider FWHM recieved as a result of the AGCENTROID operation.*/
+    public double getFwhm()   { return fwhm;}
+
+    /** Returns the focus setting (mm) for this Task.*/
+    public double getFocus() { return focus; }
+
+}
+
+/** $Log: AG_Focus_Sequence_Task.java,v $
+/** Revision 1.1  2006/12/12 08:25:56  snf
+/** Initial revision
+/**
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/**
+/** Revision 1.3  2002/09/16 09:38:28  snf
+/** *** empty log message ***
+/**
+/** Revision 1.2  2001/06/08 16:27:27  snf
+/** Changed to PArallel impl.
+/**
+/** Revision 1.1  2001/04/27 17:14:32  snf
+/** Initial revision
+/** */
+

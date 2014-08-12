@@ -1,0 +1,21 @@
+#!/bin/csh
+
+set RCW_CFG = /occ/tmp/.rcw
+
+set code
+set MODE
+
+if (! -e $RCW_CFG) then
+    set code = ENG
+else
+    set code = `cat ${RCW_CFG}`
+endif
+
+echo "Code is: $code "
+
+if ($code =~ "ENG") then
+	echo "RCS will start in Engineering mode"
+else 
+	echo "RCS will start in Automatic mode and start operations at sunset"
+endif
+

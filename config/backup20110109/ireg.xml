@@ -1,0 +1,385 @@
+
+<xml >
+
+<!-- ==================================== -->
+<!-- RATCAM                               -->
+<!-- ==================================== -->
+
+ <instrument name="RATCAM" type = "Imager">
+  
+  <descriptor>  
+    <name>RATCAM</name>
+    <class>camera.optical</class>
+  </descriptor>
+
+  <imager>
+
+    <filterset name = "lower">
+      <filter>
+        <name>clear</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>SDSS-I</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>SDSS-Z</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>SDSS-R</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>H-Alpha-100</name>
+        <class></class>
+      </filter>
+    </filterset>
+
+    <filterset name = "upper">
+      <filter>
+        <name>clear</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>Bessell-B</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>SDSS-G</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>SDSS-U</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>Bessell-V</name>
+        <class></class>
+      </filter>
+    </filterset>
+
+    <capabilities>
+      <sky-model-provider>true</sky-model-provider>
+      <focus-instrument>true</focus-instrument>
+      <rotator-offset>0.0</rotator-offset>
+      <aperture-offset x="-37" y="-34"/>
+      <acquisition-offset x="0" y="0"/>     
+    </capabilities>
+
+   <detector>
+     <array-size width="2048" height="2048"/>
+     <plate-scale>0.135</plate-scale>
+   </detector>
+
+   </imager>
+
+   <calibration>
+     <MorningSkyFlats>
+       <StartOffset>600000</StartOffset>
+       <EndOffset>2000000</EndOffset>
+       <Window>1200000</Window>
+       <Interval>82400000</Interval>
+     </MorningSkyFlats>
+     <EveningSkyFlats>
+       <StartOffset>600000</StartOffset>
+       <EndOffset>2000000</EndOffset>
+       <Window>1200000</Window>
+       <Interval>82400000</Interval>
+     </EveningSkyFlats>
+     <history file = "/occ/rcs/instruments/ratcam.calib.dat"/>
+   </calibration>
+
+  <monitor host="192.168.1.31" port="6783"  interval="20000"/>
+
+ </instrument>
+
+<!-- ==================================== -->
+<!-- THOR                                 -->
+<!-- ==================================== -->
+
+ <instrument name="THOR" type = "TipTiltImager">
+
+  <descriptor>  
+    <name>THOR</name>
+    <class>camera.tiptilt</class>
+  </descriptor>
+
+   <tiptiltimager>
+    <filterset name = "single">
+      <filter>
+        <name>Blue</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>Red</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>Mirror</name>
+        <class></class>
+      </filter>
+    </filterset>
+
+    <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>90.0</rotator-offset>
+     <aperture-offset x="324" y="123"/>
+     <acquisition-offset x="554" y="334"/>     
+   </capabilities>
+
+   <detector>
+     <array-size width="512" height="512"/>
+     <plate-scale>0.44</plate-scale>
+   </detector>
+
+   </tiptiltimager>
+
+    <monitor host="192.168.1.62" port="8472" interval="20000" />
+
+ </instrument>
+
+
+<!-- ==================================== -->
+<!-- SUPACAM                              -->
+<!-- ==================================== -->
+
+ <instrument name="SUPIRCAM" type = "Imager">
+
+  <descriptor>  
+    <name>SUPIRCAM</name>
+    <class>camera.ir</class>
+  </descriptor>
+
+   <imager>
+    <filterset name = "single">
+      <filter>
+        <name>Barr-K-Prime</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>Barr-H</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>Barr-J</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>clear</name>
+        <class></class>
+      </filter>
+      <filter>
+        <name>blank</name>
+        <class></class>
+      </filter>
+    </filterset>
+
+    <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>90.0</rotator-offset>
+     <aperture-offset x="324" y="123"/>
+     <acquisition-offset x="554" y="334"/>     
+   </capabilities>
+
+   <detector>
+     <array-size width="512" height="512"/>
+     <plate-scale>0.44</plate-scale>
+   </detector>
+
+   </imager>
+
+   <calibration>
+      <history file = "/occ/rcs/instruments/supircam.calib.dat"/>
+   </calibration>
+
+
+    <monitor host="192.168.1.33" port="8367" interval="20000" />
+
+ </instrument>
+
+<!-- ==================================== -->
+<!-- RISE                                 -->
+<!-- ==================================== -->
+
+ <instrument name="RISE" type = "Imager">
+
+   <descriptor>  
+     <name>RISE</name>
+     <class>camera.optical,fast</class>
+   </descriptor>
+
+   <imager>
+
+  <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>45.0</rotator-offset>
+     <aperture-offset x="30" y="-100"/>
+     <acquisition-offset x="0" y="0"/>     
+   </capabilities>
+
+   <detector>
+     <array-size width="256" height="256"/>
+     <plate-scale>0.67</plate-scale>
+   </detector>
+
+   </imager>
+
+   <calibration>
+      <history file = "/occ/rcs/instruments/rise.calib.dat"/>
+   </calibration>
+
+  <monitor host="192.168.1.27" port="6783"  interval="30000"/>
+
+ </instrument>
+
+<!-- ==================================== -->
+<!-- RINGO2                               -->
+<!-- ==================================== -->
+
+ <instrument name="RINGO2" type = "Polarimeter">
+
+  <descriptor>  
+    <name>RINGO2</name>
+    <class>polarimeter</class>
+  </descriptor>
+
+  <polarimeter>
+
+  <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>0.0</rotator-offset>
+     <aperture-offset x="0" y="0"/>
+     <acquisition-offset x="0" y="0"/>     
+   </capabilities>
+
+   <detector>
+     <array-size width="256" height="256"/>
+     <plate-scale>0.87</plate-scale>
+   </detector>
+
+  </polarimeter>
+
+   <calibration>
+      <history file = "/occ/rcs/instruments/ringo2.calib.dat"/>
+   </calibration>
+
+  <monitor host="192.168.1.41" port="1112"  interval="60000"/>
+
+ </instrument>
+
+
+<!-- ==================================== -->
+<!-- FRODO                                -->
+<!-- ==================================== -->
+
+ <instrument name="FRODO" type = "DualBeamSpectrograph">
+
+  <descriptor>  
+    <name>FRODO</name>
+    <class>dual.beam.spec</class>
+  </descriptor>
+
+  <spectrograph>
+
+  <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>0.0</rotator-offset>
+     <aperture-offset x="-37" y="-34"/>
+     <acquisition-offset x="1089" y="530"/>     
+   </capabilities>
+
+  <detector>
+     <array-size width="1024" height="1024"/>
+     <plate-scale>0.44</plate-scale>
+   </detector>
+ 
+ </spectrograph>
+
+   <calibration>
+      <history file = "/occ/rcs/instruments/frodo.calib.dat"/>
+   </calibration>
+   
+  <monitor host="192.168.1.26" port="7083" interval="20000"/>
+
+ </instrument>
+
+<!-- ==================================== -->
+<!-- FRODO BLUE                           -->
+<!-- ==================================== -->
+
+ <instrument name="FRODO_BLUE" type = "DualBeamSpectrograph">
+
+  <descriptor>  
+    <name>FRODO_BLUE</name>
+    <class>dual.beam.spec</class>
+  </descriptor>
+
+  <spectrograph>
+
+  <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>0.0</rotator-offset>
+     <aperture-offset x="-37" y="-34"/>
+     <acquisition-offset x="1089" y="530"/>     
+   </capabilities>
+
+  <detector>
+     <array-size width="1024" height="1024"/>
+     <plate-scale>0.44</plate-scale>
+   </detector>
+ 
+ </spectrograph>
+
+   <calibration>
+      <history file = "/occ/rcs/instruments/frodo.calib.dat"/>
+   </calibration>
+   
+  <monitor host="192.168.1.26" port="7083" interval="20000"/>
+
+ </instrument>
+
+<!-- ==================================== -->
+<!-- FRODO RED                            -->
+<!-- ==================================== -->
+
+ <instrument name="FRODO_RED" type = "DualBeamSpectrograph">
+
+  <descriptor>  
+    <name>FRODO_RED</name>
+    <class>dual.beam.spec</class>
+  </descriptor>
+
+  <spectrograph>
+
+  <capabilities>
+     <sky-model-provider>false</sky-model-provider>
+     <focus-instrument>false</focus-instrument>
+     <rotator-offset>0.0</rotator-offset>
+     <aperture-offset x="-37" y="-34"/>
+     <acquisition-offset x="1089" y="530"/>     
+   </capabilities>
+
+  <detector>
+     <array-size width="1024" height="1024"/>
+     <plate-scale>0.44</plate-scale>
+   </detector>
+ 
+ </spectrograph>
+
+   <calibration>
+      <history file = "/occ/rcs/instruments/frodo.calib.dat"/>
+   </calibration>
+
+  <monitor host="192.168.1.26" port="7083" interval="20000"/>
+
+ </instrument>
+
+</xml>

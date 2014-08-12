@@ -1,0 +1,13 @@
+project {display:block;background:grey}
+
+subproject {display:block;background:pink}
+
+workflow {display:block;position:relative;width:400px;left:100px;border:thin solid blue}
+
+change {display:block;position:relative;width:100px;border:thin dashed red;padding:10}
+
+li {display:block;position:relative;left:15px}
+
+classref {display:block;position:relative;left:30px}
+
+description {display:block;background:yellow;color;blue}

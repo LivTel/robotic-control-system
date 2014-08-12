@@ -1,0 +1,122 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+current_CAT_NAME.setValue(status.source.srcName);
+current_OBJECT.setValue(status.source.srcName);
+current_CAT_RA.setValue (Position.formatHMSString(ra, ":"));
+current_CAT_DEC.setValue(Position.formatDMSString(dec, ":"));
+current_APP_RA.setValue (Position.formatHMSString(ra, ":"));
+current_APP_DEC.setValue(Position.formatDMSString(dec, ":"));
+current_RA.setValue (Position.formatHMSString(ra, ":"));
+current_DEC.setValue(Position.formatDMSString(dec, ":"));
+current_LST.setValue(Position.formatHMSString(status.time.lst/13750.987083533, ":")); 
+
+current_AUTOGUID  .setValue(TCS_Status.codeString(status.autoguider.agStatus));
+current_AGSTATE  .setValue(TCS_Status.codeString(status.autoguider.agSwState));
+current_AGMODE   .setValue(TCS_Status.codeString(status.autoguider.agMode));
+current_AGGMAG   .setValue(new Double(status.autoguider.guideStarMagnitude));
+current_AGFWHM   .setValue(new Double(status.autoguider.fwhm));
+current_AGMIRDMD .setValue(new Double(status.autoguider.agMirrorDemand));
+current_AGMIRPOS .setValue(new Double(status.autoguider.agMirrorPos));
+current_AGMIRST  .setValue(TCS_Status.codeString(status.autoguider.agMirrorStatus));
+current_AGFOCDMD .setValue(new Double(status.autoguider.agFocusDemand));
+current_AGFOCUS  .setValue(new Double(status.autoguider.agFocusPos));
+current_AGFOCST  .setValue(TCS_Status.codeString(status.autoguider.agFocusStatus));
+current_AGFILDMD .setValue(TCS_Status.codeString(status.autoguider.agFilterDemand));
+current_AGFILPOS .setValue(TCS_Status.codeString(status.autoguider.agFilterPos));
+current_AGFILST  .setValue(TCS_Status.codeString(status.autoguider.agFilterStatus));
+
+// current_LMAZPOS  .setValue(new Double(status.limits.azPosLimit));
+// current_LMAZNEG  .setValue(new Double(status.limits.azNegLimit));
+// current_LMALTPOS .setValue(new Double(status.limits.altPosLimit));
+// current_LMALTNEG .setValue(new Double(status.limits.altNegLimit));
+// current_LMROTPOS .setValue(new Double(status.limits.rotPosLimit));
+// current_LMROTNEG .setValue(new Double(status.limits.rotNegLimit));
+// current_LMAZTIM  .setValue(new Double(status.limits.timeToAzLimit));
+// current_LMAZDIR  .setValue(TCS_Status.codeString(status.limits.azLimitSense));
+// current_LMALTTIM .setValue(new Double(status.limits.timeToAltLimit));
+// current_LMALTDIR .setValue(TCS_Status.codeString(status.limits.altLimitSense));
+// current_LMALTTIM .setValue(new Double(status.limits.timeToRotLimit));
+// current_LMROTDIR .setValue(TCS_Status.codeString(status.limits.rotLimitSense));
+
+current_AZDMD  .setValue(new Double(status.mechanisms.azDemand));
+current_AZPOS  .setValue(new Double(status.mechanisms.azPos));
+current_AZSTAT .setValue(TCS_Status.codeString(status.mechanisms.azStatus));
+current_ALTDMD  .setValue(new Double(status.mechanisms.altDemand));
+current_ALTPOS  .setValue(new Double(status.mechanisms.altPos));
+current_ALTSTAT .setValue(TCS_Status.codeString(status.mechanisms.altStatus));
+current_AIRMASS .setValue(new Double(status.astrometry.airmass));
+current_ROTDMD   .setValue(new Double(status.mechanisms.rotDemand));
+current_ROTPOS   .setValue(new Double(status.mechanisms.rotPos));
+current_ROTMODE  .setValue(TCS_Status.codeString(status.mechanisms.rotMode));
+current_ROTSKYPA .setValue(new Double(status.mechanisms.rotSkyAngle));
+current_ROTSTAT  .setValue(TCS_Status.codeString(status.mechanisms.rotStatus));
+current_ENC1DMD .setValue(TCS_Status.codeString(status.mechanisms.encShutter1Demand));
+current_ENC1POS .setValue(TCS_Status.codeString(status.mechanisms.encShutter1Pos)); 
+current_ENC1STAT .setValue(TCS_Status.codeString(status.mechanisms.encShutter1Status));
+current_ENC2DMD .setValue(TCS_Status.codeString(status.mechanisms.encShutter2Demand));
+current_ENC2POS .setValue(TCS_Status.codeString(status.mechanisms.encShutter2Pos)); 
+current_ENC2STAT .setValue(TCS_Status.codeString(status.mechanisms.encShutter2Status));
+current_FOLDDMD  .setValue(TCS_Status.codeString(status.mechanisms.foldMirrorDemand));
+current_FOLDPOS  .setValue(TCS_Status.codeString(status.mechanisms.foldMirrorPos));
+current_FOLDSTAT .setValue(TCS_Status.codeString(status.mechanisms.foldMirrorStatus));
+current_PMCDMD .setValue(TCS_Status.codeString(status.mechanisms.primMirrorCoverDemand));
+current_PMCPOS .setValue(TCS_Status.codeString(status.mechanisms.primMirrorCoverPos));
+current_PMCSTAT .setValue(TCS_Status.codeString(status.mechanisms.primMirrorCoverStatus));
+current_FOCDMD   .setValue(new Double(status.mechanisms.secMirrorDemand));
+current_TELFOCUS .setValue(new Double(status.mechanisms.secMirrorPos));
+current_DFOCUS   .setValue(new Double(status.mechanisms.focusOffset));
+current_FOCSTAT  .setValue(TCS_Status.codeString(status.mechanisms.secMirrorStatus));
+current_MIRSYSST .setValue(TCS_Status.codeString(status.mechanisms.primMirrorSysStatus));
+
+current_WMSSTAT   .setValue(TCS_Status.codeString(status.meteorology.wmsStatus));
+current_WMSRAIN   .setValue(TCS_Status.codeString(status.meteorology.rainState));
+current_WMSMOIST  .setValue(new Double(status.meteorology.moistureFraction));
+current_TEMPTUBE  .setValue(new Double(status.meteorology.serrurierTrussTemperature));
+current_WMOILTMP  .setValue(new Double(status.meteorology.oilTemperature));
+current_WMSPMT    .setValue(new Double(status.meteorology.primMirrorTemperature));
+current_WMFOCTMP  .setValue(new Double(status.meteorology.secMirrorTemperature));
+current_WMAGBTMP  .setValue(new Double(status.meteorology.agBoxTemperature));
+current_WMSTEMP   .setValue(new Double(status.meteorology.extTemperature + KELVIN));
+current_WMSDEWPT  .setValue(new Double(status.meteorology.dewPointTemperature));
+current_WINDSPEE  .setValue(new Double(status.meteorology.windSpeed));
+current_WMSPRES   .setValue(new Double(status.meteorology.pressure));
+current_WMSHUMID  .setValue(new Double(status.meteorology.humidity*100.0));
+current_WINDDIR   .setValue(new Double(status.meteorology.windDirn));
+
+current_NETSTATE .setValue(TCS_Status.codeString(status.state.networkControlState));
+current_ENGSTATE .setValue(TCS_Status.codeString(status.state.engineeringOverrideState));
+current_TELSTATE .setValue(TCS_Status.codeString(status.state.telescopeState));
+current_TCSSTATE .setValue(TCS_Status.codeString(status.state.tcsState));
+current_PWRESTRT .setValue(new Boolean(status.state.systemRestartFlag));
+current_PWSHUTDN .setValue(new Boolean(status.state.systemShutdownFlag));
+
+// current_TIMEMJD .setValue(status.time.mjd);
+// current_TIMEUT1 .setValue(status.time.ut1);
+current_LST     .setValue(Position.formatHMSString(status.time.lst/13750.987083533, ":"));
+
+current_REFPRES  .setValue(new Double(status.astrometry.refractionPressure));
+current_REFTEMP  .setValue(new Double(status.astrometry.refractionTemperature + KELVIN));
+current_REFHUMID .setValue(new Double(status.astrometry.refractionHumidity));
+
+current_MOONDIST.setValue(new Double(Math.toDegrees(target.getAngularDistance(moon))));
+current_MOONFRAC.setValue(new Double(0.5*(1.0 + Math.cos(Math.PI-angle))));
+current_MOONALT.setValue(new Double(Math.toDegrees(moon.getAltitude())));
+current_MOONSTAT.setValue("UP");
+current_MOONSTAT.setValue("DOWN");

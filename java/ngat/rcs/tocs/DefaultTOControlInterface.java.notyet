@@ -1,0 +1,42 @@
+package ngat.rcs.tocs;
+
+import java.rmi.*;
+import java.util.*;
+
+import ngat.phase2.*;
+
+public class DefaultTOControlInterface extends UnicastRemoteObject implements TOControlInterface {
+
+    /** TOControlAgent's job queue.*/
+    List jobQueue;
+
+    public  DefaultTOControlInterface(List jobQueue) throws RemoteException {
+	super();
+	this.jobQueue = jobQueue;
+    }
+
+    /** Slew onto target and track.*/
+    public void tocSlew(Source source, TOControlResponseHandler trh) throws RemoteException {
+
+	// first work out if we can even see the target.	
+	Site   site = RCS_Controller.controller.getObservatorySite(); 
+	double domeLimit = RCS_Controller.controller.getDomelimit();
+
+	Position target  = source.getPosition();	
+	double   srcElev = target.getAltitude(now, site);
+	if (srcElev < domeLimit)
+	    throw new TOCException("Target: "+src.getName()+
+				   " elevation: "+Position.toDegrees(srcElev,2)+
+				   " is below dome limit: "+Position.toDegrees(domeLimit,2));
+
+	// ok so far
+	
+
+    }
+
+    /** Select and configure the relevant instrument.*/
+    public void tocConfigure(InstrumentConfig config, TOControlResponseHandler trh) throws RemoteException {
+
+    }
+
+}

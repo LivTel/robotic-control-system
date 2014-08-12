@@ -1,0 +1,134 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+current_CAT_NAME
+current_OBJECT
+current_CAT_RA
+current_CAT_DEC
+current_APP_RA
+current_APP_DEC
+current_RA
+current_DEC
+current_LST
+// current_TELSTAT
+// current_TELFOCUS
+// current_DFOCUS  
+// current_AIRMASS 
+// current_ROTMODE 
+// current_ROTSKYPA
+// current_AZIMUTH
+// current_ALTITUDE
+// current_WMSHUMID
+// current_WMSPRES 
+// current_WMSTEMP 
+// current_WINDSPEE
+// current_WINDDIR 
+// current_TEMPTUBE
+// current_REFHUMID
+// current_REFPRES 
+// current_REFTEMP 
+// current_AGFOCUS 
+// current_AGSLIDE 
+// current_AGFILTER
+current_AUTOGUID  
+current_AGSTATE  
+current_AGMODE   
+current_AGGMAG   
+current_AGFWHM   
+current_AGMIRDMD 
+current_AGMIRPOS 
+current_AGMIRST  
+current_AGFOCDMD 
+current_AGFOCUS  
+current_AGFOCST  
+current_AGFILDMD 
+current_AGFILPOS 
+current_AGFILST  
+// current_LMAZPOS  
+// current_LMAZNEG  
+// current_LMALTPOS 
+// current_LMALTNEG 
+// current_LMROTPOS 
+// current_LMROTNEG 
+// current_LMAZTIM  
+// current_LMAZDIR  
+// current_LMALTTIM 
+// current_LMALTDIR 
+// current_LMALTTIM 
+// current_LMROTDIR 
+current_AZDMD  
+current_AZPOS  
+current_AZSTAT 
+current_ALTDMD  
+current_ALTPOS  
+current_ALTSTAT 
+current_AIRMASS 
+current_ROTDMD   
+current_ROTPOS   
+current_ROTMODE  
+current_ROTSKYPA 
+current_ROTSTAT  
+current_ENC1DMD 
+current_ENC1POS 
+current_ENC1STAT 
+current_ENC2DMD 
+current_ENC2POS 
+current_ENC2STAT 
+current_FOLDDMD  
+current_FOLDPOS  
+current_FOLDSTAT 
+current_PMCDMD 
+current_PMCPOS 
+current_PMCSTAT 
+current_FOCDMD   
+current_TELFOCUS 
+current_DFOCUS   
+current_FOCSTAT  
+current_MIRSYSST 
+current_WMSSTAT   
+current_WMSRAIN   
+current_WMSMOIST  
+current_TEMPTUBE  
+current_WMOILTMP  
+current_WMSPMT    
+current_WMFOCTMP  
+current_WMAGBTMP  
+current_WMSTEMP   
+current_WMSDEWPT  
+current_WINDSPEE  
+current_WMSPRES   
+current_WMSHUMID  
+current_WINDDIR   
+current_NETSTATE 
+current_ENGSTATE 
+current_TELSTATE 
+current_TCSSTATE 
+current_PWRESTRT 
+current_PWSHUTDN 
+// current_TIMEMJD 
+// current_TIMEUT1 
+current_LST     
+current_REFPRES  
+current_REFTEMP  
+current_REFHUMID 
+current_MOONDIST
+current_MOONFRAC
+current_MOONALT
+current_MOONSTAT
+current_MOONSTAT

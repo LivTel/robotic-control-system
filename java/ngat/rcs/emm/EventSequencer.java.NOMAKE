@@ -1,0 +1,351 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.emm;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+
+import java.util.*;
+/** Implementation of TimeSequencer and ModeSequencer using a List for
+ * the modes and a TreeMap for the Events.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: EventSequencer.java.NOMAKE,v 1.1 2006/05/17 06:31:45 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/emm/RCS/EventSequencer.java.NOMAKE,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public abstract class EventSequencer implements TimeSequencer, Registry {
+    
+    /** Stores the set of modes in force.*/
+    protected List modes;
+    
+    /** Stores the set of timed events.*/
+    protected SortedMap eventTimes;
+    
+    /** Creates an EventSequencer with no events or mode sequences.*/
+    EventSequencer() {
+	modes = new Vector();
+	eventTimes = new TreeMap();
+    }
+    
+    
+    /** Insert a TimeEvent at the specified time.
+     * @param eventCode A code to represent the type of event.
+     * @param time The time of the event.
+     */
+    public void insert(int eventCode, long time) {
+	eventTimes.put(new Date(time), new Integer(eventCode));
+    }
+    
+    /** Returns the time of the next event of the specified type.
+     * @param eventCode A code to represent the type of event.
+     */
+    public long getNext(int eventCode) {
+	Iterator it = eventTimes.keySet().iterator();
+	while (it.hasNext()) {  
+	    Date    date = (Date)it.next();
+	    Integer code = (Integer)eventTimes.get(date); 
+	    if (code.intValue() == eventCode)
+		return date.getTime();
+	}
+	return -1L;
+    }
+    
+    /** Returns the time of the next event of the specified type
+     * and removes it from the list.  
+     * @param eventCode A code to represent the type of event.
+     */
+    public long useNext(int eventCode) { 
+	Iterator it = eventTimes.keySet().iterator();
+	while (it.hasNext()) {  
+	    Date    date = (Date)it.next();
+	    Integer code = (Integer)eventTimes.get(date); 
+	    if (code.intValue() == eventCode)
+		eventTimes.remove(date);
+	    return date.getTime();
+	}
+	return -1L;
+    }
+    
+    /** Returns the code for the next event in sequence leaving the 
+     * event in place - further calls will return the same event
+     * unless events are slotted into the list before it. It is a good
+     * idea to call clearExpired() before calling getNext() getNextEvent()
+     * and so forth to ensure that already expired events are not returned.
+     * These methods do not check to see if the returned events have expired.*/
+    public int getNextEvent() {
+	Date    date = (Date)eventTimes.firstKey();
+	Integer code = (Integer)eventTimes.get(date);
+	return code.intValue();
+    }
+    
+    /** Returns the code for the next event and removes it from 
+     * the list.*/
+    public int useNextEvent() {
+	Date    date = (Date)eventTimes.firstKey();
+	Integer code = (Integer)eventTimes.get(date);
+	eventTimes.remove(date);
+	return code.intValue();
+    }
+
+
+    /** Removes all events of the specified type from the list.
+     * @param eventCode A code to represent the type of event.
+     */
+    public void erase(int eventCode) {
+	Iterator it = eventTimes.keySet().iterator();
+	while (it.hasNext()) {  
+	    Date    date = (Date)it.next();
+	    Integer code = (Integer)eventTimes.get(date); 
+	    if (code.intValue() == eventCode)
+		it.remove();
+	}
+    }
+
+    /** Removes all events irrespective of type from the list.
+     */
+    public void eraseAll() {
+	eventTimes.clear();
+    }
+
+    /** Removes all expired events i.e. those whose time is less than the
+     * time returned by System.currentTimeMillis().
+     */
+    public void clearExpired() {
+	Date now = new Date(System.currentTimeMillis());
+	Iterator it = eventTimes.keySet().iterator();
+	while (it.hasNext()) {
+	    Date date = (Date)it.next();
+	    if (date.before(now))
+		it.remove();
+	}	
+    }
+
+    /** Set the period during which a particular mode of operation
+     * is to be defined. Within the specified period a call to
+     * getMode(modeCode) or isMode(modeCode) will return true, outside
+     * of this period these methods will return false.
+     * It is possible to set a given mode for several contiguous or 
+     * overlapping periods.
+     * @param modeCode A code to represent the 'type' of mode in force.
+     */
+    public void setMode(int modeCode, long time1, long time2) {
+	modes.add(new ModeSequence(modeCode, time1, time2));
+    }
+
+    /** Set the start time for entering a specified mode. No end time
+     * is specified so that a call to getMode() or isMode() for any time
+     * after the specifed time will return true. The method endMode() with
+     * matching parameters is used to cancel this call. Implementors should
+     * ensure that an appropriate mechanism is employed so that a call to
+     * endMode() cancels the correct startMode() and not others.
+     */
+    public void startMode(int modeCode, long time) {
+	modes.add(new ModeSequence(modeCode, time));
+    }
+
+    /** Looks for an unterminated ModeSequence with the specified code.
+     * The sequence has its end time set to the specified time. If no
+     * ModeSequence with the specified code is found or none with an
+     * appropriately matching start time, then the method returns silently.
+     */
+    public void endMode(int modeCode, long time) {
+	// Search throwugh the modes for any unfinished we use the first we find if any
+	ModeSequence mode = null;
+	Iterator it = modes.iterator();
+	while (it.hasNext()) {  
+	    mode = (ModeSequence)it.next();
+	    if (  (mode.getStart() < time) && 
+		  (mode.getEnd() < 0L) &&
+		  (mode.getCode() == modeCode)) {
+		mode.setEnd(time);
+		return;
+	    }
+	}
+    }
+    
+    /** Returns the start time for the start of the next mode with the
+     * specified code. If no mode with the specified code exists then
+     * returns -1L;
+     * @param modeCode A code to represent the 'type' of mode in force.
+     */
+    public long getStart(int modeCode) {
+	long now = System.currentTimeMillis();
+	ModeSequence mode = null;
+	Iterator it = modes.iterator();
+	while (it.hasNext()) {  
+	    mode = (ModeSequence)it.next();
+	    if (mode.getStart() > now && modeCode == mode.getCode()) {
+		return mode.getStart();
+	    }
+	}
+	return -1L;
+    }
+    
+    /** Returns true if the specified mode is in force at the specified time.
+     * @param modeCode A code to represent the 'type' of mode in force.
+     * @param time The time at which the mode is to be checked.
+     */
+    public boolean isMode(int modeCode, long time) {
+	ModeSequence mode = null;
+	Iterator it = modes.iterator();
+	while (it.hasNext()) {  
+	    mode = (ModeSequence)it.next();
+	    if (  (mode.getStart() < time) && 
+		  ( (mode.getEnd() > time) || (mode.getEnd() < 0L) ) && 
+		  (modeCode == mode.getCode() ) )
+		return true;
+	}
+	return false;
+    }
+
+    /** Returns true if the specified mode is in force at this instant.
+     * @param modeCode A code to represent the 'type' of mode in force.
+     */
+    public boolean isMode(int modeCode) {
+	return isMode(modeCode, System.currentTimeMillis());
+    }
+
+    /** Returns an array of codes to represent the mode(s) in force at the
+     * specified time. The choice of codes is left to the application employing
+     * the mode settings. If there is no mode in force i.e. none has
+     * been set the implementing class should return an appropriate code.
+     * @param time The time at which the mode is to be checked.
+     */ 
+    public int[] getModes(long time) {
+	Vector modeList = new Vector();
+	ModeSequence mode = null;
+	Iterator it = modes.iterator();
+	while (it.hasNext()) {  
+	    mode = (ModeSequence)it.next();
+	    if (  (mode.getStart() < time) && 
+		  ( (mode.getEnd() > time) || (mode.getEnd() < 0L) ) )
+		modeList.add(mode);
+	}
+	int[] marray = new int[modeList.size()];
+	int im = 0;
+	it = modeList.iterator();
+	while (it.hasNext()) {  
+	    mode = (ModeSequence)it.next();
+	    marray[im++] = mode.getCode();
+	}
+	return marray;	
+    }
+
+    /** Returns an array of codes to represent the mode(s) in force at this 
+     * instant. The choice of codes is left to the application employing
+     * the mode settings. If there is no mode in force i.e. none has
+     * been set the implementing class should return an appropriate code.
+     */ 
+    public int[] getModes() {
+	return getModes(System.currentTimeMillis());
+    }
+
+    /** Stores the details of a mode sequence.*/
+    class ModeSequence {
+
+	/** The code of this mode.*/
+	private int code;
+
+	/** The start of this mode.*/
+	private long start;
+
+	/** The end of this mode.*/
+	private long end;
+
+	/** Create a ModeSequence with specified mode and times.*/
+	ModeSequence(int code, long time1, long time2) {
+	    this.code  = code;
+	    this.start = time1;
+	    this.end   = time2;
+	}
+
+	/** Create a ModeSequence with open end time.*/
+	ModeSequence(int code, long time1) {
+	    this(code, time1, -1L);
+	}
+
+	/** Create a ModeSequence starting now and with open end time.*/
+	ModeSequence(int code) {
+	    this(code, System.currentTimeMillis());
+	}
+
+	/** Returns the code for this ModeSequence.*/
+	public int  getCode()  { return code; }
+
+	/** Sets the code for this ModeSequence.
+	 * @param code The code to set.*/
+	public void setCode(int code) { this.code = code; }
+
+	/** Returns the start time for this ModeSequence.
+	 */
+	public long getStart() { return start; }
+	
+	/** Sets the start time for this ModeSequence.
+	 * @param start The start time to set.*/
+	public void setStart(long start) { this.start = start; }
+
+	/** Returns the end time for this ModeSequence.
+	 * If the mode does not have a specified end time this method
+	 * returns (-1).
+	 */
+	public long getEnd()   { return end; }
+	
+	/** Sets the end time for this ModeSequence.
+	 * @param end The end time to set.*/
+	public void setEnd(long end) { this.end = end; }
+
+    }
+    
+}
+
+/** $Log: EventSequencer.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:31:45  snf
+/** Initial revision
+/**
+/** Revision 1.2  2002/09/16 09:38:28  snf
+/** *** empty log message ***
+/**
+/** Revision 1.1  2001/04/27 17:14:32  snf
+/** Initial revision
+/** */

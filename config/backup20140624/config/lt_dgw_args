@@ -1,0 +1,3 @@
+#!/bin/csh
+
+set GEN_LIST = "lt_oss_monitor"

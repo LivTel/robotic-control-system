@@ -1,0 +1,33 @@
+#!/bin/csh
+
+# ---------------------
+# RCS Terminal Starter.
+# ---------------------
+
+xterm -bg beige -fg black -geometry 160x25+0+0 -title "RCS"&
+
+sleep 1
+xterm -bg darkslategrey -fg deeppink -geometry 120x15+0+250 -title "CONTROL" &
+
+sleep 1
+xterm -bg DarkOrange -fg blue    -geometry  100x25+350+220 -title "CTRL_TRANS"&
+
+xterm -bg VioletRed4 -fg cyan     -geometry 80x25+100+700  -title "ISS LOG"&
+
+sleep 1
+xterm -bg VioletRed4 -fg green    -geometry 80x25+0+418 -title "OPS LOG" &
+
+sleep 1
+xterm -bg VioletRed4 -fg orange   -geometry 140x27+160+328 -title "TASK LOG"&
+
+#xterm -bg VioletRed4 -fg yellow   -geometry 150x25+250+640 -title "ERROR LOG"&
+#xterm -bg VioletRed4 -fg lavender -geometry 100x25+300+620 -title "EVENT LOG"&
+
+sleep 1
+xterm -bg VioletRed4 -fg white    -geometry 80x25+400+150  -title "COMMAND LOG"&
+
+sleep 1 
+xterm -bg green -fg blue -title "PCA" &
+
+sleep 1
+xterm -bg blue -fg green -title "STATUS" &

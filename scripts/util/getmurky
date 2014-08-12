@@ -1,0 +1,118 @@
+#!/bin/csh
+
+
+#while (1)
+
+# Run  from cron at 1 minute intervals
+
+    set sfile = /home/eng/murky.stamp
+
+    set ostamp = `cat $sfile`
+
+    set raw = /home/eng/murky.raw
+
+    /usr/bin/wget -q -O $raw ftp://150.203.92.5/pub/met23/met23.txt
+
+    set data = `cat $raw | sed -e 's/\@/ /'`
+
+    set yr  =  `echo "$data" | awk '{print substr($1,8,4)}'`
+    set mon =  `echo "$data" | awk '{print substr($1,4,3)}'`
+    set day =  `echo "$data" | awk '{print substr($1, 1,2)}'`
+    
+    set tim =  `echo "$data" | awk '{print $36}'`
+    set ctim = `echo $tim | sed -e 's/://'`
+   
+    switch ("$mon")
+	case "JAN"
+	    set mm = 1
+	    breaksw
+	case "FEB"
+	    set mm = 2
+	    breaksw
+	case "MAR"
+	    set mm = 3
+	    breaksw
+	case "APR"
+	    set mm = 4
+	    breaksw
+	case "MAY"
+	    set mm = 5
+	    breaksw
+	case "JUN"
+	    set mm = 6
+	    breaksw
+	case "JUL"
+	    set mm = 7
+	    breaksw
+	case "AUG"
+	    set mm = 8
+	    breaksw
+	case "SEP"
+	    set mm = 9
+	    breaksw
+	case "OCT"
+	    set mm = 10
+	    breaksw
+	case "NOV"
+	    set mm = 11
+	    breaksw
+	case "DEC"
+	    set mm = 12
+	    breaksw
+    endsw
+    
+    set ext   = `echo "$data" | awk '{print $38}'`
+    set dew   = `echo "$data" | awk '{print $43}'`
+    set hum   = `echo "$data" | awk '{print $44}'`
+    set wsp   = `echo "$data" | awk '{print $46}'`
+
+    set enc   = `echo "$data" | awk '{print $51}'`
+    set capsenc = 0
+    if ("$enc" == "Opened") then
+	    set enc = 5
+	    set capsenc = 0
+    else
+	    set enc = 3
+	    set capenc = 1
+    endif 
+
+    set mir   = `echo "$data" | awk '{print $52}'`
+    if ("$mir" == "Opened") then
+	    set mir = 5
+    else
+	    set mir = 3
+    endif
+
+    echo "${yr}"-"${mm}"-"${day}"T"$tim" "$wsp" "$ext" "$dew" "$hum" "$enc" "$mir" >! /home/eng/murky.data
+
+    cat /home/eng/murky.data
+
+
+    # Generate the CAPS copy.
+
+    set cstamp = `echo "$data" | awk '{print $1,$36}'`
+
+    if ($cstamp != $ostamp)
+
+	set cdate = `date -u "+%Y,%j,%H%M"`
+
+	echo ${cdate}",0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,"${capsenc}",0.0,0" >! /var/www/html/metdata
+
+	echo ANU
+	echo ${cdate}",0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,"${capsenc}",0.0,0" 
+
+ 
+    else
+    
+	echo "ANU Date stamp not changed"
+
+    endif
+
+    # Reset the date stamp and save for next time
+    set ostamp = $cstamp
+
+    cat $ostamp >! $sfile
+
+    #sleep 60
+
+end

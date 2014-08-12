@@ -1,0 +1,11 @@
+#!/bin/csh
+
+# gnuyou takes a single param which is the text we want to describe our system
+# with in the gpl header. Uses the base file gnu.txt which needs placing in
+# a standard place like ~dev/tmp/gnutemplate.txt
+
+# gnuyou <system>
+
+set sys = $1
+cat ~dev/tmp/gnutemplate.txt | sed -e "s/XXX/$1/" > ${sys}gnu.txt
+

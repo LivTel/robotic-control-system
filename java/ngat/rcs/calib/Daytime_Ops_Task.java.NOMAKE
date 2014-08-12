@@ -1,0 +1,389 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.util.*;
+import ngat.astrometry.*;
+
+import java.io.*;
+import java.util.*;
+import java.text.*;
+
+public class Daytime_Ops_Task extends DefaultModalTask {
+
+    protected static final String CLASS = "DaytimeMCA";
+
+    /** Short date format (HH:MM).*/
+    public static final SimpleDateFormat adf = new SimpleDateFormat("HH:mm");
+    
+    protected static Daytime_Ops_Task instance;
+
+    protected static SimpleDateFormat sdf;
+    
+    /** Stores the list of Tasks to perform along with other configurable information.*/
+    protected SortedMap plannedTasks;
+
+    protected TaskDescriptor currentTaskDescriptor;
+    
+    protected int taskCount = 0;
+    
+    protected int taskCompleted = 0;
+    
+    /** File date code for history file.*/
+    protected static String histFileExt;
+
+    /** The CA.*/
+    RCS_ControlTask controlAgent;
+
+    public Daytime_Ops_Task(String name, TaskManager manager) {
+	super(name, manager);
+	//plannedTasks = new TreeMap();	
+    }
+
+    /** Creates the initial instance of the ModalTask.
+     */
+    public void initialize(ModalTask mt) {  	
+	instance = (Daytime_Ops_Task)mt;
+	sdf = RCS_Controller.gdf;
+	adf.setTimeZone(RCS_Controller.UTC);
+	histFileExt = RCS_Controller.getObsDate().getDateStamp(); 
+	controlAgent = RCS_ControlTask.getInstance();
+    }
+    
+    /** Returns a reference to the singleton instance.*/
+    public static ModalTask getInstance() {
+	return instance;
+    }
+    
+    /** Configure from File. Reads a list of descriptions of Scripts which will be run as
+     * seperate processes under the control of this Task. The descriptions contain the
+     * following information:
+     * <ul>
+     *  <li> taskName.ID              ID used to identify the Task wrapper.
+     *  <li> taskName.script          The path to the shell script. 
+     *  <li> taskName.start           When the task should be started
+     *                                The usual relative points are in force.
+     *  <li> taskName.priority        MANDATORY or OPTIONAL
+     *  <li> taskName.duration        How long to allow it to run for before worrying.
+     *  <li> taskName.recovery.script Name of a Script to run if the task fails.
+     *  <li> taskName.recovery.action One of CALLOUT, RERUN, IGNORE, ALTERNATIVE.
+     *                                If ALT use the recovery.script above.
+     * </ul>
+     * @param file Configuration file.
+     * @exception IOException If any problem occurs reading the file or does not exist.
+     * @exception IllegalArgumentException If any config information is dodgy.
+     */    
+    public void configure(File file) throws IOException, IllegalArgumentException {
+// 	ConfigurationProperties config = new ConfigurationProperties();
+// 	config.load(new FileInputStream(file));
+// 	String property = null;
+// 	String name     = null;
+// 	String id       = null;
+// 	String script   = null;
+// 	long   start    = 0L;
+// 	long   finish   = 0L; 
+// 	int    length   = 0;
+// 	String priority = null;
+	
+// 	DateParser parser = new DateParser(RCS_Controller.controller.getObsDate());
+// 	Enumeration e = config.propertyNames();
+// 	while (e.hasMoreElements()) {
+// 	    property = (String)e.nextElement();
+// 	    if (property.indexOf(".name") != -1) {
+// 		// Actual Task-Script name.
+// 		name = property.substring(0, property.indexOf(".name"));
+// 		System.err.println("Found Task-Script: "+property);
+// 		// Get other params.
+// 		id     = config.getProperty(property);         // Task ID.
+// 		script = config.getProperty(name+".script");   // File path.
+// 		start  = parser.parse(config.getProperty(name+".start")); // Earliest start ([%zz(+|-)]HH:mm).
+// 		finish = parser.parse(config.getProperty(name+".finish")); // Latest completion.
+// 		length = config.getIntValue(name+".duration", 60); // Length (minutes).
+// 		priority = config.getProperty(name+".urgent");   // OPTIONAL | MANDATORY
+// 		// Process script parameters.
+// 		taskLog.log(1, CLASS, 
+// 			    "\nLoaded Daytime task: "+
+// 			    "\n\tName:        "+name+
+// 			    "\n\tID:          "+id+
+// 			    "\n\tScript:      "+script+
+// 			    "\n\tStart after: "+sdf.format(new Date(start))+
+// 			    "\n\tFinish by:   "+sdf.format(new Date(finish))+
+// 			    "\n\tDuration:    "+length+
+// 			    "\n\tUrgent:      "+priority);
+		
+// 		plannedTasks.put(id, new TaskDescriptor(id, script, start, finish, length*60*1000L, priority)); 
+// 		taskCount++;
+// 	    }
+	    
+// 	}
+// 	taskLog.log(1, CLASS, "There are: "+taskCount+" subtasks to execute.");
+    }
+    
+    /** Loads the current history file to allow this Task to modify its current config.
+     * @param history The history map.
+     * @exception IOException If any problem occurs reading the file or does not exist.
+     * @exception IllegalArgumentException If any config information is dodgy.
+     */    
+    public void loadHistory(Map history) throws IOException, IllegalArgumentException {	
+	
+// 	DateParser parser = new DateParser(RCS_Controller.controller.getObsDate());
+	   	  
+// 	TaskDescriptor td   = null;
+// 	// Iterate over the plannedTasks looking for any info in the HistoryFile.
+// 	Iterator it = plannedTasks.keySet().iterator();
+// 	while (it.hasNext()) {
+// 	    String taskId = (String)it.next();
+// 	    td = (TaskDescriptor)plannedTasks.get(taskId);
+	  
+// 	    // Look to see if the Task finished. (We don't allow failures - task is not retried).
+// 	    boolean finished   = false;
+// 	    long    finishTime = 0L; 
+// 	    taskLog.log(1, CLASS, "Searching for end time: ["+name+"."+td.id+"]");
+// 	    String  finish     = history.getProperty(name+"."+td.id+".done",    "NO");
+// 	    if ( ! finish.equals("NO")) {
+// 		// Ok its done.
+// 		finishTime = parser.parse(finish);
+// 		finished = true;
+// 		taskLog.log(1, CLASS, "Task: "+td.id+" Finished at: "+sdf.format(new Date(finishTime)));
+// 	    }	    
+
+// 	    if ( ! finished ) {
+// 		td.done = false;
+// 	    } else {
+// 		td.done = true;
+// 		taskCompleted++;
+// 	    }
+
+// 	}
+	//taskLog.log(1, CLASS, 
+	//    "After loadHistory: There are "+taskCount+
+	//    " Tasks of which "+(taskCompleted == taskCount ? "ALL" : "")+
+	//    taskCompleted+" are done.");
+    }
+
+    /** Override to return <i>true</i> if it is 'daytime' i.e. The sun is risen
+     * as calculated by Astrometry, or a SUNRISE trigger has occurred.
+     */
+    public boolean acceptControl() { 	
+// 	//System.err.println("DAY::Checking for control accept");
+
+// 	ObsDate obsDate = RCS_Controller.controller.getObsDate();
+// 	long now = System.currentTimeMillis();
+
+// 	//if (obsDate.isPreNight(now) || obsDate.isPostNight(now)) {
+// 	    //System.err.println("**"+obsDate.getTimePeriod(now)+
+// 		//	       "- DAYTIME OPS Feasible:");
+// 	    taskLog.log(1, CLASS, 
+// 			"AcceptControl:: There are "+taskCount+
+// 			" Tasks of which "+taskCompleted+" are done.");
+// 	    if (taskCompleted == taskCount) {
+// 		//System.err.println("** All Tasks are done - FAIL DAYTIME OPS");
+// 		return false; 
+// 	    } else {
+// 		//System.err.println("** Some Tasks are NOT done - DAYTIME OPS Feasible:");
+		
+// 	    }
+// 	    //} else {	   
+// 	   // System.err.println("**"+obsDate.getTimePeriod(now)+
+// 		//	       "- DAYTIME OPS NOT Feasible:");
+// 	    //return false;
+// 	    //}
+
+	
+// 	// Iterate over the plannedTasks looking for any which can be started now.
+// 	// As soon as we find one we say OK! - for now we check them ALL for debug
+// 	boolean debugOk = false;
+// 	Iterator it = plannedTasks.keySet().iterator();
+// 	while (it.hasNext()) {
+// 	    String taskId     = (String)it.next();
+// 	    TaskDescriptor td = (TaskDescriptor)plannedTasks.get(taskId);
+
+// 	    // Weird ...
+// 	    if (td.finish < td.start)
+// 		System.err.println("DAY::Task: "+taskId+
+// 			   " WEIRD Starts: "+ sdf.format(new Date(td.start))+
+// 			   " Ends: "+sdf.format(new Date(td.finish)));
+		
+// 	    // a) Ignore if they've completed.
+// 	    if (td.done) {
+// 		//System.err.println("DAY::Task: "+taskId+" IS DONE -> SKIP");
+// 		continue;
+// 	    }
+// 	    // b). If Before its start time cant start.
+// 	    if (td.start > now) {
+// 		//System.err.println("DAY::Task: "+taskId+" TOO EARLY Starts: "+
+// 		//		   sdf.format(new Date(td.start)));
+// 		if (td.id.equals("EVENING_REBOOT"))
+// 		    System.err.println("EV_REBOOT in: "+ (td.start-now)/1000.0 +" secs.");
+// 		continue;
+// 	    }	   
+// 	    // c). After Latest start time.
+// 	    if (td.finish - td.duration < now) {
+// 		//System.err.println("DAY::Task: "+taskId+" TOO LATE Should have started by: "+
+// 			//	   sdf.format(new Date(td.finish - td.duration)));
+// 		continue;
+// 	    }	 
+// 	    // Got this far must be OK but keep looking!
+// 	    debugOk = true;
+// 	} 
+	
+// 	//}
+	
+// 	return debugOk;
+	return true;
+    } 
+    
+    public Task getNextJob() {
+// 	long now = System.currentTimeMillis();
+// 	Iterator it = plannedTasks.keySet().iterator();
+// 	ScriptTask task = null;
+// 	TaskDescriptor td   = null;
+// 	// Look for a Task which has not been done.
+// 	while (it.hasNext()) {
+// 	    String taskId = (String)it.next();
+// 	    td = (TaskDescriptor)plannedTasks.get(taskId);
+// 	    if (td.done) continue;
+// 	    if ((td.start < now) && 
+// 		(td.finish - td.duration > now)) { 
+// 		task = new ScriptTask(td.id, this, td.scriptFileName, histFileExt);
+// 		taskLog.log(1, CLASS, "Returning Next Job: "+task.getName());
+// 		currentTaskDescriptor = td;
+// 		return task;	   
+// 	    }
+// 	}
+	return null;
+    }
+
+    /** Overridden to handle completion of a subTask. 
+     * The subtask's completion state is written to the history file.
+     * @param task The subTask which has done.
+     */
+    public void onSubTaskDone(Task task){
+	super.onSubTaskDone(task);	
+// 	currentTaskDescriptor.done = true;
+// 	taskCompleted++;
+	
+// 	String text = 
+// 	    name+"."+
+// 	    currentTaskDescriptor.id+
+// 	    ".done="+adf.format(new Date());
+	
+// 	try {
+// 	    controlAgent.appendHistory(text);
+// 	} catch (IOException iox) {
+// 	    errorLog.log(1, CLASS, name, "onSubTaskDone",
+// 			 "Writing completion details to history: "+iox);
+// 	}
+    }
+
+    
+    /** Overridden to handle failure of a subTask. 
+     * The subtask's failure state is written to the history file.
+     * @param task The subTask which has done.
+     */
+    public void onSubTaskFailed(Task task){
+	super.onSubTaskFailed(task);	
+// 	taskCompleted++;
+	
+// 	// This makes a unique key for this failure on this invokation.
+// 	String text = 
+// 	    name+"."+
+// 	    currentTaskDescriptor.id+   
+// 	    ".failed="+adf.format(new Date());
+
+// 	try {
+// 	    controlAgent.appendHistory(text);
+// 	} catch (IOException iox) {
+// 	    errorLog.log(1, CLASS, name, "onSubTaskFailed",
+// 			 "Writing failure details to history: "+iox);
+// 	}
+	
+    }
+
+    
+    /** Overridden to carry out specific work after the init() method is called.
+     * Sets a number of FITS headers and subscribes to any required events.*/
+    public void onInit() {
+	super.onInit();
+	opsLog.log(1, "Starting Daytime-Operations Mode.");
+    }
+
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Daytime-Operations Mode.");
+    }
+
+    /** EventSubscriber method.
+     */
+    public void notifyEvent(String eventId, Object data) {}
+    
+
+    class TaskDescriptor {
+
+	public String id;
+	
+	public String scriptFileName;
+
+	public long start;
+
+	public long finish;
+
+	public long duration;
+
+	public String priority;
+
+	public boolean done = false;
+
+	TaskDescriptor(String id, String script, long start, long finish, long duration, String priority) {
+	    this.id             = id;
+	    this.scriptFileName = script;
+	    this.start          = start;
+	    this.finish         = finish;
+	    this.duration       = duration;
+	    this.priority       = priority;
+	}
+
+    }
+
+}

@@ -1,0 +1,830 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.astrometry.*;
+import ngat.util.*;
+import ngat.rcs.gui.*;
+
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.lang.reflect.*;
+
+/**
+ * Calibration operations are performed by dedicated manager tasks which are
+ * subclasses of CalibrationTask.
+ * The following parameters are required in order to set up these MCAs.
+ *  configFile      A file containing specific configuration for this manager.
+ *  taskClass       The class which implements this manager.
+ *  recoveryClass   A class which handles recovery on failure. 
+ *  start           Earliest time this manager can be enabled.  
+ *  finish          Latest time by which this manager must have completed. 
+ *  duration        How long the job is expected to take.
+ *  window          The size of the enablement window.
+ *  repeat          True if this manager can be invoked repeatedly. 
+ *  interval        The repeat interval.
+ *  priority        Priority to allow selection between MCAs.
+ *  maxFailCount    Max number of failed attempts for this MCA.
+ *
+ * It is expected that these params will be revised - e.g. to allow a CAL_MCA
+ * to read its enablement intervals from a file in its own specific form rather 
+ * than using the restrictive settings currently available using the
+ * (start, end, interval, window, duration) model.
+ *
+ */
+public class Calibration_Ops_Task extends DefaultModalTask {
+
+    protected static final String CLASS = "CCA";
+
+    /** Minimum priority for Tasks.*/
+    public static final int TASK_MINIMUM_PRIORITY = 99;
+
+    /** Default value for maiximum failure count.*/
+    public static final int DEFAULT_MAX_FAIL_COUNT = 1;
+
+    protected static Calibration_Ops_Task instance;
+    
+    /** General date format.*/
+    protected static SimpleDateFormat sdf = RCS_Controller.gdf;
+ 
+    /** Short date format (HH:MM).*/
+    public static final SimpleDateFormat adf = new SimpleDateFormat("HH:mm");
+    
+    /** Shortish date format (HHMMSS).*/
+    public static final SimpleDateFormat kdf = new SimpleDateFormat("HHmmss");
+
+    /** Stores the list of Tasks to perform along with other configurable information.*/
+    protected SortedMap plannedTasks;
+ 
+    /** Counts number of individual CalibrationTasks to perform.*/
+    protected int taskCount = 0;
+    
+    /** Counts number of individual CalibrationTasks completed so far this run.*/
+    protected int taskCompleted = 0;
+  
+    /** List of Tasks which are currently available to run.*/
+    protected List availableTasks;
+
+    /** Descriptor for currently executing CalibrationTask.*/
+    protected TaskDescriptor currentTaskDescriptor;
+
+    /** TEMP Counts subtasks started so far.*/
+    int execCount = 0;
+
+    /** The CA.*/
+    RCS_ControlTask controlAgent;
+
+    protected Calibration_Ops_Task(String name, TaskManager manager) {
+	super(name, manager);
+	plannedTasks   = new TreeMap();
+	availableTasks = new Vector();	
+    }
+
+    /** Creates the initial instance of the ModalTask.
+     */
+    public void initialize(ModalTask mt) {  	
+	instance = (Calibration_Ops_Task)mt;
+	adf.setTimeZone(RCS_Controller.UTC);
+	controlAgent = RCS_ControlTask.getInstance();
+    }
+
+    /** Returns a reference to the singleton instance.*/
+    public static ModalTask getInstance() {
+	return instance;
+    }
+    
+    /** Configure from File.
+     * @param file Configuration file.
+     * @exception IOException If any problem occurs reading the file or does not exist.
+     * @exception IllegalArgumentException If any config information is dodgy.
+     */    
+    public void configure(File file) throws IOException, IllegalArgumentException { 
+	ConfigurationProperties config = new ConfigurationProperties();
+	config.load(new FileInputStream(file));
+	String  name    = null;
+	String  property = null;
+	String  id      = null;
+	String  tClass  = null;
+	String  rClass  = null;
+	String  cfgFile = null;
+	long    start   = 0L;
+	long    finish  = 0L;
+	int     interval= 0;
+	boolean repeat  = false;
+	int     max     = 0; 
+	int     window  = 0;
+	int     priority= TASK_MINIMUM_PRIORITY;
+	int     maxFailCount = DEFAULT_MAX_FAIL_COUNT;
+
+	DateParser parser = new DateParser(RCS_Controller.controller.getObsDate());
+	Enumeration e = config.propertyNames();
+	while (e.hasMoreElements()) {
+	    property = (String)e.nextElement();
+	    if (property.indexOf(".ID") != -1) {
+		// Actual Task name.
+		name = property.substring(0, property.indexOf(".ID"));
+		System.err.println("Found Calib-Task: "+property);
+		// Get other params.
+		id      = config.getProperty(property);         // Task ID.
+		tClass  = config.getProperty(name+".task.class"); // Task Class.
+		rClass  = config.getProperty(name+".task.recovery");
+		cfgFile = config.getProperty(name+".config");
+		start   = parser.parse(config.getProperty(name+".earliest.start"));
+		finish  = parser.parse(config.getProperty(name+".latest.finish"));
+		priority= config.getIntValue(name+".task.priority", TASK_MINIMUM_PRIORITY);
+
+		// Repeated Tasks.
+		repeat  = config.getBooleanValue(name+".can.repeat", false);
+		if (repeat)
+		    interval = config.getIntValue(name+".repeat.interval", 0); // Minutes !
+		else
+		    interval = 0;
+		max     = config.getIntValue(name+".max.time", 60);    // Minutes !
+		window  = config.getIntValue(name+".window.size", 60); // Minutes !
+
+		maxFailCount = config.getIntValue(name+".max.fail.count", DEFAULT_MAX_FAIL_COUNT);
+		
+		taskLog.log(1, CLASS, 
+			    "\nLoaded Calibration task: "+
+			    "\n\tName:          "+id+
+			    "\n\tClass:         "+tClass+
+			    "\n\tRecovery:      "+rClass+
+			    "\n\tConfig File:   "+cfgFile+
+			    "\n\tStart After:   "+sdf.format(new Date(start))+			 
+			    "\n\tFinish By:     "+sdf.format(new Date(finish))+
+			    "\n\tMax Duration:  "+max+" Mins."+			   
+			    "\n\tExec Window:   "+window+" Mins."+
+			    "\n\tPriority:      "+priority+
+			    "\n\tRepeatable:    "+(repeat ? "YES" : "NO")+
+			    "\n\tInterval:      "+interval+" Mins.");
+				
+		// Store the TaskClassID and info against its ID.		
+		plannedTasks.put(id, 
+				 new TaskDescriptor(id,     
+						    cfgFile, 
+						    tClass, 
+						    rClass, 
+						    start,  
+						    finish, 
+						    max*60*1000L, 
+						    window*60*1000L, 
+						    repeat, 
+						    interval*60*1000L,
+						    priority,
+						    maxFailCount)); 
+		taskCount++;
+	    }
+	   
+	}
+	taskLog.log(1, CLASS, "There are: "+taskCount+" subtasks to execute.");
+    }
+
+    /** Loads the current history file to allow this Task to modify its current config.
+     * The CalibrationAgent MUST start during the pre-night period of an ObsDate - 
+     * this means that the historyFile will be correct for that ObsDate right through until 
+     * the start of the next ObsDate.
+     * LoadHistory() is called only on initial bootup (or reboot) and so
+     * the HistoryFile will not be changed (for the Calibrate subtasks) until the next
+     * ObsDate. 
+     * Checks over the list of Planned Tasks and marks those which are logged 
+     * as having completed as 'done' - they will not be rerun. 
+     * If all the tasks are done then this Agent will not accept control again this ObsDate.
+     *
+     * NOTE We need to..
+     * a) Read any fail count from history
+     *
+     * b) Read any repeat counts/ last execution time from history and store it.
+     *
+     * @param file Configuration file.
+     * @exception IOException If any problem occurs reading the file or does not exist.
+     * @exception IllegalArgumentException If any config information is dodgy.
+     */    
+    public void loadHistory(Map history) throws IOException, IllegalArgumentException {
+	
+	DateParser parser = new DateParser(RCS_Controller.controller.getObsDate());
+	
+	// Iterate over the plannedTasks looking for any info in the HistoryFile.
+	Iterator it = plannedTasks.keySet().iterator();
+	while (it.hasNext()) {
+	    String taskId     = (String)it.next();
+	    TaskDescriptor td = (TaskDescriptor)plannedTasks.get(taskId);
+	    String taskClass  = td.taskClass;
+	  
+	    // Work out which invokation period we are in - for non-repeats it can only be ZERO.
+	    // As window is always at start of interval we should expect to see possible values
+	    // for the 'imax' invokation in the history file.
+	    int imax = 0;
+	    if (td.repeat) {		
+		long now = System.currentTimeMillis();
+		imax = (int)((now - td.start) / td.interval);
+	    }
+	    
+	    // If we want to be really clever here we could look at all the invokation periods
+	    // running backwards from 'imax' to ZERO to work out when it last failed/succeeded,
+	    // if not during this invokation, but thats for another day....
+
+	    // Note that the lastInvokation only gets set correctly 
+	    // if the Task was actually done this invokation without the above stuff.
+
+	    // Set currInvokation to 'imax' always.
+	    td.currInvokation = imax;
+
+	    // Check to see if its failed this invokation and count how many times.
+	    long latestFail = 0L;
+	    Iterator e2 = history.keySet().iterator();
+	    while (e2.hasNext()) {
+		String key = (String)e2.next();
+		String failKey = name+"."+taskId+"."+imax+".failed.";
+		if (key.indexOf(failKey) == -1) continue;
+
+		// OK found a failure for this invokation - record it.
+		// Note the format is (not ?) DateParser compatible yet..
+		String fail     = key.substring(failKey.length());
+		long   failTime = parser.parse(fail);		
+		td.failCount++;  
+		// Record the latest fail time.
+		if (latestFail < failTime) {
+		    latestFail = failTime;
+		    td.lastFailedAt = failTime;
+		}
+		taskLog.log(1, CLASS, 
+			    "Task: "+name+"."+taskId+" Failed ["+imax+"] at: "+sdf.format(new Date(td.lastFailedAt)));
+	    }
+
+	    // Whether it failed or not..
+	    // Check to see if its successfully completed this invokation.
+	    Iterator e1 = history.keySet().iterator();
+	    while (e1.hasNext()) {
+		String key = (String)e1.next();
+		String doneKey = name+"."+taskId+"."+imax+".done";
+		if (! key.equals(doneKey)) continue;
+		
+		// OK found a Done for this invokation - record it.
+		String done     = (String)history.get(doneKey);
+		long   doneTime = parser.parse(done);
+		td.done       = true;
+		td.lastDoneAt = doneTime;
+		td.lastInvokation = imax;
+		taskLog.log(1, CLASS, 
+			    "Task: "+name+"."+taskId+" Last Done ["+imax+"] at: "+sdf.format(new Date(doneTime)));
+	    }
+	   	  
+	    //Summary for this Task.
+	    taskLog.log(1, CLASS, 
+		"Task: "+name+"."+taskId+" Invokation period: "+imax+
+		(td.done ? " Done at: "+sdf.format(new Date(td.lastDoneAt))+"." : 
+		 (td.failCount == 0 ? " Not yet attempted." : 
+		  " Failed at: "+sdf.format(new Date(td.lastFailedAt))+
+		  " after "+td.failCount+" attempts.")));
+	    
+	    }	
+	
+    }
+    
+    /** Override to return <i>true</i> under the following circumstances.
+     * ... TBD ....
+     */
+    public boolean acceptControl() { 	
+	
+	taskLog.log(1, CLASS, 
+		    "AcceptControl:: Checking tasks");
+       
+	long now = System.currentTimeMillis();
+	
+	// Iterate over the plannedTasks looking for any which can be started now.
+	// As soon as we find one we say OK! - for now we check them ALL for debug
+	boolean debugOk = false;
+	Iterator it = plannedTasks.keySet().iterator();
+	while (it.hasNext()) {
+	    String taskId     = (String)it.next();
+	    TaskDescriptor td = (TaskDescriptor)plannedTasks.get(taskId); 
+
+	    // For repeatable Tasks we need to check if the currentInvokation period
+	    // has exceeded the value of lastInvokation i.e. we are into a new window.
+	    // If so, reset: failCount, done flag and invokation.
+
+	    int thisInvokation = 0;
+	    if (td.repeat) {
+		thisInvokation = (int)((now - td.start) / td.interval);
+		if (thisInvokation > td.currInvokation) {
+		    td.currInvokation = thisInvokation;
+		    td.failCount = 0;
+		    td.done = false;
+		}
+	    }
+	    long earlyStart  = td.start;
+	    long startWindow = td.start + (thisInvokation * td.interval);
+	    long endWindow   = startWindow + td.window;	   	  
+	    long lastStart   = (long)Math.min((double)endWindow, (double)(td.finish - td.duration));
+	    //System.err.println("CAL::Task: "+taskId+" Checking Details.."+
+	    //	       "\nInterval:       "+td.interval+
+	    //	       "\nWindow:         "+td.window+
+	    //	       "\nStart:          "+new Date(td.start)+
+	    //	       "\nFinish:         "+new Date(td.finish)+
+	    //	       "\nDuration:       "+td.duration+
+	    //	       "\nEarliest Start: "+new Date(earlyStart)+
+	    //	       "\nStart Window:   "+new Date(startWindow)+
+	    //	       "\nEnd Window:     "+new Date(endWindow)+
+	    //	       "\nLast Start:     "+new Date(lastStart));
+	    
+	    // Check the various options here.
+	    
+	    // Weirdness.
+	    if (td.finish < td.start)
+		System.err.println("CAL::Task: "+taskId+
+				   " WEIRD Starts: "+ sdf.format(new Date(td.start))+
+				   " Ends: "+sdf.format(new Date(td.finish)));
+	    
+	    // a) Ignore if completed.
+	    if (td.done) {
+		System.err.println("CAL::Task: ["+thisInvokation+"] "+taskId+"\t (ALREADY DONE)");
+		continue;
+	    }
+	    // b) Before earliest possible start.
+	    if (earlyStart > now) {
+		System.err.println("CAL::Task: ["+thisInvokation+"] "+taskId+"\t (VERY EARLY) Start After: "+
+				   sdf.format(new Date(earlyStart)));
+		continue;
+	    }
+	    // c). Before start of window.
+	    if (startWindow > now) {
+		System.err.println("CAL::Task: ["+thisInvokation+"] "+taskId+"\t (TOO EARLY) Start After: "+
+				   sdf.format(new Date(startWindow)));
+		continue;
+	    }
+	    // d). Past latest start time.
+	    if (lastStart < now) {
+		System.err.println("CAL::Task: ["+thisInvokation+"] "+taskId+
+				   "\t (MISSED) Must be Started by: "+sdf.format(new Date(lastStart))+
+				   " and Done by: "+ sdf.format(new Date(lastStart+td.duration)));
+		continue;
+	    } 
+	    // e). Too Many failures.
+	    if (td.failCount > td.maxFailCount) {
+		System.err.println("CAL::Task: ["+thisInvokation+"] "+taskId+
+				   "\t (TOO MANY ATTEMPTS) "+td.failCount+
+				   " exceeds : "+td.maxFailCount);
+		continue;
+	    }
+	    // Got this far must be OK but keep looking!
+	    System.err.println("CAL::Task: ["+thisInvokation+"] "+taskId+
+			       "\t (CAN DO) ");
+	    debugOk = true;
+	}
+	
+	return debugOk;
+
+    } 
+  
+    /** Overriden to return the time at which this ModalControlAgent will next request
+     * control.
+     * ##### CURRENTLY FAKED TO RETURN NOW ########
+     * @return Time when this MCA will next want/be able to take control (millis 1970).
+     */
+    public long demandControlAt() { 
+	// 	ObsDate obsDate = RCS_Controller.controller.getObsDate();
+ 	long    now     = System.currentTimeMillis();
+
+    
+	long NEVER = now + 24 * 3600 *1000L;  // one day hence.
+
+	taskLog.log(1, CLASS, 
+		    "DemandControlAt:: Checking tasks");
+	
+	// Iterate over the plannedTasks looking for any which can be started.
+	// Record the start time and compare to find earliest over all tasks.
+	
+	long firstControl = NEVER;
+	long myNext = NEVER;
+
+	Iterator it = plannedTasks.keySet().iterator();
+	while (it.hasNext()) {
+	    String taskId     = (String)it.next();
+	    TaskDescriptor td = (TaskDescriptor)plannedTasks.get(taskId); 
+	    
+	    // For repeatable Tasks we need to check if the currentInvokation period
+	    // has exceeded the value of lastInvokation i.e. we are into a new window.
+	    
+	    int thisInvokation = 0;
+	    if (td.repeat) {
+		thisInvokation = (int)((now - td.start) / td.interval);	
+	    }  
+	    
+	    long earlyStart  = td.start;
+	    // These are datums for the current (or only) invokation.	  
+	    long startWindow = td.start + (thisInvokation * td.interval);
+	    long endWindow   = startWindow + td.window;	   	  
+	    long lastStart   = (long)Math.min((double)endWindow, (double)(td.finish - td.duration));
+	    
+	    // Check the various options here.
+	    
+	    // a) Weirdness.
+	    if (td.finish < td.start)
+		System.err.println("CAL::Task: "+taskId+
+				   " WEIRD Starts: "+ sdf.format(new Date(td.start))+
+				   " Ends: "+sdf.format(new Date(td.finish)));
+	    
+	    // b) Before earliest possible start => use that time.
+	    if (earlyStart > now) {
+		myNext = earlyStart;
+		continue;
+	    }
+	    
+	    boolean doable = (!td.done) && (td.failCount <= td.maxFailCount);
+	    // c) In a window and NOT done and NOT overfailed => now
+	    if (startWindow > now && doable) {
+		myNext = now;
+		continue;
+	    }
+	    
+	    // d) In a window and done => Try next available window if ANY.
+	    if (startWindow > now && (! doable)) {
+		if (td.repeat) {
+		    myNext = startWindow + td.interval;
+		    if (myNext > td.finish - td.duration)
+			myNext = NEVER;
+		} else 
+		    myNext = NEVER;
+		continue;
+	    }
+	    
+	    // e). Between windows => Only repeaters go onto next window..
+	    if (endWindow > now) {
+		if (td.repeat) {
+		    myNext = startWindow + td.interval;
+		    if (myNext > td.finish - td.duration)
+			myNext = NEVER;
+		} else 
+		    myNext = NEVER;
+		continue;
+	    }
+	 	  
+	    // Got this far must be OK but keep looking!
+	
+	    if (myNext < firstControl)
+		firstControl = myNext;
+	}
+	
+	// This is the earliest of the calib task start times.
+	return firstControl;
+
+    }
+
+    public Task getNextJob() {	
+
+	CalibrationTask task = null;
+
+	// Clear the available list out.	
+	availableTasks.clear();
+
+	long now = System.currentTimeMillis();
+	
+	// Iterate over the plannedTasks looking for any which can be started now.
+	// As soon as we find one we say OK! - for now we check them ALL for debug
+	boolean debugOk = false;
+	Iterator it = plannedTasks.keySet().iterator();
+	while (it.hasNext()) {
+	    String taskId     = (String)it.next();
+	    TaskDescriptor td = (TaskDescriptor)plannedTasks.get(taskId);
+	    
+	    long earlyStart  = td.start;
+	    long startWindow = td.start + (td.currInvokation * td.interval);
+	    long endWindow   = startWindow + td.window;	   	  
+	    long lastStart   = (long)Math.min((double)endWindow, (double)(td.finish - td.duration));
+	    int  priority    = td.priority;
+
+	    // a) Ignore if completed.
+	    if (td.done) {		
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    "Task: ["+td.currInvokation+"] "+taskId+ " P: "+priority+
+			    " ** Already Done **");
+		continue;
+	    } 
+	    // b) Before earliest possible start.
+	    if (earlyStart > now) {		
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    "Task: ["+td.currInvokation+"] "+taskId+ " P: "+priority+
+			    " ** Far too early: Start After: "+
+				   sdf.format(new Date(earlyStart))+" **"); 
+		continue;
+	    }
+	    // c). Before start of window.
+	    if (startWindow > now) {		
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    "Task: ["+td.currInvokation+"] "+taskId+ " P: "+priority+
+			    " ** Too early: Start After: "+
+			    sdf.format(new Date(startWindow))+" **");
+		continue;
+	    }
+	    // d). Past latest start time.
+	    if (lastStart < now) {		
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    "Task: ["+td.currInvokation+"] "+taskId+ " P: "+priority+
+			    " ** Missed: Start Before: "+sdf.format(new Date(lastStart))+
+			    " and Complete by: "+ sdf.format(new Date(lastStart+td.duration))+" **");
+		continue;
+	    } 
+	    // e). Too Many failures.
+	    if (td.failCount > td.maxFailCount) {		
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    "Task: ["+td.currInvokation+"] "+taskId+ " P: "+priority+
+			    " ** Failures: "+td.failCount+ " Exceeds : "+td.maxFailCount+" **");
+		continue;
+	    }
+	    
+	    // This Task is runnable.
+	    availableTasks.add(td);
+	    
+	}
+	
+	// We should have a list of runnable tasks, one will have best (lowest) priority.
+	// If there is a tie, we chose the one most likely to complete or with the
+	// fewest failures. For now we MUST give each Task a different priority.
+	
+	int            bestPriority = 1000;
+	TaskDescriptor bestTaskDesc = null;
+	
+	// Chose a most suitable Task from those available.
+	it = availableTasks.iterator();
+	while (it.hasNext()) {
+	    TaskDescriptor td = (TaskDescriptor)it.next();
+	    
+	    if (td.priority < bestPriority) {
+		bestPriority = td.priority;
+		bestTaskDesc = td;
+	    }
+	}
+	
+	// Build a Task via Reflection. 
+	taskLog.log(1, CLASS, name, "getNextJob",
+		    "Attempting to build a: "+bestTaskDesc.taskClass);
+	
+	try {
+	    Class       clazz = Class.forName(bestTaskDesc.taskClass);
+	    Constructor con   = clazz.getConstructor(new Class[] {
+		String.class,
+		ngat.rcs.tmm.TaskManager.class,
+		java.io.File.class,
+		java.io.File.class,
+		Long.class,
+		Integer.class});
+	    
+	    // Available time for calib task is infact: 
+	    // td.duration as we are starting before the lastTime.
+	    
+	    // ## NEED TO GET RID OF HISTFILE PARAMETER
+	    task = (CalibrationTask)con.newInstance(new Object[] {
+		bestTaskDesc.id,
+		(TaskManager)this,
+		new File(bestTaskDesc.cfgFile),
+		null,
+		new Long(bestTaskDesc.duration),
+		new Integer((int)bestTaskDesc.currInvokation)});
+	    
+	    try {
+		task.configure();
+		currentTaskDescriptor = bestTaskDesc; 
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    "Configured CalibTask: "+task.getName());
+		return task;
+	    } catch (Exception e) {		 
+		taskLog.log(1, CLASS, name, "getNextJob",
+			    " ** Failed to Configure Task: "+bestTaskDesc.id+ ":"+e);
+	    }
+	    
+	} catch (Exception e) {
+	    taskLog.log(1, CLASS, name, "getNextJob",
+			" ** Failed to build Task: "+bestTaskDesc.id+ ":"+e);					
+	}
+    
+	taskLog.log(3, CLASS, name, "getNextJob",
+		    "Returning a: "+(task != null ? task.getClass().getName() : "NULL"));
+	return null;
+    }
+    
+    /** Overridden to carry out specific work after the init() method is called.
+     * Sets a number of FITS headers and subscribes to any required events.*/
+    public void onInit() {
+	super.onInit();
+	opsLog.log(1, "Starting Calibration-Operations Mode.");
+    }
+
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Calibration-Operations Mode.");
+    }
+
+    /** Overridden to handle completion of a subTask. 
+     * The subtask's completion state is written to the history file.
+     * @param task The subTask which has done.
+     */
+    public void onSubTaskDone(Task task){
+	super.onSubTaskDone(task);	
+	currentTaskDescriptor.done = true;
+	taskCompleted++;
+	
+	String text = 
+	    name+"."+
+	    currentTaskDescriptor.id+"."+
+	    currentTaskDescriptor.currInvokation+
+	    ".done="+adf.format(new Date());
+	
+	try {
+	    controlAgent.appendHistory(text);
+	} catch (IOException iox) {
+	    errorLog.log(1, CLASS, name, "onSubTaskDone",
+			 "Writing completion details to history: "+iox);
+	}
+
+    }
+
+    /** Overridden to handle failure of a subTask. 
+     * The subtask's failure state is written to the history file..
+     * @param task The subTask which has done.
+     */
+    public void onSubTaskFailed(Task task){
+	super.onSubTaskFailed(task);	
+	currentTaskDescriptor.failCount++;	
+	
+	// This makes a unique key for this failure on this invokation.
+	String text = 
+	    name+"."+
+	    currentTaskDescriptor.id+"."+
+	    currentTaskDescriptor.currInvokation+
+	    ".failed="+adf.format(new Date());
+
+	try {
+	    controlAgent.appendHistory(text);
+	} catch (IOException iox) {
+	    errorLog.log(1, CLASS, name, "onSubTaskFailed",
+			 "Writing failure details to history: "+iox);
+	}   	
+	
+    }
+
+    /** EventSubscriber method.
+     */
+    public void notifyEvent(String eventId, Object data) {}
+
+
+    /** Holds description of the task to perform.*/
+    class TaskDescriptor {
+
+	/** Task Ident.*/
+	public String id;
+
+	/** Name of its config file.*/
+	public String cfgFile;
+
+	/** Task Class name.*/
+	public String taskClass;
+
+	/** Task recovery Class name.*/
+	public String recoveryClass;
+
+	/** Earliest time when it should start.*/
+	public long start;
+
+	/** Latest time by which it should be finished.*/
+	public long finish;
+
+	/** Maximum duration.*/
+	public long duration;
+
+	/** Size of start window.*/
+	public long window;
+
+	/** Execution priority - used to chose between concurrently executable Tasks.*/
+	public int priority;
+
+	/** True if the Task can repeat.*/
+	public boolean repeat;
+
+	/** Minimum interval between repeats.*/
+	public long interval;
+
+	/** Records the number of current invokation of this task.*/
+	public long currInvokation;
+	
+	/** True if its finished successfully (last invokation).*/
+	public boolean done;
+	
+	/** Counts number of failed attempts (last invokation).*/
+	public int failCount;
+
+	/** Specifies maximum number of failed attempts.*/
+	public int maxFailCount;
+
+	/** Records the time of last successful attempt for this task.*/
+	public long lastDoneAt;
+
+	/** Records the time of last unsuccessful attempt for this task.*/
+	public long lastFailedAt;
+
+	/** Records the number of last invokation of this task.*/
+	public long lastInvokation;
+
+
+	TaskDescriptor(String  id,     
+		       String  cfgFile, 
+		       String  tClass, 
+		       String  rClass, 
+		       long    start,  
+		       long    finish, 
+		       long    duration, 
+		       long    window,
+		       boolean repeat, 
+		       long    interval,
+		       int     priority,
+		       int     maxFailCount) {
+	    this.id            = id;
+	    this.cfgFile       = cfgFile;
+	    this.taskClass     = tClass;
+	    this.recoveryClass = rClass;
+	    this.start         = start;
+	    this.finish        = finish;
+	    this.duration      = duration;
+	    this.window        = window;
+	    this.priority      = priority;
+	    this.repeat        = repeat;
+	    this.interval      = interval;
+	    this.maxFailCount  = maxFailCount;
+
+	    done               = false;
+	    failCount          = 0;	  
+	    lastDoneAt         = 0L;
+	    lastFailedAt       = 0L;
+	    lastInvokation     = 0;
+	    currInvokation     = 0;
+	}
+	
+	/** Returns a readable version of this TaskDescriptor.*/
+	public String toString() {
+	    return 
+		"TaskDescriptor(CALIB):"+
+		"\n\tTask Name:     "+id+
+		"\n\tClass:         "+taskClass+
+		"\n\tRecovery:      "+recoveryClass+
+		"\n\tConfig File:   "+cfgFile+
+		"\n\tStart After:   "+sdf.format(new Date(start))+
+		"\n\tStart Before:  "+sdf.format(new Date(finish-duration))+
+		"\n\tFinish By:     "+sdf.format(new Date(finish))+
+		"\n\tMax Duration:  "+(duration/(60*1000L))+" Mins."+
+		"\n\tWindow Size:   "+(window/(60*1000L))+" Mins."+
+		"\n\tPriority:      "+priority+
+		"\n\tRepeatable:    "+(repeat ? "YES" : "NO")+
+		"\n\t  Interval:    "+(repeat ? ""+(interval/(60*1000L))+" Mins." : "N/A")+
+		"\n\tLast Invoke:   "+lastInvokation+
+		"\n\tLast Done at:  "+sdf.format(new Date(lastDoneAt))+
+		"\n\tFailures:      "+failCount+"/"+maxFailCount+
+		"\n\tLast Fail at:  "+sdf.format(new Date(lastFailedAt))+
+		"\n\tCurrent Invoke:"+currInvokation;	
+	}
+
+    }
+
+}
+
+

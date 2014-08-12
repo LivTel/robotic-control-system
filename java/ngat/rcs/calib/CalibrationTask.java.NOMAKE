@@ -1,0 +1,218 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.net.*;
+import ngat.util.*;
+import ngat.util.logging.*;
+import ngat.message.base.*;
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.text.*;
+
+/** A generic Task used for performing Calibration operations. These Tasks are
+ * always under the control of the Calibration_Ops ModalTask.
+ * CalibrationTasks are created from a config file supplied to Calib_Ops and should
+ * use this file to load any runtime information - e.g. the InstrumentConfigs etc.
+ * CalibrationTasks are <b>required</b> to write into the history file any significant
+ * events during their execution - nominally the fact that they have started and 
+ * completed successfully. The information is used by the Calib_Ops ModalTask to
+ * recover after an unscheduled reboot.
+ * The information should be written in the format:-
+ * <br>
+ * <ul>
+ *  <li>&gt;manager-name&lt; . &gt;task-name&lt; . &gt;invokation&lt; .started  = &gt;time-(HH:MM)&lt;
+ *  <li>&gt;manager-name&lt; . &gt;task-name&lt; . &gt;invokation&lt; .finished = &gt;time-(HH:MM)&lt;
+ * </ul>
+ * <br>
+ * <br>
+ * E.g. CALIB_OPS.TELFOCUS.0.started = 18:20
+ * <br>
+ * <br>
+ * Any additional information e.g. ErrorContext on failure, can be written but is
+ * not currently required.
+ * <br>
+ * E.g. CALIB_OPS.AGFOCUS.0.error = T16:22&N604023&MAutoguider%20timed%20out&Xnull
+ * <br> 
+ * <br>
+ * (ErrorContext with <u>T</u>ime, Error <u>N</u>umber, <u>M</u>essage, E<u>x</u>ception.)
+ * <br>
+ * For Calibration ops which are repeatable the invokation number can be non-zero.
+ * <br>
+ * <br>
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: CalibrationTask.java,v 1.1 2006/12/12 08:25:56 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/CalibrationTask.java,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public abstract class CalibrationTask extends ParallelTaskImpl {
+
+    /** Short date format (HH:MM).*/
+    public static final SimpleDateFormat adf = new SimpleDateFormat("HH:mm");
+    
+    /** Shortish date format (HHMMSS).*/
+    public static final SimpleDateFormat kdf = new SimpleDateFormat("HHmmss");
+    
+    
+    /** The id of the Class.*/
+    protected final String CLASS = "CalibrationTask";
+
+    /** Contains configuration information in an appropriate, Task-dependant format.*/
+    File configFile;
+
+    /** Used to write details of execution history for recovery.*/
+    File historyFile;
+
+    /** Maximum time available for this Task to complete (millis).*/
+    long maxDuration;
+
+    /** Records the invokation number of this Task - 
+     * Some calibration operations can be invoked several times over a night's run.
+     */
+    int invokation; 
+
+    /** Create a CalibrationTask with the following (Object) params - 
+     * Note that duration is wrapped.
+     * @param name        The name of this Task.
+     * @param manager     The Task's manager.
+     * @param configFile  Configuration file.
+     * @param historyFile History file.
+     * @param maxDuration Maximum time available for completion (millis).
+     * @param invokation  The invokation number of this Task (if repeatable).
+     */
+    public CalibrationTask(String      name, 
+			   TaskManager manager, 
+			   File        configFile, 
+			   File        historyFile, 
+			   Long        maxDuration,
+			   Integer     invokation) {
+	super(name, manager);
+	this.configFile  = configFile;
+	this.historyFile = historyFile;	
+	this.invokation  = invokation.intValue();
+	setTimeConstrained(true);
+	setTimeLimit(maxDuration.longValue());	
+    }
+
+    /** Configure the Task from content of File. Subtasks should override
+     * to carry out their own specific configuration. This default method
+     * does nothing.
+     */
+    protected void configure() throws IOException , IllegalArgumentException {}
+
+    /** Overridden to handle recovery from failure of a subTask. 
+     * @param task The subTask which has failed.
+     */
+    public void onSubTaskFailed(Task task) {super.onSubTaskFailed(task);}
+    
+    /** Overridden to handle completion of a subTask.     
+     * @param task The subTask which has done.
+     */
+    public void onSubTaskDone(Task task){super.onSubTaskDone(task);}
+
+    /** Overridden to handle an aborted subTask - called after the subTask was
+     * aborted (usually by us) and has carried out its own abort handling,
+     * and called back to indicate so. 
+     * @param task The subTask which has been aborted.
+     */
+    public void onSubTaskAborted(Task task) {super.onSubTaskAborted(task);}
+    
+    /** Overridden to allow subclasses to perform setup <i>just prior</i> to initialization.*/
+    public void preInit() {
+	taskLog.log(INFO, 1, CLASS, name, "Pre-Initializing");		
+    }
+    
+    /** Override to allow subclasses to perform setup <i>just after</i> initialization.
+     * Here we open the output stream to the history file and write out the started message.*/
+    public void onInit() {
+	super.onInit();	
+    }
+    
+    /** Override to handle recovery after this Task is aborted.*/
+    public void onAborting() {
+	super.onAborting();
+    }
+    
+    /** Override to allow subclasses to carry out any specific clearing up
+     * after the generic clearup has been performed. Here we write any error
+     * context information - (this is not required).*/
+    public void onDisposal() {
+	super.onDisposal();	
+    }
+    
+    /** Override to allow subclasses to carry out any specific work after they
+     * have completed all their subtasks, prior to disposal. Here we write the
+     * finished message to the history file.*/
+    public void onCompletion() {
+	super.onCompletion();	
+    }
+    
+    /** Overriden to allow subclasses to carry out any specific clearing up
+     * after the generic clearup has been performed. Here we write any error
+     * context information - (this is not required).*/
+    public void onFailure() {
+	super.onFailure();
+    }
+    
+
+}
+/** $Log: CalibrationTask.java,v $
+/** Revision 1.1  2006/12/12 08:25:56  snf
+/** Initial revision
+/**
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/**
+/** Revision 1.2  2002/09/17 07:34:44  snf
+/** Changed onDisposal() to handle abort as well as fail and to indicate which.
+/**
+/** Revision 1.1  2002/09/16 09:38:28  snf
+/** Initial revision
+/** */

@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# RCXTERM 4
+
+# ------ #
+# CONFIG #
+# ------ #
+LOGDIR=/occ/logs
+RCSLOGDIR=/occ/tmp
+
+
+
+# ---- #
+# DATE #
+# ---- #
+YYYY=$(date +%Y)
+DAYN=$(date +%j)
+
+
+# --- #
+# RCS #
+# --- #
+xterm -hold -bg beige -fg black -fn 6x10 -geometry 200x15+0+0 -title "RCS" \
+-e tail -f ${RCSLOGDIR}/rcs_lt.log &
+sleep 1
+
+
+# --------- #
+# SCHEDULER #
+# --------- #
+# Extra grep required
+xterm -hold -bg darkslategrey -fg yellow -fn 6x10 -geometry 200x22+0+182 -title "SCHEDULER" \
+-e tail -f ${RCSLOGDIR}/sched.log &
+sleep 1
+
+
+# ---- #
+# TASK #
+# ---- #
+xterm -hold -bg VioletRed4 -fg orange -fn 6x10 -geometry 200x22+0+434 -title "TASK" \
+-e tail -f ${LOGDIR}/rcs_task_${YYYY}_D${DAYN}.txt &
+sleep 1
+
+
+# ------- #
+# COMMAND #
+# ------- #
+xterm -hold -bg VioletRed4 -fg white -fn 6x10 -geometry 150x14+0+700 -title "COMMAND" \
+-e "tail -f ${LOGDIR}/rcs_command_${YYYY}_D${DAYN}.txt | grep COMMAND | grep -v SHOW" &
+
+
+
+
+exit 0

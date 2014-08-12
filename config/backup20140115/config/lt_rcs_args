@@ -1,0 +1,11 @@
+#!/bin/csh
+
+# --------------------------------------------------------------------
+# Config for: Robotic Control System Executor (RCX): (LT)
+# --------------------------------------------------------------------
+
+# RCX Log maximum bytes per file.
+set RCS_LOG_MAX		= 5000000
+
+# RCX Log maximum number of files.
+set RCS_LOG_COUNT	= 4

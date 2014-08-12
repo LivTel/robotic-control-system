@@ -1,0 +1,56 @@
+#!/bin/csh
+
+# ---------------------------
+# Setup for RCS installation.
+# ---------------------------
+
+# Check for launch directory
+
+set LAN = /opt/ngat/bin
+set RCS_EXEC = /occ/rcs/exec
+
+if (! -e $LAN) then
+	echo "Launch directory: [ $LAN ] not found, you may need to run occ_setup "
+	exit 1
+endif
+
+if (! -e $LAN/rcx) then
+    /bin/cp -fv $RCS_EXEC/rcx $LAN/rcx
+endif
+
+if (! -e $LAN/rcw) then
+    /bin/cp -fv $RCS_EXEC/rcw $LAN/rcw
+endif
+
+if (! -e $LAN/rcx_setup) then
+    /bin/cp -fv $RCS_EXEC/rcx_setup $LAN/rcx_setup
+endif
+
+if (! -e $LAN/rcw_init) then
+    /bin/cp -fv $RCS_EXEC/rcw_init $LAN/rcw_init
+endif
+
+# setup rcw
+touch /occ/tmp/.rcw
+echo "ENG" >> /occ/tmp/.rcw
+
+# setup sched file
+touch /occ/rcs/planetarium/schedule_0.wsf
+
+echo "Unpacking certificates..."
+cd /occ/rcs/planetarium/keys
+tar xvf std_certs_latest
+
+echo "Setting rti image processing wrappers executable..."
+cd /occ/rcs/planetarium/scripts
+chmod +x *
+
+echo "Extracting image processing executables..."
+cd /occ/rcs/planetarium/executables
+/bin/cp -fv gpp_latest /occ/util/gpp
+/bin/cp -fv ppp_latest /occ/util/ppp
+/bin/cp -fv gpp_cfg.txt /occ/misc/config/gpp.cfg
+/bin/cp -fv ppp_cfg.txt /occ/misc/config/ppp.cfg
+
+
+echo "Done RCS setup"

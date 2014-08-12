@@ -1,0 +1,34 @@
+#!/bin/csh
+ 
+# --------------------------------
+# Data Grabber for: RoboDIMM data.
+# --------------------------------
+ 
+set DEPLOY_DATA = $DEPLOY_HOME/data
+ 
+set raw  = $DEPLOY_DATA/robodimm.raw
+set data = $DEPLOY_DATA/robodimm.data
+touch $data
+
+set POLL = 180
+
+#wget -q -O $raw http://www.ing.iac.es/ds/robodimm/robodimm.php
+ 
+while (1)
+ 
+    wget  -O $raw  http://www.ing.iac.es/ds/robodimm/robodimm.php
+
+    set tim1 = `cat $raw | awk '{print $33}'`
+    set tim2 = `cat $raw | awk '{print substr($34,1,8)}'`
+    set obj = `cat $raw | awk '{print $35}'`
+    set alt = `cat $raw | awk '{print $39}'`
+    set h1  = `cat $raw | awk '{print $42}'`
+    set h2  = `cat $raw | awk '{print $43}'`
+    set v1  = `cat $raw | awk '{print $44}'`
+    set v2  = `cat $raw | awk '{print $45}'`
+
+    echo ${tim1}T${tim2} ${obj} ${alt} ${h1} ${h2} ${v1} ${v2} >&! $data
+    
+    sleep $POLL
+ 
+end

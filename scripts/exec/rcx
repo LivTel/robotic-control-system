@@ -1,0 +1,279 @@
+#!/bin/csh 
+
+# -----------------------------------------------------
+# Launcher for: Robotic Control System Executive. (RCX).
+# -----------------------------------------------------
+
+onintr cleanup
+
+source /opt/ngat/etc/cshrc
+
+source ${DEPLOY_BIN}/class_setup
+source ${DEPLOY_BIN}/rcx_setup
+
+set tel = $DEPLOY_SYSTEM
+
+set DAT = `date -u +"%Y_%m%d_%H%M"`
+set RCS_CONSOLE_LOG_FILE = ${DEPLOY_TMP}/rcs_${tel}.log
+    
+source $RCS_CONFIG/${tel}_rcs_args
+
+$DEPLOY_ETC/log_roll $RCS_CONSOLE_LOG_FILE $RCS_LOG_MAX $RCS_LOG_COUNT
+
+echo "RCX Invokation at $DAT ..."
+
+#
+# Restart Mode Codes. ( These are exit codes for restarts).
+#
+set ENGINEERING_CODE = 21
+set ROBOTIC_CODE     = 22
+#
+# Stop Codes. ( These are exit codes for various halts).
+#
+set REBOOT_CODE      = 23
+set HALT_CODE        = 24
+set SHUTDOWN_CODE    = 25
+
+#
+# Startup Switches. (Passed to Launcher as args).
+#
+
+set ENGINEERING_FLAG = -engineering
+set BOOT_FLAG        = -boot
+set ROBOTIC_FLAG     = -auto
+
+#
+# Defaults.
+#
+set DEFAULT_FLAG = $ENGINEERING_FLAG
+set DEFAULT_ID   = "Engineering"
+
+#
+# Setup.
+#
+set PROFILE     = DEFAULT
+set RUN_PUID    = $RCS_HOME/%%run
+set PID         = $DEPLOY_TMP/rcx.pid
+
+# Set this if we want to write the PID.
+unset WRITE_PID
+
+# Set to force running logs to be deleted.
+set DELETE_LOGS
+
+# Set this to redirect console output - we MUST do this if started by RCW
+set REDIRECT_CONSOLE
+
+# Set to force logs to be archived.
+set ARCHIVE_LOGS
+
+set IN = $1 
+
+#
+# Read from site config.
+#
+
+set TELID     = `cat $RCS_SITE_INFO | grep 'id'        | cut -d"=" -f2`
+set TELESCOPE = `cat $RCS_SITE_INFO | grep 'telescope' | cut -d"=" -f2`
+set SITE      = `cat $RCS_SITE_INFO | grep 'site'      | cut -d"=" -f2`
+set LATITUDE  = `cat $RCS_SITE_INFO | grep 'latitude'  | cut -d"=" -f2`
+set LONGITUDE = `cat $RCS_SITE_INFO | grep 'longitude' | cut -d"=" -f2`
+
+setenv TZ_OFFSET     `cat $RCS_SITE_INFO | grep 'tzoffset' | cut -d"=" -f2`
+setenv OD_START_HOUR `cat $RCS_SITE_INFO | grep 'sodh'     | cut -d"=" -f2`
+
+switch ($IN)
+
+    #
+    # MANUAL. 
+    #
+    case manual:
+	echo "Manual startup... Engineering mode, no redirect."
+	set MODE_FLAG = $ENGINEERING_FLAG
+	set MODE_ID   = "Engineering, Manual startup"
+	unset REDIRECT_CONSOLE
+	unset DELETE_LOGS
+	unset ARCHIVE_LOGS
+    breaksw
+    #
+    # ENG.
+    #
+    case eng:
+	echo "Startup from RCW Boot ... Engineering mode" >>&  $RCS_CONSOLE_LOG_FILE
+	set MODE_FLAG = $ENGINEERING_FLAG
+	set MODE_ID   = "Engineering"
+    breaksw
+
+    #
+    # AUTO. Used by /sbin/init during bootup start.
+    #
+    case auto:
+	echo "Startup from RCW Boot... Robotic mode" >>&  $RCS_CONSOLE_LOG_FILE
+	set MODE_FLAG = $ROBOTIC_FLAG
+	set MODE_ID   = "Robotic"
+	set BOOT
+    breaksw
+
+    # STOP
+    case stop:
+
+    	echo "Robotic Control System Executive stopping"  >>& $RCS_CONSOLE_LOG_FILE
+	
+	if (! -e $PID) then
+	    echo "Cannot locate a PID file: $PID "  >>& $RCS_CONSOLE_LOG_FILE
+	    exit 1
+	endif
+	set AID = `cat $PID` 
+    
+	if ($AID == "") then
+	    echo "$PID does not contain a valid PID for the RCS" >>& $RCS_CONSOLE_LOG_FILE
+	    exit 2
+	endif
+
+	set BID = `ps -ef | grep $AID | awk '{if ($3 == '$AID') print $2}'`
+
+	kill -9 $AID  
+
+	kill -9 $BID
+
+	rm -f $PID
+
+	exit 0
+
+    breaksw
+   
+endsw
+
+# Archive logs.
+if (${?ARCHIVE_LOGS}) then
+
+    echo "Archiving RCS logs" >>& $RCS_CONSOLE_LOG_FILE
+
+    cd $DEPLOY_LOG
+    if (! -d tmp) mkdir tmp
+ 
+    # set list = `glob $RCS_ARCHIVE_LIST `
+    set list = `glob rcs_command*.txt rcs_ctrl*.txt rcs_task*.txt rcs_oper*.txt rcs_cil*.txt rcs_event.* `
+ 
+    if ($status == 0) then
+	set ct = 0
+	set mf = 0
+	echo "Checking log files for archiving..." >>& $RCS_CONSOLE_LOG_FILE
+	foreach file ( $list )
+	    @ ct++
+	    mv -v $file tmp/ >>& $RCS_CONSOLE_LOG_FILE
+	    if ($status == 0) then
+		@ mf++
+	    endif
+	end
+	echo "Moved $mf files of $ct for archiving" >>& $RCS_CONSOLE_LOG_FILE
+	if ($mf == $ct ) then
+	    echo "Deleting dross..." >>& $RCS_CONSOLE_LOG_FILE
+	    /bin/rm -fv rcs_*.txt >>& $RCS_CONSOLE_LOG_FILE
+	endif
+    else
+	echo "No files to archive, Deleting dross..." >>& $RCS_CONSOLE_LOG_FILE
+	/bin/rm -fv rcs_*.txt >>& $RCS_CONSOLE_LOG_FILE
+    endif
+
+    set list = `glob obs_log_${tel}* `
+    if ($status == 0) then
+	echo "Moving Observation logs..." >>& $RCS_CONSOLE_LOG_FILE
+
+	foreach obslog ( $list )    
+	    echo "Testing $obslog "
+	    set ic = 0
+	    while (-e $DEPLOY_LOG/archive/${obslog}.${ic})
+		@ ic++
+	    end
+	    mv -fv $obslog $DEPLOY_LOG/archive/${obslog}.${ic} >>& $RCS_CONSOLE_LOG_FILE
+	end
+
+    else
+	echo "No observing logs to transfer" >>& $RCS_CONSOLE_LOG_FILE
+    endif
+
+    cd tmp
+
+
+  
+    echo "Creating archive..." >>& $RCS_CONSOLE_LOG_FILE
+    tar cvf Ops_${tel}_rcs_${DAT}.tar  rcs*.txt  >>& $RCS_CONSOLE_LOG_FILE
+    gzip -f Ops_${tel}_rcs_${DAT}.tar
+    mv -fv Ops_${tel}_rcs_${DAT}.tar.gz $DEPLOY_LOG/archive/
+
+    echo "Deleting raw log files.." >>& $RCS_CONSOLE_LOG_FILE
+    /bin/rm -fv rcs_*.txt >>& $RCS_CONSOLE_LOG_FILE
+
+    # Sensor Data logging
+    cd $RCS_HOME/data
+    echo "Create sensor log archive "  >>& $RCS_CONSOLE_LOG_FILE
+    tar cvf data_${tel}_${DAT}.tar *.dat >>& $RCS_CONSOLE_LOG_FILE
+    gzip -f data_${tel}_${DAT}.tar 
+    mv  data_${tel}_${DAT}.tar.gz $DEPLOY_LOG/archive/
+     echo "Deleting raw sensor log files.." >>& $RCS_CONSOLE_LOG_FILE
+    /bin/rm -f  *.dat
+
+
+endif
+
+# Delete running logs.
+if (${?DELETE_LOGS}) then
+#if (${?TDB}) then 
+   echo "Deleting running logs" >>&  $RCS_CONSOLE_LOG_FILE
+    /bin/rm -fv $DEPLOY_LOG/rcs_* >>& $RCS_CONSOLE_LOG_FILE
+endif
+
+set telid = `echo $TELID | tr '[A-Z]' '[a-z]'`
+
+# No JIT for java 1.3+
+set JIT_FLAGS = -Xint
+
+# Use JIT (any version)
+#set JIT_FLAGS
+
+#
+# System properties to push into JVM.
+#
+set DD_ASTROMETRY    = -Dastrometry.impl\=ngat.astrometry.TestCalculator
+set DD_TZ_OFFSET     = -DTZ_OFFSET\=$TZ_OFFSET
+set DD_OD_START_HOUR = -DOD_START_HOUR\=$OD_START_HOUR
+set DD_LOG           = -Dlog\=${DEPLOY_LOG}
+set LAUNCHER         = ngat.rcs.RCS_Controller
+
+
+cd $RCS_HOME 
+
+set CONFIG = "-config /occ/rcs/rcs.properties"
+set D_ID   = "robotic@`hostname`"
+#set TCS_MODE = -DTCS_MODE\=SYS_AUTO or lt_sim or TCS_SIM or SYS_SIM
+
+set EGD = "-Djava.security.egd=file:/dev/urandom"  
+
+set CODEBASE = "-Djava.rmi.server.codebase=file:///occ/rcs/rcs_class.jar"
+set DGC      = "-Djava.rmi.dgc.leaseValue=1800000"
+
+set EXM      = "-Dexec.model"
+
+echo $$ > $PID
+     
+if (${?REDIRECT_CONSOLE}) then
+    $JAVA -DRCS $EGD -DTCS_MODE=SYS_AUTO \
+	$DD_LOG $JIT_FLAGS $DD_ASTROMETRY $DD_OD_START_HOUR $DD_TZ_OFFSET $EXM $DGC $CODEBASE \
+	$LAUNCHER $D_ID $CONFIG $MODE_FLAG  >>& $RCS_CONSOLE_LOG_FILE
+	set pexit = $status
+else
+    $JAVA -DRCS $EGD -DTCS_MODE=SYS_AUTO $DGC $CODEBASE $EXM \
+	$DD_LOG $JIT_FLAGS $DD_ASTROMETRY $DD_OD_START_HOUR $DD_TZ_OFFSET \
+	$LAUNCHER $D_ID $CONFIG $MODE_FLAG 
+	set pexit = $status
+endif
+
+echo "RCS Process exited with status $pexit" >>&  $RCS_CONSOLE_LOG_FILE
+exit $pexit   
+
+cleanup:
+echo "Cleanup on Interrupt during execution" >>&  $RCS_CONSOLE_LOG_FILE
+rm -f $PID
+
+exit 1

@@ -1,0 +1,119 @@
+RCS Source change log.
+
+Build: 25 on 2006-10-03 09:32 
+
+Build: 26 on 2006-10-03 09:33 
+
+Build: 20 on 2006-10-06 11:57 
+
+Build: 21 on 2006-10-26 12:41 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: 22 on 2006-10-31 10:09 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: 23 on 2006-11-03 07:29 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: 23 on 2007-01-15 08:26 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: 24 on 2007-01-24 08:03 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: 25 on 2007-01-24 09:44 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: 26 on 2007-02-19 15:25 
+2006-10-05 [GroupSequenceTask]       Added UpdateTask.setTabuTime() to set a tabu on any task which failed due to AG failure].
+2006-10-09 [ObservationSequenceTask] Added Unwrapping task sequenced before ObservationTask to check for az/rot limits.
+
+Build: ${build.number} on 2007-03-09 11:18 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+
+Build: 28 on 2007-03-09 21:19 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+
+Build: 28 on 2007-08-03 09:23 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule
+
+Build: 28 on 2007-10-22 11:44 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule
+
+Build: 28 on 2007-10-22 11:45 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule
+
+Build: 28 on 2008-09-25 14:09 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule
+
+Build: 28 on 2008-09-25 14:19 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule
+
+Build: 28 on 2008-09-25 14:20 
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule

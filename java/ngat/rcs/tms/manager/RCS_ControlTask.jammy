@@ -1,0 +1,1260 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+package ngat.rcs.tms.manager;
+
+import java.io.*;
+import java.text.*;
+import java.util.*;
+
+import javax.swing.tree.*;
+
+import ngat.astrometry.*;
+import ngat.message.ISS_INST.*;
+import ngat.message.RCS_TCS.*;
+import ngat.message.base.*;
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.rcs.*;
+import ngat.rcs.calib.*;
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.emm.*;
+import ngat.rcs.iss.*;
+import ngat.rcs.oldscience.*;
+import ngat.rcs.oldstatemodel.*;
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+import ngat.rcs.tms.*;
+import ngat.rcs.tms.executive.*;
+import ngat.rcs.tocs.*;
+import ngat.util.*;
+import ngat.util.logging.*;
+
+/**
+ * Top level Control Task. Manages the various Modal Control Agents.
+ */
+public class RCS_ControlTask extends ParallelTaskImpl implements EventSubscriber, StateModelEventListener, Logging {
+
+	/** Failure exit code: No history file found or not able to create. */
+	public static final int NO_HISTORY = 605010;
+
+	/**
+	 * Grace period before JVM shutdown (millis) after ShutdownTask has
+	 * completed.
+	 */
+	public static final long SHUTDOWN_PAUSE_INTERVAL = 30000L;
+
+	/**
+	 * Grace period before signalling completion/failure of Task after it has
+	 * completed/failed.
+	 */
+	public static final long TASK_COMPLETION_PAUSE_INTERVAL = 300000L;
+
+	/**
+	 * Period to wait (millis) for ShutdownTask to complete before proceeding
+	 * anyway.
+	 */
+	public static final long SHUTDOWN_WAIT_TIMEOUT = 20000L;
+
+	/** Application Class Id. */
+	public static final String CLASS = "ControlAgent";
+
+	/** Standard date format. */
+	static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm z");
+
+	/** Short date format fro file IDs. */
+	static final SimpleDateFormat adf = new SimpleDateFormat("DDD");
+
+	// Stop mode overrides. These codes are passed via the EMM from the RCI.
+
+	/** Operator override command - No operation. */
+	public static final String OPERATOR_NORMAL_COMMAND = "NOOP";
+
+	/** Operator override command - Restart RCS in Auto-select mode. */
+	public static final String OPERATOR_RESTART_ROBOTIC_COMMAND = "AUTO";
+
+	/** Operator override command - Restart RCS in Engineering mode. */
+	public static final String OPERATOR_RESTART_ENGINEERING_COMMAND = "ENG";
+
+	/** Operator override command - Reboot the system . */
+	public static final String OPERATOR_REBOOT_COMMAND = "REBOOT";
+
+	/** Operator override command - Halt the RCS and its watchdog. */
+	public static final String OPERATOR_HALT_COMMAND = "HALT";
+
+	/** Operator override command - Shutdown the system. */
+	public static final String OPERATOR_SHUTDOWN_COMMAND = "SHUTDOWN";
+
+	// Init state overrides...
+
+	/** Operator override command. Force mode switch to NIGHT. */
+	public static final String OPERATOR_OPERATIONAL_COMMAND = "GO_OPERATIONAL";
+
+	/** Operator override command. Force mode switch to DAY. */
+	public static final String OPERATOR_STANDBY_COMMAND = "GO_STANDBY";
+
+	/**
+	 * Operator override command. Force mode switch to mode determined by
+	 * time-of-day.
+	 */
+	public static final String OPERATOR_ROBOTIC_COMMAND = "GO_AUTO";
+
+	/** Operator shutdown message. */
+	public static final String OPERATOR_SHUTDOWN_MESSAGE = "OPERATOR_SHUTDOWN";
+
+	/** Job control command. */
+	public static final String TASK_INTERRUPT_MESSAGE = "mca-interrupt";
+	public static final String TASK_YIELD_MESSAGE = "mca-yield";
+	public static final String TASK_ABORTED_MESSAGE = "mca-aborted";
+
+	/** Transient task completion message. */
+	public static final String START_DONE_MESSAGE = "START_DONE";
+	public static final String START_FAILED_MESSAGE = "START_FAILED";
+	public static final String STOP_DONE_MESSAGE = "STOP_DONE";
+	public static final String STOP_FAILED_MESSAGE = "STOP_FAILED";
+	public static final String OPEN_DONE_MESSAGE = "OPEN_DONE";
+	public static final String OPEN_FAILED_MESSAGE = "OPEN_FAILED";
+	public static final String CLOSE_DONE_MESSAGE = "CLOSE_DONE";
+	public static final String CLOSE_FAILED_MESSAGE = "CLOSE_FAILED";
+	public static final String POWER_DOWN_DONE_MESSAGE = "POWER_DOWN_DONE";
+	public static final String POWER_DOWN_FAILED_MESSAGE = "POWER_DOWN_FAILED";
+	public static final String POWER_UP_DONE_MESSAGE = "POWER_UP_DONE";
+	public static final String POWER_UP_FAILED_MESSAGE = "POWER_UP_FAILED";
+
+	// Tasks.
+
+	/** Emergency system shutdown during power outage. */
+	Task systemShutdownTask;
+
+	/** Setting TCS operational. */
+	Task opStartTask;
+
+	/** Setting TCS unoperational. */
+	Task opStopTask;
+
+	/** Closing dome and covers at end of night or onset of weather problem. */
+	Task closeTask;
+
+	/** Opening dome and covers after threat clearance or control enablement. */
+	Task openTask;
+
+	/** Opening mirror cover and selecting instruments. */
+	Task initTask;
+
+	/** Closing mirror cover, parking scope. */
+	Task finalTask;
+
+	/** Telescope safing after an mcp or other abort. */
+	Task safeTask;
+
+	/**
+	 * System bootup and checks of subsystems at start of night or after reboot.
+	 */
+	Task powerUpTask;
+
+	/** Modal Control Agents. */
+	static Map modalControlAgents = new HashMap();
+
+	/** Background mode controler. */
+	BackgroundControlAgent backgroundControlAgent;
+
+	// /** Planetarium Operations mode.*/
+	// PlanetariumControlAgent planetariumControlAgent;
+
+	/** Robotic Operations mode. */
+	//Science_Ops_Task scienceControlAgent;
+	// ScienceControlAgent;
+
+	/** Target of Opportunity Operations mode. */
+	TOControlAgent toopControlAgent;
+	// TOControlAgent;
+
+	/** Daytime Operations mode. */
+	// Daytime_Ops_Task daytimeControlAgent;
+	// DaytimeControlAgent;
+	/** Calibration (DAY) Operations mode. */
+	// Calibration_Ops_Task calibrationDayControlAgent;
+	/** Calibration (NIGHT) Operations mode. */
+	// /Calibration_Ops_Task calibrationNightControlAgent;
+	/** Recovery Operations mode. */
+	// Recovery_Ops_Task recoveryControlAgent;
+	// RecoveryControlAgent;
+	// /** Manual Operations mode.*/
+	// Manual_Ops_Task manualControlAgent;
+
+	/** The currently executing MODAL task. */
+	protected volatile ModalTask currentModalAgent;
+
+	/** The currently executing TRANSIENT task. */
+	protected volatile Task currentTransientTask;
+
+	/**
+	 * This is the code we will use to shutdown the RCS on command from an
+	 * operator. Default is REBOOT_ROBOTIC can be changed by an OVERRIDE signal.
+	 */
+	protected int overrideShutdownCode = RCS_Controller.RESTART_ROBOTIC;
+
+	/** Reference to the Controller. */
+	RCS_Controller controller;
+
+	/** Broadcastable status info. */
+	Properties rcsStatus;
+
+	/** Status Multicaster. */
+	protected MulticastObjectRelay statusRelay;
+
+	/** Execution history. */
+	protected ConfigurationProperties rcs_history;
+
+	/** RCS History file. */
+	protected File historyFile;
+
+	// Locks.
+	protected Object swapLock;
+
+	protected long startupTime;
+
+	protected Logger bootLog;
+
+	protected Logger ctrlLog;
+
+	protected static RCS_ControlTask instance;
+
+	/** Create the ControlAgent. */
+	protected RCS_ControlTask(String name, TaskManager manager) {
+
+		super(name, manager);
+
+		setExitOnCompletion(false);
+
+		rcsStatus = new Properties();
+
+		statusRelay = RCS_Controller.statusRelay;
+
+		controller = RCS_Controller.controller;
+
+		bootLog = LogManager.getLogger("BOOT");
+
+		ctrlLog = LogManager.getLogger("CTRL_AGENT");
+
+		startupTime = System.currentTimeMillis();
+
+		// stateModel = new StateModel("RCS_STATE_MODEL");
+		// stateModel.setEventListener(this);
+
+		// stateModelUpdateInterval = DEFAULT_STATE_MODEL_UPDATE_INTERVAL;
+		// all above moved into RCS Controller.
+
+	}
+
+	/**
+	 * Creates the initial instance of the ControlTask.
+	 * 
+	 * @param name
+	 *            The name of the Task.
+	 * @param manager
+	 *            Reference to this task's manager.
+	 */
+	public static void initialize(String name, TaskManager manager) {
+		instance = new RCS_ControlTask(name, manager);
+	}
+
+	// /** Configure StateModel from File.*/
+	// public void configureStateModel(File file) throws IOException,
+	// IllegalArgumentException {
+	// stateModel.configure(file);
+	// }
+	// all above moved into RCS Controller.
+
+	/** Loads the History file or creates it. */
+	public void loadHistory() throws RCSStartupException {
+
+		rcs_history = new ConfigurationProperties();
+
+		ObsDate od = RCS_Controller.getObsDate();
+
+		historyFile = new File("rcs_" + od.getDateStamp() + ".history");
+		// E.g. rcs_021.history for obsdate (sod 21 Jan - sod 22 Jan).
+
+		//
+		// WHAT TO DO IF WE CANT MAKE THIS FILE !!!!!!!!!!!!!
+		//
+		if (historyFile.exists()) {
+			// Ok- carry on.
+			bootLog.log(1, CLASS, name, "init", "History file ok: " + historyFile.getPath());
+		} else {
+			// No history - must be start of obs-day (i.e. early (local)
+			// afternoon reboot?
+			try {
+				historyFile.createNewFile();
+				bootLog.log(1, CLASS, name, "init", "Created RCS_Controller execution history file: "
+						+ historyFile.getPath());
+			} catch (IOException e) {
+				bootLog.log(1, CLASS, name, "init", "Failed to create execution history file: " + e);
+				throw new RCSStartupException("Error creating execution history file : " + e, NO_HISTORY);
+			}
+		}
+
+	}
+
+	/** Append a message to the history file. */
+	public void appendHistory(String message) throws IOException {
+
+		PrintStream historyOut = new PrintStream(new FileOutputStream(historyFile.getPath(), true), true);
+		taskLog.log(INFO, 3, CLASS, name, "appendHistory", "Opened output to History File: " + historyFile.getPath());
+
+		historyOut.println(message);
+
+		if (historyOut.checkError())
+			errorLog.log(1, CLASS, name, "onSubTaskDone", "Writing history file:");
+
+		historyOut.close();
+		taskLog.log(INFO, 3, CLASS, name, "appendHistory", "Closed HistoryFile");
+
+		historyOut = null;
+
+	}
+
+	@Override
+	public void preInit() {
+		super.preInit();
+
+		// -----------------------------
+		// Create all required subtasks.
+		// -----------------------------
+		bootLog.log(1, CLASS, name, "init", "Generating Transient tasks.");
+		//
+		// REPLACE X_ prefix with a suitable TOP_LEVEL prefix...
+		//
+		systemShutdownTask = new PowerDownTask("X_POWER_DOWN", this);
+		((PowerDownTask) systemShutdownTask).setTimeConstrained(true);
+		((PowerDownTask) systemShutdownTask).setTimeLimit(SHUTDOWN_WAIT_TIMEOUT);
+
+		closeTask = new CloseTask("TMM_CLOSE", this);
+
+		openTask = new Enclosure_Task("TMM_OPEN", this, ENCLOSURE.BOTH, ENCLOSURE.OPEN);
+
+		opStartTask = new Operational_Task("TMM_START_OPS", this, OPERATIONAL.ON);
+
+		opStopTask = new Operational_Task("TMM_STOP_OPS", this, OPERATIONAL.OFF);
+
+		initTask = new InitializeTask("TMM_INIT", this);
+
+		finalTask = new FinalizeTask("TMM_FINAL", this);
+
+		safeTask = new MakeSafeTask("TMM_MAKE_SAFE", this);
+
+		powerUpTask = new GreySuitManTask("TMM_POWER_UP", this, 200000L);
+
+		bootLog.log(1, CLASS, name, "init", "Generating Modal tasks.");
+
+		// ---------------------------------------
+		// Register the Event-Trigger constraints.
+		// ---------------------------------------
+		bootLog.log(1, CLASS, name, "init", "Registering Trigger codes.");
+
+		// Operator Commands.
+		// EventRegistry.subscribe("OPERATOR", this);
+
+		// EventRegistry.subscribe(TASK_INTERRUPT_MESSAGE, this);
+	}
+
+	/**
+	 * Returns a reference to the singleton instance.
+	 * 
+	 * @uml.property name="instance"
+	 */
+	public static RCS_ControlTask getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Returns the history file.
+	 * 
+	 * @uml.property name="historyFile"
+	 */
+	public File getHistoryFile() {
+		return historyFile;
+	}
+
+	/** Set the MCA identified by id. */
+	public static void addModalControlAgent(String id, ModalTask mca) {
+		modalControlAgents.put(id, mca);
+	}
+
+	/** Returns the MCA identified by id or null. */
+	public static ModalTask getModalControlAgent(String id) {
+		if (modalControlAgents.containsKey(id))
+			return (ModalTask) modalControlAgents.get(id);
+		return null;
+	}
+
+	// ======================================
+	// Implementation of TaskManager methods.
+	// ======================================
+
+	// =================
+	// TaskImpl methods.
+	// =================
+
+	/**
+	 * Called by subTask to signal a message to its manager. The manager may use
+	 * the information or just pass it on up the hierarchy or even throw it
+	 * away. Overridden to NOT pass on to manager.
+	 * 
+	 * @param task
+	 *            The subTask which originated the message.
+	 * @param category
+	 *            An identifier to distinguish the type of message.
+	 * @param message
+	 *            The object carrying the message.
+	 */
+	@Override
+	public void sigMessage(Task source, int category, Object message) {
+		// System.err.println("SigMessage - do nothing: "+source.getName()+" : "+category+" : "+message);
+	}
+
+	@Override
+	public void onInit() {
+		super.onInit();
+
+		// Event subscriptions.
+		// EventRegistry.subscribe("TEST_MESSAGE_1", this);
+		// E/ventRegistry.subscribe("TEST_MESSAGE_2", this);
+		// EventRegistry.subscribe("TEST_MESSAGE_3", this);
+		// EventRegistry.subscribe("TEST_MESSAGE_4", this);
+
+		// EventRegistry.subscribe(OPERATOR_RESTART_ROBOTIC_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_RESTART_ENGINEERING_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_REBOOT_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_NORMAL_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_HALT_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_SHUTDOWN_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_SHUTDOWN_MESSAGE, this);
+
+		// EventRegistry.subscribe(OPERATOR_OPERATIONAL_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_STANDBY_COMMAND, this);
+		// EventRegistry.subscribe(OPERATOR_NORMAL_COMMAND, this);
+
+		// EventRegistry.subscribe(TASK_INTERRUPT_MESSAGE, this);
+
+		// / startStateModel();
+
+	}
+
+	/**
+	 * Carry out recovery from failure:
+	 * <ul>
+	 * <li>ModalTasks NEVER fail - though their subTasks can do.
+	 * <li>Transients can fail - behaviour then becomes dependant on specific
+	 * Transient.
+	 * <li>Daytime Tasks can fail - though they shouldn't generally.
+	 * </ul>
+	 */
+	@Override
+	public void onSubTaskFailed(Task task) {
+		synchronized (taskList) {
+
+			// if (task instanceof ModalTask) {
+			// onSubTaskAborted(task);
+			// return;
+			// }
+
+			super.onSubTaskFailed(task);
+			// Just swap it out for now.
+			unloadCurrentTransient(task);
+			String evc = "";
+			long delay = 0L;
+			if (task == closeTask) {
+				evc = "CLOSE_FAILED";
+			} else if (task == openTask) {
+				evc = "OPEN_FAILED";
+			} else if (task == opStartTask) {
+				evc = "START_FAILED";
+				delay = TASK_COMPLETION_PAUSE_INTERVAL;
+			} else if (task == opStopTask) {
+				evc = "STOP_FAILED";
+			} else if (task == initTask) {
+				evc = "INIT_FAILED";
+				delay = TASK_COMPLETION_PAUSE_INTERVAL;
+			} else if (task == finalTask) {
+				evc = "FINAL_FAILED";
+				delay = TASK_COMPLETION_PAUSE_INTERVAL;
+			} else if (task == safeTask) {
+				evc = "SAFE_FAILED";
+				delay = TASK_COMPLETION_PAUSE_INTERVAL;
+			} else if (task == systemShutdownTask) {
+				evc = "POWER_DOWN_DONE";
+			} else
+				evc = "POWER_UP_FAILED";
+
+			// Now send the message if any ... fudged, uses delay length for
+			// now..
+			if (delay > 0L) {
+				final long del = delay;
+				final String ev = evc;
+				new Thread(new Runnable() {
+					public void run() {
+						try {
+							Thread.sleep(del);
+						} catch (InterruptedException e) {
+							ctrlLog.log(1, CLASS, name, "Interrupted waiting to post: " + ev);
+						}
+						EventQueue.postEvent(ev);
+					}
+				}).start();
+			} else
+				EventQueue.postEvent(evc);// TransientTask.DONE
+
+		}
+	}
+
+	/**
+	 * It must be a MODAL which was aborted.
+	 */
+	@Override
+	public void onSubTaskAborted(Task task) {
+		synchronized (taskList) {
+			super.onSubTaskAborted(task);
+			if (task != null)
+				taskList.removeTask(task);
+			EventQueue.postEvent(TASK_ABORTED_MESSAGE);
+		}
+	}
+
+	/**
+	 * Only Transients ever complete as such.
+	 */
+	@Override
+	public void onSubTaskDone(Task task) {
+		synchronized (taskList) {
+			super.onSubTaskDone(task);
+			unloadCurrentTransient(task);
+			String evc = "";
+			long delay = 0L;
+			if (task == closeTask) {
+				evc = "CLOSE_DONE";
+			} else if (task == openTask) {
+				evc = "OPEN_DONE";
+			} else if (task == opStartTask) {
+				evc = "START_DONE";
+				delay = TASK_COMPLETION_PAUSE_INTERVAL;
+			} else if (task == opStopTask) {
+				evc = "STOP_DONE";
+			} else if (task == initTask) {
+				evc = "INIT_DONE";
+			} else if (task == finalTask) {
+				evc = "FINAL_DONE";
+			} else if (task == safeTask) {
+				evc = "SAFE_DONE";
+			} else if (task == systemShutdownTask) {
+				evc = "POWER_DOWN_DONE";
+				delay = SHUTDOWN_PAUSE_INTERVAL;
+			} else
+				evc = "POWER_UP_DONE";
+
+			// Now send the message if any ... fudged, uses delay length for
+			// now..
+			if (delay > 0L) {
+				final long del = delay;
+				final String ev = evc;
+				new Thread(new Runnable() {
+					public void run() {
+						try {
+							Thread.sleep(del);
+						} catch (InterruptedException e) {
+							ctrlLog.log(1, CLASS, name, "Interrupted waiting to post: " + ev);
+						}
+						EventQueue.postEvent(ev);
+					}
+				}).start();
+			} else
+				EventQueue.postEvent(evc);// TransientTask.DONE
+		}
+	}
+
+	/**
+	 * Called to clear up after this Task is terminated. Calls
+	 * Controller.dispose() to clear up any logging, running threads etc. Then
+	 * exits with an appropriate exit code (from RCS_Controller)..
+	 */
+	protected void dispose(int exitCode) {
+		System.err.println("Disposing: Code: " + exitCode);
+		controller.terminate(exitCode);
+		// Fudge to take account of small process codes.
+		System.exit(exitCode - 605000);
+	}
+
+	/** Create an initially empty parallel tasklist. */
+	@Override
+	protected TaskList createTaskList() {
+		return taskList;
+	}
+
+	/**
+	 * Handle StateModel Action Events. These are messages passed back from the
+	 * StateModelImplementation whenever a significant event occurs. These
+	 * events are determined by the StateModelImpl's Effector and can be due to
+	 * state transitions etc.
+	 */
+	public void stateModelEventOccurred(StateModelEvent event) {
+
+		String eventCode = event.getEventId();
+		String eventData = event.getEventData();
+		long eventDelta = event.getEventDelta();
+
+		// This is where we map Model-Transitions to CA-Actions.
+
+		ctrlLog.log(1, CLASS, name, "stateModelEventOccurred", "CA:StateTransition: [" + eventCode + ":" + eventData
+				+ "]");
+
+		if (eventCode.equals("SWITCH_MODE_ENG")) {
+			switchModeEngAction();
+		} else if (eventCode.equals("SWITCH_MODE_AUTO")) {
+			switchModeAutoAction();
+		} else if (eventCode.equals("INIT_OPS")) {
+			initOpsAction();
+		} else if (eventCode.equals("SWAP")) {
+			swapAction();
+		} else if (eventCode.equals("JOB_REQ")) {
+			jobRequestAction();
+		} else if (eventCode.equals("OPEN")) {
+			openAction();
+		} else if (eventCode.equals("CLOSE")) {
+			closeAction();
+		} else if (eventCode.equals("START")) {
+			startAction();
+		} else if (eventCode.equals("STOP")) {
+			stopAction();
+		} else if (eventCode.equals("INIT")) {
+			initAction();
+		} else if (eventCode.equals("FINAL")) {
+			finalAction();
+		} else if (eventCode.equals("MAKE_SAFE")) {
+			safeAction();
+		} else if (eventCode.equals("ABORT_MODAL")) {
+			System.err.println("CA calling abort modal on " + eventCode + " using reason: " + eventData);
+			abortModalAction(eventData);
+		} else if (eventCode.equals("ABORT_START")) {
+			abortStartAction();
+		} else if (eventCode.equals("ABORT_STOP")) {
+			abortStopAction();
+		} else if (eventCode.equals("ABORT_OPEN")) {
+			abortOpenAction();
+		} else if (eventCode.equals("ABORT_CLOSE")) {
+			abortCloseAction();
+		} else if (eventCode.equals("POWER_RESET")) {
+			powerRestartAction();
+		} else if (eventCode.equals("POWER_SHUTDOWN")) {
+			powerShutdownAction();
+		} else if (eventCode.equals("OPERATOR_SHUTDOWN")) {
+			operatorShutdownAction();
+		} else if (eventCode.equals("KILL")) {
+			killAction(eventData);
+		} else if (eventCode.equals("EVENT")) {
+			eventAction(eventData, eventDelta);
+		}
+
+	}
+
+	//
+	// -----------------------------
+	// Action Event Implementations.
+	// -----------------------------
+	//
+
+	/**
+	 * Action Event Implementor for the SWITCH_MODE_ENG Action. Sets the
+	 * controller's ENG flag.
+	 */
+	private void switchModeEngAction() {
+		// controller.setEngineering(true);
+
+		FITS_HeaderInfo.setTelMode(FITS_HeaderInfo.TELMODE_MANUAL);
+
+		// Override forwarding of AG START command by ISS to TCS.
+		ngat.rcs.iss.ISS_AG_START_CommandImpl.setOverrideForwarding(true);
+
+	}
+
+	/**
+	 * Action Event Implementor for the SWITCH_MODE_AUTO Action. Unsets the
+	 * controller's ENG flag.
+	 */
+	private void switchModeAutoAction() {
+		// controller.setEngineering(false);
+
+		FITS_HeaderInfo.setTelMode(FITS_HeaderInfo.TELMODE_AUTOMATIC);
+
+	}
+
+	/**
+	 * Action Event Implementor for the START Action. Sends an OPERATIONAL ON
+	 * Command to the TCS and handles response.
+	 */
+	private void startAction() {
+		EventQueue.postEvent("START_READY");
+		startTransient(opStartTask);
+	}
+
+	/**
+	 * Action Event Implementor for the STOP Action. Sends an OPERATIONAL OFF
+	 * Command to the TCS and handles response.
+	 */
+	private void stopAction() {
+		EventQueue.postEvent("STOP_READY");
+		startTransient(opStopTask);
+	}
+
+	/**
+	 * Action Event Implementor for the OPEN Action. Sends an ENCLOSURE OPEN
+	 * Command to the TCS and handles response.
+	 */
+	private void openAction() {
+		EventQueue.postEvent("OPEN_READY");
+		startTransient(openTask);
+	}
+
+	/**
+	 * Action Event Implementor for the CLOSE Action. Sends an ENCLOSURE CLOSE
+	 * Command to the TCS and handles response.
+	 */
+	private void closeAction() {
+		EventQueue.postEvent("CLOSE_READY");
+		startTransient(closeTask);
+	}
+
+	/**
+	 * Action Event Implementor for the INIT Action. Sends MIRROR_COVER OPEN,
+	 * AGSELECT CASS, INST CASS Commands to the TCS and handles responses.
+	 */
+	private void initAction() {
+		EventQueue.postEvent("INIT_READY");
+		startTransient(initTask);
+	}
+
+	/**
+	 * Action Event Implementor for the FINAL action. Sends MIRROR_COVER CLOSE,
+	 * PARK ZENITH Commands to the TCS and handles responses.
+	 */
+	private void finalAction() {
+		EventQueue.postEvent("FINAL_READY");
+		startTransient(finalTask);
+	}
+
+	/**
+	 * Action Event Implementor for the MAKE_SAFE action. Sends TRACK OFF
+	 * Commands to the TCS and handles responses.
+	 */
+	private void safeAction() {
+		EventQueue.postEvent("SAFE_READY");
+		startTransient(safeTask);
+	}
+
+	/**
+	 * Action Event Implementor for the INIT_NIGHT Action. Swap a new MCA in now
+	 * after removing the currently executing MCA (if any).
+	 */
+	private void initOpsAction() {
+		// The CA is now 'operational'.
+		controller.setOperational(true);
+		swapModal();
+	}
+
+	/**
+	 * Action Event Implementor for the SWAP_NIGHT Action. Swap a new MCA in now
+	 * after removing the currently executing MCA (if any).
+	 */
+	private void swapAction() {
+		swapModal();
+	}
+
+	/**
+	 * Action Event Implementor for the JOB_REQUEST_NIGHT Action. Schedules the
+	 * next MCA-Job during night.
+	 */
+	private void jobRequestAction() {
+		controlElection();
+	}
+
+	/**
+	 * Action Event Implementor for the ABORT_MODAL Action. Sends abort()
+	 * message to the current MCA.
+	 */
+	private void abortModalAction(String reason) {
+		// The CA is now 'non-operational' for a bit at least.
+		controller.setOperational(false);
+		abortCurrentModal(reason);
+	}
+
+	/**
+	 * Action Event Implementor for the POWER_RESTART Action. Prepares the RCS
+	 * for powering down but leaves instruments.
+	 */
+	private void powerRestartAction() {
+		abortCurrentModal("POWER_DOWN");
+		((PowerDownTask) systemShutdownTask).setInstrumentAction(PowerDownTask.INST_NO_ACTION);
+		overrideShutdownCode = RCS_Controller.SHUTDOWN;
+		startTransient(systemShutdownTask);
+	}
+
+	/**
+	 * Action Event Implementor for the POWER_SHUTDOWN Action. Prepares the RCS
+	 * for powering down and tries to shutdown all instruments.
+	 */
+	private void powerShutdownAction() {
+		abortCurrentModal("POWER_DOWN");
+		((PowerDownTask) systemShutdownTask).setInstrumentAction(PowerDownTask.INST_SHUTDOWN);
+		overrideShutdownCode = RCS_Controller.SHUTDOWN;
+		startTransient(systemShutdownTask);
+	}
+
+	/**
+	 * Action Event Implementor for the OPERATOR_SHUTDOWN Action. Prepares the
+	 * RCS for an operator requested shutdown. Currently this action is
+	 * implemented seperately due to the requirement for passing shutdown
+	 * options for OCC and ICSs - NOT currently doable via the action callback
+	 * mechanism.
+	 */
+	private void operatorShutdownAction() {
+
+	}
+
+	/**
+	 * Action Event Implementor for the ABORT_START Action. Tries to abort a
+	 * running START operation.
+	 */
+	private void abortStartAction() {
+		abortTransientTask(opStartTask);
+	}
+
+	/**
+	 * Action Event Implementor for the ABORT_STOP Action. Tries to abort a
+	 * running STOP operation.
+	 */
+	private void abortStopAction() {
+		abortTransientTask(opStopTask);
+	}
+
+	/**
+	 * Action Event Implementor for the ABORT_OPEN Action. Tries to abort a
+	 * running OPEN operation.
+	 */
+	private void abortOpenAction() {
+		abortTransientTask(openTask);
+	}
+
+	/**
+	 * Action Event Implementor for the ABORT_CLOSE Action. Tries to abort a
+	 * running CLOSE operation.
+	 */
+	private void abortCloseAction() {
+		abortTransientTask(closeTask);
+	}
+
+	/**
+	 * Action Event Implementor for the KILL Action. Stops the JVM.
+	 */
+	private void killAction(String reason) {
+		System.err.println("Killing due to: " + reason);
+		dispose(overrideShutdownCode);
+	}
+
+	/**
+	 * Action Event Implementor for the EVENT Action. Posts an event message.
+	 */
+	private void eventAction(String topic, long delay) {
+
+		long now = System.currentTimeMillis();
+
+		EventQueue.postTimedEvent(topic, null, now + delay, 0L, EventQueue.PRIORITY_LEVEL);
+
+	}
+
+	//
+	// ----------------------------------------------
+	// Convenience methods used to implement actions.
+	// ----------------------------------------------
+	//
+
+	/**
+	 * Convenience method used to implement various ActionEvents. Swap a new
+	 * Mode Control Agent in now after removing the currently executing MCA (if
+	 * any).
+	 */
+	protected void swapModal() {
+		taskLog.log(4, CLASS, name, "swapModal", "Checking for next Modal Control Agent");
+		synchronized (taskList) {
+			currentModalAgent = (ModalTask) TaskOperations.getInstance().nextModal();
+			if (currentModalAgent == null)
+				return;
+			taskLog.log(4, CLASS, name, "startModal", "Retrieved Next Modal Control Agent: "
+					+ currentModalAgent.getName());
+			// We reset the new MCA and get it started. This is the point to
+			// check for any higher priority MCAs which will 'soon' want control
+			// so we can set a timelimit on the cMCA.
+			long timeLimit = TaskOperations.getInstance().futureModal(currentModalAgent);
+			currentModalAgent.reset();
+
+			long now = System.currentTimeMillis();
+			// We set a time limit from its startup.
+			currentModalAgent.setTimeLimit(timeLimit - now);
+			currentModalAgent.setTimeConstrained(true);
+			taskLog.log(3, CLASS, name, "swapModal", "MCA is: " + currentModalAgent.getAgentDesc()
+					+ ", No pre-emption before: " + sdf.format(new Date(timeLimit)) + " in "
+					+ ((timeLimit - now) / 1000) + " secs");
+
+			taskList.addTask(currentModalAgent);
+			worker.interrupt();
+		}
+	}
+
+	/**
+	 * Convenience method used to implement various ActionEvents. If the current
+	 * MCA will accept a new job and no higher priority MCA wants control then
+	 * the MCA is given a new job. Otherwise the current MCA is aborted - later
+	 * to have a new one started.
+	 */
+	protected void controlElection() {
+
+		taskLog.log(4, CLASS, name, "controlElect", "Checking for next Modal Control Agent");
+		ModalTask nextModalAgent = (ModalTask) TaskOperations.getInstance().nextModal();
+		if (nextModalAgent == currentModalAgent) {
+
+			// This is the actual time of next, higher MCA demands control at..
+			long timeLimit = TaskOperations.getInstance().futureModal(currentModalAgent);
+
+			long now = System.currentTimeMillis();
+
+			// We set a time limit from its startup.
+			currentModalAgent.setTimeLimit(timeLimit - now);
+			currentModalAgent.setTimeConstrained(true);
+			taskLog.log(3, CLASS, name, "controlElect", "Current (and next) MCA is: "
+					+ currentModalAgent.getAgentDesc() + ", No pre-emption before: " + sdf.format(new Date(timeLimit))
+					+ " in " + ((timeLimit - now) / 1000) + " secs");
+
+			currentModalAgent.nextJob();
+		} else {
+
+			taskLog.log(3, CLASS, name, "controlElect", "Current MCA is: " + currentModalAgent + " Next MCA is: "
+					+ nextModalAgent);
+
+			// TODO need to check if CMA is null - how can it be ? but sometimes
+			// it IS !
+
+			if (nextModalAgent.getAgentPriority() < currentModalAgent.getAgentPriority()) {
+				abortCurrentModal("override.mode.change");
+			} else {
+				abortCurrentModal("altruistic.mode.change");
+			}
+		}
+	}
+
+	/**
+	 * Request that the current MCA be swapped in when the currently executing
+	 * task (if any) completes, fails or aborts.
+	 * 
+	 * @param eventCode
+	 *            Description of the reason for aborting -- TBD details.
+	 */
+	protected void abortCurrentModal(String reason) {
+		synchronized (taskList) {
+			// No point swapping to same task.
+			System.err.println("*** Abort Current MCA");
+			taskLog.log(2, CLASS, name, "abortCurrentModal", "Unloading current Modal task due to: " + reason);
+			// tmmLog.log("Switch from current mode "+cma.getAgentID()+" due to: "+reason);
+
+			Task task = currentModalAgent;
+			currentModalAgent = null;
+			if (task != null) {
+				// taskList.removeTask(task);
+
+				if (!task.isAborted()) {
+
+					// This is a default - we need a mapping from (reason ->
+					// abortcode).
+					int abcode = 666;
+
+					if (reason.equals("mcp_suspend"))
+						abcode = 665;
+					else if (reason.equals("threat"))
+						abcode = 664;
+					else if (reason.equals("sudden_close"))
+						abcode = 663;
+					else if (reason.equals("override.mode.change"))
+						abcode = 662;
+					else if (reason.equals("altruistic.mode.change"))
+						abcode = 661;
+					else if (reason.equals("eng_hold"))
+						abcode = 668;
+
+					((ModalTask) task).setAbortCode(abcode, reason);
+					task.abort();
+
+				}
+			}
+		}
+	}
+
+	/**
+	 * Convenience method used to switch in the various Transient Tasks. Swap
+	 * the specified (possibly null) task in after removing the currently
+	 * executing task (if any). #### WE MAY WANT TO HAVE SEVERAL TTs RUNNING SO
+	 * NEED A LIST ###
+	 * 
+	 * @param nextTask
+	 *            The task to swap/add into the task list.
+	 */
+	protected void startTransient(Task nextTask) {
+		taskLog
+				.log(3, CLASS, name, "startTransient", "Loading: "
+						+ (nextTask != null ? nextTask.getName() : "NO-TASK"));
+		// ## Watch out dont start one when another is running.!!!!
+		synchronized (taskList) {
+			if (nextTask == null)
+				return;
+			currentTransientTask = nextTask;
+			nextTask.reset();
+			taskList.addTask(nextTask);
+			worker.interrupt();
+		}
+	}
+
+	/**
+	 * Convenience method used to abort a Transient TAsk.
+	 */
+	protected void abortTransientTask(Task task) {
+		synchronized (taskList) {
+			// Dont actually bother aborting, we will just not wait for the fail
+			// response
+			// as we will probably be issuing a counter Task (eg Stop/Start,
+			// Open/Close, Init/Final).
+		}
+	}
+
+	// =======================
+	// EventSubscriber method.
+	// =======================
+
+	/**
+	 * EventSubscriber method. <br>
+	 * Event notifications are RCS commands and operator overrides. Various
+	 * modules are allowed to send RCI commands, e.g. TOOP_MCA can interrupt the
+	 * current MCA to take control immediately rather than wait for the next
+	 * ControlElection request by current MCA.
+	 */
+	@Override
+	public void notifyEvent(String commandCode, Object data) {
+		// TODO has this method been defuncted ???
+	
+		ctrlLog.log(1, CLASS, name, "notifyEvent", "Receiving trigger: " + commandCode);
+		ctrlLog.log(1, CLASS, name, "notifyEvent", "After processing trigger: " + commandCode);
+
+	}
+
+	/**
+	 * EventSubscriber method.
+	 */
+	@Override
+	public String getSubscriberId() {
+		return name;
+	}
+
+	/**
+	 * Request that the specified transient task be swapped out.
+	 * 
+	 * @param task
+	 *            The Task to swap out.
+	 */
+	protected void unloadCurrentTransient(Task task) {
+		synchronized (taskList) {
+			// No point swapping to same task.
+			taskLog.log(3, CLASS, name, "unloadTransient", "Unloading current Transient task");
+
+			if (task != null) {
+				taskList.removeTask(task);
+				currentTransientTask = null;
+			}
+		}
+	}
+
+	/** Returns a readable description of the current state of the CA. */
+	public String stateToString() {
+		// StringBuffer buff = new StringBuffer();
+		// buff.append("RCS_ControlAgent: "+name);
+		// buff.append("\n\tModal Control Agent: "+
+		// (currentModalAgent != null ? currentModalAgent.getName() : "NONE"));
+		// buff.append("\n\tRunning Transient Task: "+
+		// (currentTransientTask != null ? currentTransientTask.getName() :
+		// "NONE"));
+		// buff.append("\n\t"+stateModel.stateToString());
+		// return buff.toString();
+		//return controller.getStateModel().stateToString();
+		return "Ce_ne_plus_disponible";
+	}
+
+	/** Returns a Mapping of the current state model disposition. */
+	public Map getStateInfo() {
+		//return controller.getStateModel().getStateInfo();
+		return null;
+	}
+
+	public void manage(Task task) {
+		// synchronized (taskList) {
+		currentModalAgent = (ModalTask) task;
+		// taskList.addTask(another);
+		messageQueue.add(new TaskEvent(task, SUBTASK_ADDED));
+		// worker.interrupt();
+		// }
+	}
+
+	public void unmanage(Task task) {
+		// synchronized (taskList) {
+		if (currentModalAgent == task)
+			currentModalAgent = null;
+		// taskList.removeTask(task);
+		messageQueue.add(new TaskEvent(task, SUBTASK_REMOVE));
+		// worker.interrupt();
+		// }
+	}
+
+	// /** Instructs the CA to start its (non null) StateModel
+	// implementation..*/
+	// protected void startStateModel() {
+	// if (stateModel != null &&
+	// stateModelIsIdle) {
+	// stateModelIsIdle = false;
+	// stateModel.start(stateModelUpdateInterval);
+	// }
+	// }
+
+	/** Returns the current MODAL task if any. */
+	public Task getCurrentModalTask() {
+		return currentModalAgent;
+	}
+
+	/**
+	 * Returns the current TRANSIENT task if any.
+	 * 
+	 * @uml.property name="currentTransientTask"
+	 */
+	public Task getCurrentTransientTask() {
+		return currentTransientTask;
+	}
+
+	/** Process an RCI or Operator Override command. */
+	private void processControlCommand(String command, String options) {
+		ctrlLog.log(1, CLASS, name, "processControlCommand", "Recieved RCI Operator Command: [" + command + "]");
+
+		// Try to extract the RCS and ICS options.
+		// Format: OP_<rcs-option>[_<ics-option>]
+
+		StringTokenizer parser = new StringTokenizer(options, "_");
+		if (parser.countTokens() < 1)
+			return;
+
+		// Set the RCS shutdown options.
+		String rcsOption = parser.nextToken();
+		int rcsAction = 0;
+		if (rcsOption.equals(OPERATOR_NORMAL_COMMAND))
+			rcsAction = RCS_Controller.NOOP;
+		else if (rcsOption.equals(OPERATOR_RESTART_ENGINEERING_COMMAND))
+			rcsAction = RCS_Controller.RESTART_ENGINEERING;
+		else if (rcsOption.equals(OPERATOR_RESTART_ROBOTIC_COMMAND))
+			rcsAction = RCS_Controller.RESTART_ROBOTIC;
+		else if (rcsOption.equals(OPERATOR_REBOOT_COMMAND))
+			rcsAction = RCS_Controller.REBOOT;
+		else if (rcsOption.equals(OPERATOR_HALT_COMMAND))
+			rcsAction = RCS_Controller.HALT;
+		else if (rcsOption.equals(OPERATOR_SHUTDOWN_COMMAND))
+			rcsAction = RCS_Controller.SHUTDOWN;
+		else {
+			ctrlLog.log(1, CLASS, name, "processControlCommand", "Command RCS Shutdown action [" + rcsOption
+					+ "] not recognized.");
+			return;
+		}
+
+		// Set for return.
+		overrideShutdownCode = rcsAction;
+
+		// Set the ICS shutdown options (defaults to NOOP).
+		String icsOption = "";
+		int icsAction = 0;
+		if (!parser.hasMoreTokens())
+			icsOption = "NOOP";
+		else
+			icsOption = parser.nextToken();
+
+		if (icsOption.equals("NOOP"))
+			icsAction = PowerDownTask.INST_NO_ACTION;
+		else if (icsOption.equals("REDATUM"))
+			icsAction = PowerDownTask.INST_REDATUM;
+		else if (icsOption.equals("RESTART"))
+			icsAction = PowerDownTask.INST_RESTART;
+		else if (icsOption.equals("REBOOT"))
+			icsAction = PowerDownTask.INST_REBOOT;
+		else if (icsOption.equals("SHUTDOWN"))
+			icsAction = PowerDownTask.INST_SHUTDOWN;
+		else {
+			ctrlLog.log(3, CLASS, name, "processControlCommand", "Command ICS Shutdown action [" + icsOption
+					+ "] not recognized.");
+			return;
+		}
+
+		// systemControlExec(rcsAction , icsAction);
+
+	}
+
+	/**
+	 * Execute a system control option.
+	 * 
+	 * @param rcsAction
+	 *            What to do with RCS.
+	 * @param icsAction
+	 *            What to do with ICSs.
+	 */
+	public void systemControlExec(int rcsAction, int icsAction) {
+
+		// Set for return.
+		overrideShutdownCode = rcsAction;
+
+		// ((PowerDownTask)systemShutdownTask).setInstrumentAction(icsAction);
+		// ((PowerDownTask)systemShutdownTask).setShutdownAction(rcsAction);
+		// startTransient(systemShutdownTask);
+
+		// This is a signal to the StateModel - to set SI_SHUTDOWN flag
+		EventQueue.postEvent(OPERATOR_SHUTDOWN_MESSAGE);
+
+		// abortCurrentModal(command);
+	}
+
+	/** Returns history. */
+	public ConfigurationProperties getHistory() {
+		return rcs_history;
+	}
+
+	/** Returns readable description. */
+	@Override
+	public String toString() {
+		return "[RCS_CA : " + name + "]";
+	}
+
+}

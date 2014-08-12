@@ -1,0 +1,528 @@
+/*   
+     Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+     This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation; either version 2 of the License, or
+     (at your option) any later version.
+
+     Robotic Control System is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU General Public License for more details.
+
+     You should have received a copy of the GNU General Public License
+     along with Robotic Control System; if not, write to the Free Software
+     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.tmm.manager;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.message.RCS_TCS.*;
+
+/**
+ * This Task creates a series of Offset and Expose Tasks to carry out the
+ * Telescope Offsets between mosaci cells and carry out the individual
+ * exposures.
+ * 
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: Observation_Task.java,v 1.2 2007/03/21 12:53:37 snf Exp snf $
+ * <dt><b>Source:</b>
+ * <dd>$Source:
+ * /home/dev/src/rcs/java/ngat/rcs/tmm/manager/RCS/Observation_Task.java,v $
+ * </dl>
+ * 
+ * @author $Author: snf $
+ * @version $Revision: 1.2 $
+ */
+public class Observation_Task extends ParallelTaskImpl {
+
+    /** ERROR_BASE for this Task type. */
+    public static final int ERROR_BASE = 1900;
+
+    public static final int OFFSET_TASK_FAILED = 601901;
+
+    public static final int EXPOSURE_TASK_FAILED = 601902;
+
+    public static final int REBOOT_TASK_FAILED = 601903;
+
+    /** Reference to the Observation to be performed. */
+    protected Observation observation;
+
+    /** The selected instrument. */
+    protected Instrument instrument;
+
+    /** True if this observation represents standard exposures. */
+    protected boolean standard;
+
+    /** True if we only want to glance at target. */
+    protected boolean glance;
+
+    /** True if this observation refers to a single FIXED TIME observation. */
+    protected boolean fixed;
+
+    /** Holds the time for a FIXED observation if applicable. */
+    protected long fixedTime;
+
+    /** True if AG control is delegated to this task. */
+    protected boolean doControlAutoguider;
+
+    protected AutoGuide_Task autoOffTask;
+
+    protected AutoGuide_Task autoOnTask;
+
+    protected Offset_Task offsetTask;
+
+    protected Reboot_Task rebootTask;
+
+    /** Count the number of attempts at recovery. */
+    int recCount;
+
+    /** TEMP Flag to indicate that a subtask is beeing interrupted. */
+    boolean interrupting = false;
+
+    /**
+     * Create an Observation_Task using the supplied Observation and settings.
+     * By default it does not refer to a fixed time exposure.
+     * 
+     * @param observation
+     *            The Observation to perform.
+     * @param standard
+     *            True if this observation represents standard exposures.
+     * @param name
+     *            The unique name/id for this TaskImpl - should be based on the
+     *            COMMAND_ID.
+     * @param manager
+     *            The Task's manager.
+     */
+    public Observation_Task(String name, TaskManager manager, Observation observation, boolean standard) {
+	super(name, manager);
+	this.observation = observation;
+	this.standard = standard;
+
+	// -------------------------
+	// Decide on the Instrument.
+	// -------------------------
+	InstrumentConfig config = observation.getInstrumentConfig();
+	instrument = Instruments.findInstrumentFor(config);
+
+	if (instrument == null) {
+	    failed = true;
+	    errorIndicator = new BasicErrorIndicator(101, "Cannot select instrument for Config: "
+						     + config.getClass().getName(), null);
+	    return;
+	    // FATAL
+	}
+
+    }
+
+    /**
+     * Create an Observation_Task using the supplied Observation and settings.
+     * 
+     * @param observation
+     *            The Observation to perform.
+     * @param standard
+     *            True if this observation represents standard exposures.
+     * @param fixed
+     *            True if this observation refers to a fixed time exposure.
+     * @param fixedTime
+     *            The time for a fixed time exposure to take place.
+     * @param name
+     *            The unique name/id for this TaskImpl.
+     * @param manager
+     *            The Task's manager.
+     */
+    public Observation_Task(String name, TaskManager manager, Observation observation, boolean standard, boolean fixed,
+			    long fixedTime) {
+	this(name, manager, observation, standard);
+	this.fixed = fixed;
+	this.fixedTime = fixedTime;
+    }
+
+    /** Set true if we only want to glance at target. */
+    public void setGlance(boolean glance) {
+	this.glance = glance;
+    }
+
+    /**
+     * Set true if we must try to switch the autoguider (if we can) as something
+     * we dont know about has changed since last Obs.
+     */
+    public void setDoControlAutoguider(boolean ag) {
+	this.doControlAutoguider = ag;
+    }
+
+    public void onInit() {
+	super.onInit();
+	// EventRegistry.subscribe(Events.TEST_MESSAGE_1, this);
+
+	double ttlRot = StatusPool.latest().limits.timeToRotLimit;
+
+	taskLog.log(1, CLASS, name, "onInit", "Starting Observation sequence: "
+		    + (observation != null ? observation.getName() : "**No observation defined**") + " TTL/Rot= " + ttlRot
+		    + " secs");
+
+	int rotmode = StatusPool.latest().mechanisms.rotMode;
+	double rotsky = StatusPool.latest().mechanisms.rotSkyAngle;
+	double rotact = StatusPool.latest().mechanisms.rotPos;
+	double alt = StatusPool.latest().mechanisms.altPos;
+	double az = StatusPool.latest().mechanisms.azPos;
+
+	// paralactic info gathering
+	taskLog.log(1, CLASS, name, "onInit", "ParallacticInfo " + TCS_Status.codeString(rotmode) + " " + az + " "
+		    + alt + " " + rotsky + " " + rotact);
+
+    }
+
+    /**
+     * THIS IS JUST FOR TEST, MAY WELL BE WRONG, DOES worker.interrupt() after
+     * inserting an AbortTask. NOT IF AN EXPOSURE ISNIT RUNNING ????????
+     */
+    public void onAborting() {
+	super.onAborting();
+	if (started) {
+	    Abort_Task aTask = new Abort_Task(name + "-(ExposeAbort)", this, instrument.getName());
+	    aTask.setDelay(10000L);
+	    taskList.addTask(aTask);
+
+	    worker.interrupt();
+	}
+
+    }
+
+    public void onSubTaskDone(Task task) {
+	synchronized (taskList) {
+	    super.onSubTaskDone(task);
+	}
+
+    }
+
+    public void onSubTaskFailed(Task task) {
+	synchronized (taskList) {
+	    super.onSubTaskFailed(task);
+	    ErrorIndicator ei = task.getErrorIndicator();
+
+	    taskLog.log(2, CLASS, name, "onSubTaskFailed", "During observation: " + task.getName() + " failed due to: "
+			+ ei.getErrorString());
+
+	    if (task instanceof Offset_Task) {
+
+		offsetTask = (Offset_Task) task;
+		int runs = offsetTask.getRunCount();
+		if (runs < 6) {
+		    resetFailedTask(offsetTask);
+		} else {
+		    taskLog.log(CALL, 2, CLASS, name, "Offset_Task Failed after 6 attempts: Error: code: "
+				+ ei.getErrorCode() + " msg: " + ei.getErrorString());
+		    failed(OFFSET_TASK_FAILED, "Offset_Task failed after 6 attempts", null);
+		}
+	    } else if (task instanceof Reboot_Task) {
+
+		rebootTask = (Reboot_Task) task;
+		int runs = rebootTask.getRunCount();
+		if (runs < 6) {
+		    resetFailedTask(rebootTask);
+		} else {
+		    failed(REBOOT_TASK_FAILED, "Reboot_Task failed after 6 attempts", null);
+		}
+	    } else if (task instanceof Abort_Task) {
+		taskList.skip(task);
+
+		// TODO AG failure handling is complex and depends on what
+		// agmode is set in the obs
+		// and whether this is part of a 'run-thro' guide
+
+		// } else if
+		// (task ==autoOffTask) {
+
+		// } else if
+		// (task == autoOnTask) {
+
+	    } else if (task instanceof MosaicSequenceTask) {
+
+		// probably need to handle AUTOGUIDER acquisition problems here
+		// but leave for
+		// now as its already horribly complicated...just pass up the
+		// chain of command.
+		taskLog.log(CALL, 2, CLASS, name, "MosaicSequenceTask failed: (), Error: code: " + ei.getErrorCode()
+			    + " msg: " + ei.getErrorString());
+		failed(ei.getErrorCode(), ei.getErrorString(), ei.getException());
+
+	    } else {
+		taskLog.log(CALL, 2, CLASS, name, "Error: code: " + ei.getErrorCode() + " msg: " + ei.getErrorString());
+		failed(ei.getErrorCode(), ei.getErrorString(), ei.getException());
+	    }
+	}
+    }
+
+    /**
+     * Override to allow subclasses to carry out any specific clearing up after
+     * the generic clearup has been performed.
+     */
+    public void onDisposal() {
+	super.onDisposal();
+    }
+
+    /**
+     * Creates the TaskList for this TaskManager. A series of Offset and Expose
+     * Tasks are created depending on the Observation's mosaic settings.
+     */
+    protected TaskList createTaskList() {
+
+	Mosaic mosaic = observation.getMosaic();
+
+	double dRA = mosaic.getOffsetRA();
+	double dDec = mosaic.getOffsetDec();
+	// Take account of scaleToPixel setting.
+	if (mosaic.getScaleToPixel()) {
+	    double pixSize = instrument.getPixelSize();
+	    dRA = Math.rint(dRA / pixSize) * pixSize;
+	    dDec = Math.rint(dDec / pixSize) * pixSize;
+	}
+
+	try {
+	    Task previousTask = null;
+
+	    int mosaicCount = 0;
+
+	    switch (mosaic.getPattern()) {
+		// The Observation is an MxN grid - work from low to high dec
+		// and increasing (generally West to East) RA.
+	    case Mosaic.ARRAY:
+	    case Mosaic.GRID: {
+		int sDec = (mosaic.getCellsDec() - 1) / 2;
+		int sRA = (mosaic.getCellsRA() - 1) / 2;
+		int nDec = mosaic.getCellsDec();
+		int nRA = mosaic.getCellsRA();
+
+		taskLog.log(INFO, 2, CLASS, name, "Creating mosaic ARRAY " + nRA + "x" + nDec);
+
+		for (int iDec = 0; iDec < nDec; iDec++) {
+		    for (int iRA = 0; iRA < nRA; iRA++) {
+			// Work out the RA and Dec offsets for this mosaic cell.
+			double tRA = (iRA - sRA) * dRA;
+			double tDec = (iDec - sDec) * dDec;
+
+			MosaicSequenceTask msTask = new MosaicSequenceTask(
+									   name + "/MOSAIC_G(" + iRA + "," + iDec + ")", this, new Offset(tRA, tDec), observation,
+									   doControlAutoguider, // maybe we need more
+									   // checks here
+									   standard);
+			taskList.addTask(msTask);
+			if (previousTask != null)
+			    taskList.sequence(previousTask, msTask);
+
+			previousTask = msTask;
+			mosaicCount++;
+
+		    }
+		}
+
+		taskLog.log(CALL, 2, CLASS, name, "Generated " + mosaicCount + " offsets for Mosaic ARRAY");
+	    }
+		break;
+	    case Mosaic.CROSS:
+		// The Observation is a CROSS with arms of length (M-1)/2
+		// and (N-1)/2. Do the low dec, then RA West - East, then hi
+		// dec.
+		{
+		    int nDec = 0;
+		    int nRA = 0;
+		    // Do the low dec cells. (N/2).
+		    nDec = (mosaic.getCellsDec() - 1) / 2;
+		    for (int iDec = -nDec; iDec < 0; iDec++) {
+			double tDec = iDec * dDec;
+
+			MosaicSequenceTask msTask = new MosaicSequenceTask(name + "/MOSAIC_C(0," + iDec + ")", this,
+									   new Offset(0.0, tDec), observation, doControlAutoguider, // maybe
+									   // we
+									   // need
+									   // more
+									   // checks
+									   // here
+									   standard);
+			taskList.addTask(msTask);
+			if (previousTask != null)
+			    taskList.sequence(previousTask, msTask);
+
+			previousTask = msTask;
+			mosaicCount++;
+
+		    }
+		    // Do the RA cells. (N).
+		    nRA = (mosaic.getCellsRA() - 1) / 2;
+		    for (int iRA = -nRA; iRA <= nRA; iRA++) {
+			double tRA = iRA * dRA;
+
+			MosaicSequenceTask msTask = new MosaicSequenceTask(name + "/MOSAIC_C(" + iRA + ",0)", this,
+									   new Offset(tRA, 0.0), observation, doControlAutoguider, // maybe
+									   // we
+									   // need
+									   // more
+									   // checks
+									   // here
+									   standard);
+			taskList.addTask(msTask);
+			if (previousTask != null)
+			    taskList.sequence(previousTask, msTask);
+
+			previousTask = msTask;
+			mosaicCount++;
+
+		    }
+		    // Do the high dec cells. (N/2).
+		    nDec = (mosaic.getCellsDec() - 1) / 2;
+		    for (int iDec = 1; iDec <= nDec; iDec++) {
+			double tDec = iDec * dDec;
+
+			MosaicSequenceTask msTask = new MosaicSequenceTask(name + "/MOSAIC_C(0," + iDec + ")", this,
+									   new Offset(0.0, tDec), observation, doControlAutoguider, // maybe
+									   // we
+									   // need
+									   // more
+									   // checks
+									   // here
+									   standard);
+			taskList.addTask(msTask);
+			if (previousTask != null)
+			    taskList.sequence(previousTask, msTask);
+
+			previousTask = msTask;
+			mosaicCount++;
+
+		    }
+		    taskLog.log(CALL, 2, CLASS, name, "Generated " + mosaicCount + " offsets for Mosaic CROSS");
+		}
+		break;
+	    case Mosaic.HORIZONTAL: {
+		int sRA = (mosaic.getCellsRA() - 1) / 2;
+		int nRA = mosaic.getCellsRA();
+
+		for (int iRA = 0; iRA < nRA; iRA++) {
+		    // Work out the RA and Dec offsets for this mosaic cell.
+		    double tRA = (iRA - sRA) * dRA;
+
+		    MosaicSequenceTask msTask = new MosaicSequenceTask(name + "/MOSAIC_H(" + iRA + ",0)", this,
+								       new Offset(tRA, 0.0), observation, doControlAutoguider, // maybe
+								       // we
+								       // need
+								       // more
+								       // checks
+								       // here
+								       standard);
+		    taskList.addTask(msTask);
+		    if (previousTask != null)
+			taskList.sequence(previousTask, msTask);
+
+		    previousTask = msTask;
+		    mosaicCount++;
+		}
+
+		taskLog.log(CALL, 2, CLASS, name, "Generated " + mosaicCount + " offsets for Mosaic HORIZONTAL");
+	    }
+		break;
+
+	    case Mosaic.VERTICAL: {
+		int sDec = (mosaic.getCellsDec() - 1) / 2;
+		int nDec = mosaic.getCellsDec();
+
+		for (int iDec = 0; iDec < nDec; iDec++) {
+		    // Work out the RA and Dec offsets for this mosaic cell.
+		    double tDec = (iDec - sDec) * dDec;
+
+		    MosaicSequenceTask msTask = new MosaicSequenceTask(name + "/MOSAIC_V(0," + iDec + ")", this,
+								       new Offset(0.0, tDec), observation, doControlAutoguider, // maybe
+								       // we
+								       // need
+								       // more
+								       // checks
+								       // here
+								       standard);
+		    taskList.addTask(msTask);
+		    if (previousTask != null)
+			taskList.sequence(previousTask, msTask);
+
+		    previousTask = msTask;
+		    mosaicCount++;
+		}
+
+		taskLog.log(CALL, 2, CLASS, name, "Generated " + mosaicCount + " offsets for Mosaic VERTICAL");
+	    }
+		break;
+
+	    case Mosaic.SINGLE:
+		// The Observation is just a single exposure.
+		// This SHOULD always be the case for FIXED exposures !.
+		{
+		    // if (fixed) {
+		    // taskList.addTask(new Exposure_Task(name+"/RUNAT",
+		    // this,
+		    // observation,
+		    // standard,
+		    // fixed,
+		    // fixedTime
+		    // ));
+		    // } else {
+		    // taskList.addTask(new Exposure_Task(name+"/MULTRUN",
+		    // this,
+		    // observation,
+		    // standard
+		    // ));
+
+		    taskList.addTask(new MosaicSequenceTask(name + "/MOSAIC(SINGLE)", this, null, // NO
+							    // OFFSETS
+							    observation, doControlAutoguider, // maybe we need more
+							    // checks here
+							    standard));
+
+		}
+	    }
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", "Failed to create Task Sequence for Observation: " + tx);
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Observation.");
+	    errorIndicator.setException(tx);
+	    failed(errorIndicator);
+	    return null;
+	}
+
+	return taskList;
+    }
+
+}
+
+/**
+ * $Log: Observation_Task.java,v $ /** Revision 1.2 2007/03/21 12:53:37 snf /**
+ * added instrumentation to collect parallactic info for acquisition phase tests
+ * /** /** Revision 1.1 2006/12/12 08:28:54 snf /** Initial revision /** /**
+ * Revision 1.1 2006/05/17 06:33:38 snf /** Initial revision /** /** Revision
+ * 1.2 2002/09/16 09:38:28 snf /** *** empty log message *** /** /** Revision
+ * 1.1 2001/04/27 17:14:32 snf /** Initial revision /**
+ */
+

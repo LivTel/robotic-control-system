@@ -1,0 +1,101 @@
+<xml>
+
+  <site>
+    <name> LT </name>
+    <latitude> 28.0 </latitude>
+    <longitude> 155.0 </longitude>
+  </site>
+
+  <system>
+
+    <payload>
+
+      <!-- Rotator base offset - may move location -->
+      <rotator>
+	<offset> 104.0 </offset>
+      </rotator>
+
+      <instrument name="RINGO3">
+	<alias> RINGO3 </alias>
+	<mount> /mnt/ringo-image </mount>
+	<port> 1 </port>
+	<reboot> 1 </reboot>
+      </instrument>
+
+      <instrument name="RISE">
+	<alias> RISE </alias>
+	<mount> /mnt/rise-image </mount>
+	<port> 5 </port>
+	<reboot> 2 </reboot>
+      </instrument>
+
+      <!-- <instrument name="IO:THOR">
+	   <alias> THOR </alias>
+	   <mount> /mnt/thor-image </mount>
+	   <port> 0 </port>
+	   <reboot> 2 </reboot>
+	</instrument> -->
+
+      <instrument name="IO:O">
+	<alias> O </alias>
+	<mount> /mnt/o-image </mount>
+	<port> 0 </port>
+	<reboot> 2 </reboot>
+      </instrument>
+
+      <instrument name="IO:I">
+	<alias> O </alias>
+	<mount> /mnt/i-image </mount>
+	<port> 4 </port>
+	<reboot> 2 </reboot>
+      </instrument>
+
+      <instrument name="SPRAT">
+	<alias> SPRAT</alias>
+	<mount> /mnt/sprat-image </mount>
+	<port> 3 </port>
+	<reboot> 2 </reboot>
+      </instrument>
+
+      <instrument name="IO:I">
+	<alias> I </alias>
+	<mount> /mnt/i-image </mount>
+	<port> 6 </port>
+	<reboot> 2 </reboot>
+      </instrument>
+
+      <instrument name="FRODO">
+	<alias> FRODO</alias>
+	<mount> /mnt/frodo-image </mount>
+	<port> 1 </port>
+	<reboot> 2 </reboot>
+      </instrument>
+
+    </payload>
+
+    <guidance>
+
+      <autoguider name="CASS" default="true">
+	<host> localhost </host>
+	<port> 6571 </port>
+      </autoguider>
+
+      <autoguider name="IOAG">
+	<host> localhost </host>
+	<port> 6655 </port>
+      </autoguider>
+
+      <autoguider name="CAG"> 
+	<host> localhost </host>
+	<port> 7865 </port>
+      </autoguider>
+
+    </guidance>
+
+    <adjuster>
+      <config> /occ/rcs/config/tweaks.dat </config>
+    </adjuster>
+
+  </system>
+
+</xml>

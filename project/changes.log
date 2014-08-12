@@ -1,0 +1,10 @@
+2007-03-05 [TMMTasksequencer] Added config for LCOGT Calendar.
+           [WindowSchedule] Changes from BB@lcogt re calendar lookup.
+2007-03-07 [Instruments] Added config for SkyModelProvider setting.
+           [ExposureTask] Added check for SkyModelProvider prior to updating with DPRT results.
+2007-04-27 [Instruments] Added aperture offsets and rotator offsets for CP calculations
+2007-xx-yy [CPCalcaulator] New class to perfrom CP calculations.
+2007-xx-yy [ObsSeqTask] Added CP logic. This MTA now performs task sequencing dynamically.
+2007-05-30 [WmsFilter] Added INVALID to set of okay states.
+2007-06-14 [AnyOfRule] Added new rule type to select anyof a set of values
+2007-06-14 [MonitorsXX] Added parsing for AnyOfRule

@@ -1,0 +1,257 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   
+      <title>Project Information - RCS</title>
+   </head>
+   <body bgcolor="white">
+      <h1><u>Robotic Control System</u></h1>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( CALIB ) - Calibration Operations</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>xx</u> -    CALIB/General configuration and implementation</span><p></p>
+      <description>
+         	Covers the imlementation of the CAL MCA, its configuration and that of the various MTAs which
+         	implement the different CALIB operations.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( SCIENCE ) - Science Operations</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    SCIENCE/Autoguider integration</span><p></p>
+      <description>
+         	Integration of the autoguider to science programs.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    SCIENCE/Group types handling</span><p></p>
+      <description>
+         	Covering different group types and special handling.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    SCIENCE/Error Handling</span><p></p>
+      <description>
+         		Intelligent handling of error conditions.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_013</u> -    SCIENCE/Observation sequencing </span><p></p>
+      <description>
+         	This workflow deals with the sequencing of operations during an observation in science mode.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( POS ) - Planetarium Operations</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    POS/G2 Command migration</span><p></p>
+      <description>
+         	Migration to G2 future command set, implementation and ongoing test program.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    POS/Mosaicing</span><p></p>
+      <description>
+         	Implementation and testing of the mosaicing procedure
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    POS/Abort responses</span><p></p>
+      <description>
+         	Handling the responses to various abort reasons and propagating back to RTI.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( TOCS ) - Target of Opportunity Operations</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_002</u> -    TOCS/General Protocol</span><p></p>
+      <description>
+         	Handling general TOCS protocol issues      
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_003</u> -    TOCS/Instrumentation</span><p></p>
+      <description>           
+         	This workflow is intended to cover any instrument related issues including 
+         	
+         <ul>
+            	  
+            <li>Enhancements to the INSTR command for new or existing instruments.</li>
+            	  
+            <li>Testing of all instrument interactions</li>
+            	  
+            <li>Task implementation relating to instruments</li>
+            	
+         </ul>
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_009</u> -    TOCS/Accounting</span><p></p>
+      <description>           
+         	This workflow is intended to cover issues relating to TO accounting. This will include:-
+         	
+         <ul>
+            	  
+            <li>Update of Phase2DB with proposal/tag used time for the assigned TO proposal</li>
+            	  
+            <li>TO Service accounting</li>
+            	
+         </ul>
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( COMMS ) - Communications</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_001</u> -    COMMS/Command Translator</span><p></p>
+      <description>
+         	The CommandTranslator is a module which translates commands received from the various
+         	executive tasks and status collators as JMS objects (JSOs) into the native format for
+         	the TCS and other external subsystems. Additionally native responses are translated
+         	back to JSOs to supply the appropriate type of response to the originating task/collator.             
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_014</u> -    COMMS/CIL Handling</span><p></p>
+      <description>
+         	The CIL layer is responsible for handling the sending and receiving of UDP messages via the
+         	CIL interface. Commands (JSO) are received from clients (TMM Tasks and SCM Collators) via a
+         	SlotConnection. Handlers are created and registered for these agianst a generated sequence number.
+         	The Reader thread receives replies and places into a queue. The despatcher checks the queue,
+         	looks up the registered handler and sends the translated reply to the original client.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( EMM ) - Event Messaging</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    EMM/General implementation</span><p></p>
+      <description>
+         	Implementation and testing of EMM.
+         	
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( ISS ) - Instrument Support</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_010</u> -    ISS/Instrument control actions</span><p></p>
+      <description>
+         	This workflow deals with issues relating to the selection and configuration of
+         	instruments in Science,Planetarium and TO operations.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_012</u> -    ISS/Instrument adjustment of telescope</span><p></p>
+      <description>
+         	This workflow is to deal with issues relating to the instruments' adjustment of
+         	the telescope via INST_ISS commands via the RCS to the TCS.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    ISS/FITS headers</span><p></p>
+      <description>
+         	Generation of FITS headers from TCS queries and from internal state.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( TMM ) - Task Management</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    TMM/Sequencer</span><p></p>
+      <description>
+         	The Sequencer handles requests from the CA when the controlling MCA yields after completing a job.
+         	Here we cover the general protocol and interaction with the SM and CA.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    TMM/Recovery Registry</span><p></p>
+      <description>
+         	The recovery registry contains details in a simplified format to control the response of MTAs to
+         	failure of their subservient MTAs and ETAs. The response can be customized to suit varying daily
+         	handling of errors.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    TMM/Config Registry</span><p></p>
+      <description>
+         	The config registry contains details of configuration parameters used by any MTA or ETA which needs
+         	to be set up from day to day to suit operational requirements.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    TMM/General Mode Control</span><p></p>
+      <description>
+         Covers general issues relating to mode control agents.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( SCM ) - Status Collation</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_005</u> -    SCM/Sensors</span><p></p>
+      <description>
+         	Sensors are used to store and present data from various collation mechanisms using a standard
+         	inerface..
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_007</u> -    SCM/Filters</span><p></p>
+      <description>
+         	Filters are used to smooth the output gathered from sensors. There are a number of different
+         	classes of filter.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_008</u> -    SCM/Rules</span><p></p>
+      <description>
+         	The rulebase contains details of how the output from filtered sensor readings is to be used to trigger
+         	events to be propageted to the SM and TMM.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_011</u> -    SCM/Monitoring</span><p></p>
+      <description>
+         	General monitoring issues.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( STATEMODEL ) - State Decision Model</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_016</u> -    STATEMODEL/Changes to SM</span><p></p>
+      <description>
+         	This workflow covers the SM changes and upgrades
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( CONTROL ) - Control and monitoring</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    CONTROL/GUI control</span><p></p>
+      <description>
+         	Covers the commands sent by the GUI and their implementation at the RCS.
+         	
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u></u> -    CONTROL/Monitoring</span><p></p>
+      <description>
+         	Covers the data sent by the RCS to the GUI or other data handlers.
+         
+      </description>
+      <p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( config ) - Configuration</span><p></p>
+      <hr><span style="display:block;font-size:16pt;">
+         Subproject ( LOGGING ) - Logging</span><p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_004</u> -    LOGGING/MCA Specific logging</span><p></p>
+      <description>      
+         	This workflow is aimed at logging for the various control agents.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_006</u> -    LOGGING/Task logging</span><p></p>
+      <description>
+         	This workflow is aimed at the task (TMM) module logging.
+         
+      </description>
+      <p></p>
+      <hr><br><span style="display:block;font-size:12pt;"><u>WF_014</u> -    LOGGING/Remote logging</span><p></p>
+      <description>
+         	This workflow is associated with remote logging - i.e. from a GUI or external client.
+         
+      </description>
+   </body>
+</html>

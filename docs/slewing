@@ -1,0 +1,69 @@
+Slewing and handling of target offsets.
+
+When a slew is performed all Offsets (OFFBY) are reset in the TCS to 0.0
+
+We can have a target offset from Cat ra/dec of nominal source. 
+This must be stored as it will be needed to add to catra/dec lwhen FITS headers 
+are generated.
+
+These offsets are passed to the SlewTask as the final ra/dec to slew to is 
+calculated at the last moment by the CommandTranslator in the CIL Proxy layer 
+- e.g. for moon etc.
+
+Individual (temp) offsets are added via the OffsetTask. These must be stored so
+as to be addded to nominal (or shifted) cat ra/dec in FITS headers.
+
+These temp offsets are NON cumulative.
+
+These offsets are performed due to:
+
+ - POS_MosaicSetupMTA
+ - POS_MosaicObserveMTA
+ - TOCOffsetMTA
+ - ObsSequenceMTA 
+ - ObserveMTA.
+
+
+Rules for updating FITS header stored params:
+
+ ta:  Target Offset RA
+ td:  Target Offset Dec
+
+ da:  Temp offset RA
+ dd:  Temp offset Dec
+
+On Slew: 
+
+ ta = target offset passed param
+ td = target offset passed param
+
+ da = 0.0
+ dd = 0.0
+
+On Offset:
+
+ da = passed param
+ dd = passed param
+
+
+Rules for filling in FITS values for:
+ 
+ RA    Inc temp offsets (i.e. ra + ta + da)
+ CATRA What we send to TCS (i.e. ra + ta)
+ APPRA
+
+ DEC
+ CATDEC What we send to TCS (i.e. DEC+td)
+ APPDEC
+
+
+
+
+Notes:
+
+We add offsets directly and correct to 2pi and +/-pi - this only works
+correctly for small offsets. ta/td could however be quite large
+
+We do not handle ISS_OffsetRADEC as yet.
+
+We do not consider drift due to NS tracking (e.g. moon).

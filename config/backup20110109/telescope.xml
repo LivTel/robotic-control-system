@@ -1,0 +1,64 @@
+<xml>
+
+  <site>
+    <name> LT </name>
+    <latitude> 28.0 </latitude>
+    <longitude> -17.0 </longitude>
+  </site>
+
+  <system>
+  <payload>
+
+    <instrument name="RATCAM">
+       <alias> RATCAM </alias>
+       <mount> /mnt/rat-image </mount>
+       <port> 3 </port>
+       <reboot> 3 </reboot>
+    </instrument>
+  
+    <instrument name="RINGO2">
+       <alias> RINGO2 </alias>
+       <mount> /mnt/ringo-image </mount>
+       <port> 1 </port>
+       <reboot> 1 </reboot>
+    </instrument>
+
+    <instrument name="RISE">
+       <alias> RISE </alias>
+       <mount> /mnt/rise-image </mount>
+       <port> 5 </port>
+       <reboot> 2 </reboot>
+    </instrument>
+
+    <instrument name="THOR">
+       <alias> THOR </alias>
+       <mount> /mnt/thor-image </mount>
+       <port> 0 </port>
+       <reboot> 2 </reboot>
+    </instrument>
+
+    <instrument name="FRODO">
+       <alias> FRODO</alias>
+       <mount> /mnt/frodo-image </mount>
+       <port> 6 </port>
+       <reboot> 2 </reboot>
+    </instrument>
+
+    <instrument name="FRODO_RED">
+       <alias> FRODO</alias>
+       <mount> /mnt/frodo-image </mount>
+       <port> 6 </port>
+       <reboot> 2 </reboot>
+    </instrument>
+
+    <instrument name="FRODO_BLUE">
+       <alias> FRODO</alias>
+       <mount> /mnt/frodo-image </mount>
+       <port> 6 </port>
+       <reboot> 2 </reboot>
+    </instrument>
+
+
+  </payload>
+ </system>
+</xml>

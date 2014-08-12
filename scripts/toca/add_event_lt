@@ -1,0 +1,55 @@
+#!/bin/csh
+
+if ($# != 6) then
+    echo "wrong number of arguments (should be 6)"
+    exit 1
+endif
+
+set date_string = `date +%y%m%d`
+
+set targetname = $date_string"-"$1
+set targetra = $2
+set targetdec = $3
+set interval = $4
+set multrun = $5
+set exptime = $6
+
+echo "TARGET    =" $targetname
+echo "RA        =" $targetra
+echo "DEC       =" $targetdec
+echo "INTERVAL  =" $interval
+echo "MULTRUN   =" $multrun
+echo "EXPTIME   =" $exptime
+
+source /proxy/bin/setup
+source /proxy/bin/class_setup
+
+setenv CLASSPATH ${CLASSPATH}:/proxy/misc/class
+
+set KS = "-Djavax.net.ssl.keyStore=/proxy/misc/certs/ukrtoc.private"
+set KP = "-Djavax.net.ssl.keyStorePassword=ukrtocpw"
+set TS = "-Djavax.net.ssl.trustStore=/proxy/misc/certs/rti_servers.public"
+
+set EGD = "-Djava.security.egd=file:/dev/urandom"
+set DEBUG
+# = "-Djavax.net.debug=all"
+
+echo "Ready to add target..."
+
+java $KS $KP $TS $EGD $DEBUG -DHOST=ltdmz -DPORT=6510 -DSECURE AddTarget /LT_Phase2_001/PATT/keith.horne/PL04B17 $targetname $targetra $targetdec
+
+if ($status == 0) then
+    echo "Target was added OK" 
+else
+    echo "**** There was an error adding target - so not bothering to add the group"
+    exit 1
+endif
+
+echo "Ready to add Group and One Observation..."
+
+java $KS $KP $TS $EGD -DHOST=ltdmz -DPORT=6510 -DSECURE AddObsGroup /LT_Phase2_001/PATT/keith.horne/PL04B17 $targetname 5 23 $interval $targetname ratcam-SDSS-R-2 $exptime $multrun
+
+if ($status != 0) then
+    echo "**** There was an error adding the group"
+    exit 1
+endif

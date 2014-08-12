@@ -1,0 +1,343 @@
+/*   
+     Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+     This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation; either version 2 of the License, or
+     (at your option) any later version.
+
+     Robotic Control System is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU General Public License for more details.
+
+     You should have received a copy of the GNU General Public License
+     along with Robotic Control System; if not, write to the Free Software
+     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.tmm.manager;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.message.RCS_TCS.*;
+
+/** This Task creates a series of Offset and Expose Tasks. It may also switch the autoguider on/off.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id$
+ * <dt><b>Source:</b>
+ * <dd>$Source$
+ * </dl>
+ * @author $Author$
+ * @version $Revision$
+ */
+public class MosaicSequenceTask extends ParallelTaskImpl {
+
+    public static final int OFFSET_TASK_FAILED   = 601901;
+    
+    public static final int EXPOSURE_TASK_FAILED = 601902;
+    
+    public static final int AUTOGUIDE_ON_TASK_FAILED  = 601903;
+    
+    public static final int AUTOGUIDE_OFF_TASK_FAILED = 601904;
+    
+    /** An offset in tangent plane (rads,rads).*/
+    private Offset offset;
+    
+    /** The observation (for expsoure info).*/
+    private Observation observation;
+    
+    /** Whether to switch the autoguider off/on before/after offsetting.*/
+    private boolean autoguide;
+    
+    /** Whether the exposure is for a photometric standard.*/
+    private boolean standard;
+    
+    protected AutoGuide_Task autoguideOffTask;
+    
+    protected AutoGuide_Task autoguideOnTask;
+    
+    protected Offset_Task   offsetTask;
+    
+    protected Exposure_Task exposureTask;
+    
+    /** Create a MosaicSequenceTask using the specified parameters:
+     * @param name        Name of the task.
+     * @param manager     Manager of the task.
+     * @param offset      An offset in tangent plane (rads,rads).
+     * @param observation The observation (for expsoure info).
+     * @param autoguide   Whether to switch the autoguider off/on before/after offsetting.
+     * @param standard    Whether the exposure is for a photometric standard.
+     */
+    public MosaicSequenceTask(String      name,
+			      TaskManager manager,
+			      Offset      offset,
+			      Observation observation,
+			      boolean     autoguide,
+			      boolean     standard) {
+	super(name, manager);
+	this.offset = offset;
+	this.observation = observation;
+	this.autoguide = autoguide;
+	this.standard = standard;
+    }
+    
+ 
+    
+    /** Initializing.*/
+    public void onInit() {
+	super.onInit();
+	
+	// rads to arcsec/arcsec
+	taskLog.log(1, CLASS, name, "onInit", 
+		    "Starting Mosaic sequence: "+
+		    (offset != null ? "Offset: ("+offset.getXOffset()*206264.8062+"as,"+
+		     offset.getYOffset()*206264.8062+"as" : "No Offset")+
+		    ", Autoguider: "+(autoguide ? "under control" : "not required"));
+	
+    }
+    
+    /** Handle subtask failure.*/
+    public void onSubTaskFailed(Task task) {	
+	
+	super.onSubTaskFailed(task);
+	ErrorIndicator ei = task.getErrorIndicator();
+	
+	taskLog.log(2, CLASS, name, "onSubTaskFailed",
+		    "During mosaic sequence: "+task.getName()+" failed due to: "+ei.getErrorString());
+	
+	if ( task instanceof Exposure_Task ) {	
+	    
+	    exposureTask = (Exposure_Task)task;
+	    int runs = exposureTask.getRunCount();
+	    
+	    switch (ei.getErrorCode()) {
+	    case 100600: // DpRt failure - not serious just means no reduction		 
+		taskList.skip(exposureTask);
+		break;
+	    case 101201: //CCS_MULTRUN_EXPOSURE_FAILED
+		if (runs < 2) {
+		    resetFailedTask(exposureTask);
+		    exposureTask.setDelay(10000L);
+		} else {			
+		    failed(EXPOSURE_TASK_FAILED, 
+			   "Exposure failed after 2 attempts", null);	
+		}
+		break;
+
+	    case 100301: // MOVE_FOLD failure 
+		if (runs < 2) {
+		    resetFailedTask(exposureTask);
+		    exposureTask.setDelay(10000L);
+		} else {			
+		    failed(EXPOSURE_TASK_FAILED, 
+			   "Exposure failed after 2 attempts to move fold mirror", null);	
+		}	
+		break;
+	    default:
+		
+		taskLog.log(CALL, 2, CLASS, name, 
+			    "Exposure Failed due to: Code: "+ei.getErrorCode()+" Msg: "+ei.getErrorString());
+		failed(ei.getErrorCode(), 
+		       "Exposure failed due to: "+ei.getErrorString(), null);		    
+	    }
+	} else if
+	      ( task instanceof Offset_Task ) { 
+	    
+	    offsetTask = (Offset_Task)task;
+	    int runs = offsetTask.getRunCount();		    
+	    if (runs < 2) {
+		resetFailedTask(offsetTask); 	
+	    } else {
+		taskLog.log(CALL, 2, CLASS, name, 
+			    "Offset Failed after 2 attempts: Error: code: "+
+			    ei.getErrorCode()+" msg: "+ei.getErrorString());
+		failed(OFFSET_TASK_FAILED, 
+		       "Offset failed after 2 attempts", null);
+	    }
+	} else if 
+	      ( task ==  autoguideOffTask ) {
+	    
+	    int runs = autoguideOffTask.getRunCount();	
+	    if (runs < 2) {
+		resetFailedTask(autoguideOffTask); 	
+	    } else {
+		failed(AUTOGUIDE_OFF_TASK_FAILED, 
+		       "AutoGuide OFF failed after 2 attempts", null);	
+	    }	
+	} else if
+	      ( task ==  autoguideOnTask ) {
+	    
+	    // here is where to test the ag.opt flag and then reset the observation ag flag to never
+	    // if we fail to acquire but need to propagate to higher level if mandatory and send
+	    // the TABU flag with update back to OSS.
+	    
+	    switch (observation.getAutoGuiderUsageMode()) {
+	    case TelescopeConfig.AGMODE_OPTIONAL:
+		// reset this so none of the following mosaic offsets try to acquire
+		observation.setAutoGuiderUsageMode(TelescopeConfig.AGMODE_NEVER);
+		taskList.skip(task);
+		return;
+	    case TelescopeConfig.AGMODE_MANDATORY:	 
+		failed(AUTOGUIDE_ON_TASK_FAILED,
+		       "Failed mandatory acquisition stage",
+		       null);
+		return;
+	    case TelescopeConfig.AGMODE_NEVER:
+		taskList.skip(task);
+		return;
+	    default:
+		// should never get here but just in case...
+		int runs = autoguideOnTask.getRunCount();	
+		if (runs < 2) {
+		    resetFailedTask(autoguideOnTask); 	
+		} else {
+		    failed(AUTOGUIDE_ON_TASK_FAILED, 
+			   "AutoGuide ON failed after 2 attempts", null);	
+		}	
+	    }
+
+
+	} else {
+	    taskLog.log(CALL, 2, CLASS, name, 
+			"Error: code: "+ei.getErrorCode()+" msg: "+ei.getErrorString());
+	    failed(ei.getErrorCode(),
+		   ei.getErrorString(),
+		   ei.getException());
+	}
+    }
+
+    
+    /** Creates the TaskList for this TaskManager. A series of Offset and Expose
+     * Tasks are created depending on the Observation's mosaic settings.*/
+    protected TaskList createTaskList() {
+
+	// Options are beleived to be:
+
+	// Exposure without offset, NoAuto: ( Expose )
+	// Exposure without offset, Auto:   ( AutoOn, Expose )
+	// Exposure with offset, NoAuto:    ( Offset, Expose )
+	// Exposure with offset, Auto:      ( AutoOff, Offset, AutoOn, Expose )
+
+
+	
+	//exposureTask = new Exposure_Task(name+"/EXPOSE", 
+				//	 this, 
+				//	 observation,
+				//	 standard);
+    	// TODO DONT USE THIS NOW
+	taskList.addTask(exposureTask);	
+
+	if (offset != null) {
+	    offsetTask = new Offset_Task(name+"/OFFSET",
+					 this,
+					 offset.getXOffset(),
+					 offset.getYOffset());
+	    taskList.addTask(offsetTask);
+	}
+
+	if (autoguide) {
+
+
+	    autoguideOffTask = new AutoGuide_Task(name+"/AUTO_OFF",
+						  this,
+						  null,
+						  AUTOGUIDE.OFF);
+	    //taskList.addTask(autoguideOffTask);
+	    
+	    // just used for log messages in AutoTask
+	    TelescopeConfig agConfig = observation.getTelescopeConfig();
+	    
+	    autoguideOnTask = new AutoGuide_Task(name+"/AUTO_ON",
+						 this,
+						 agConfig,
+						 AUTOGUIDE.ON);
+	    //taskList.addTask(autoguideOnTask);
+	    
+	}
+	
+	try {
+
+	    if (offset != null) {
+		if (autoguide) {
+		    taskList.addTask(autoguideOnTask);
+		    taskList.addTask(autoguideOffTask);
+		    taskList.sequence(autoguideOffTask, offsetTask);
+		    taskList.sequence(offsetTask,       autoguideOnTask);
+		    taskList.sequence(autoguideOnTask,  exposureTask);	
+		    taskLog.log(1, CLASS, name, "createTaskList", 
+				"Sequence: ** AGOFF->OFFSET->AGON->EXPOSE");
+		} else {
+		    taskList.sequence(offsetTask,       exposureTask); 
+		    taskLog.log(1, CLASS, name, "createTaskList", 
+				"Sequence: ** OFFSET->EXPOSE");
+		}
+	    } else {
+
+		// single mosaic with autoguider
+		if (autoguide) {		    
+		    // first check if the bugger is already running...
+		    boolean alreadyrunning = (StatusPool.latest().autoguider.agStatus == TCS_Status.AG_LOCKED);
+		    taskLog.log(1, CLASS, name, "createTaskList",
+				"Autoguider is "+(alreadyrunning ? "already locked" : "NOT locked"));
+		    if (! alreadyrunning) {
+			taskList.addTask(autoguideOnTask);
+			taskList.sequence(autoguideOnTask,  exposureTask);
+			taskLog.log(1, CLASS, name, "onInit", 
+				    "Sequence: ** AGON->EXPOSE");
+		    }
+			
+		    taskLog.log(1, CLASS, name, "onInit", 
+				"Sequence: ** EXPOSE");		    
+		} else {	
+		    // single mosaic with NO autoguider
+		    taskLog.log(1, CLASS, name, "onInit", 
+				"Sequence: EXPOSE");
+		}		
+	    }   
+
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for Mosaic: "+tx);
+	    
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Mosaic.");
+	    errorIndicator.setException(tx);
+	    failed(errorIndicator);
+
+	    return null;
+	}
+
+	return taskList;
+    }
+
+}
+
+

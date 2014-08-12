@@ -1,0 +1,338 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+package ngat.rcs.iss;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+import ngat.net.*;
+import ngat.message.base.*;
+import ngat.message.ISS_INST.*;
+import ngat.message.RCS_TCS.*;
+
+import java.io.*;
+
+public class ISS_MOVE_FOLD_CommandImpl extends ISS_CommandImpl {
+
+	public static final String CLASS = "ISS_MOVE_FOLD_CommandImpl";
+
+	/** This is set if we are already on the port so we dont bother to send it. */
+	protected boolean overrideNoForward = false;
+
+	// by default we will override the MOVE_FOLDand fake a reply !
+	private static boolean overrideForwarding = false;
+
+    /** The fold posn requested. */
+    int rfold;
+    
+    /** The fold position code requested.*/
+    int rsfold;
+    
+    /** Current fold position. */
+    int cfold;
+
+    /** Current fold position code. */
+    int csfold;
+
+	public ISS_MOVE_FOLD_CommandImpl(JMSMA_ProtocolServerImpl serverImpl, COMMAND receivedCommand) {
+		super(serverImpl, receivedCommand);
+	}
+
+	/** Override forwarding for this command. */
+	public static void setOverrideForwarding(boolean ovr) {
+		overrideForwarding = ovr;
+	}
+
+	public void processReceivedCommand(INST_TO_ISS receivedCommand) {
+		super.processReceivedCommand(receivedCommand);
+
+		// check for no-change - no send onwards
+		if (receivedCommand instanceof ngat.message.ISS_INST.MOVE_FOLD) {
+			csfold = StatusPool.latest().mechanisms.foldMirrorPos;		
+			int cdeploy = StatusPool.latest().autoguider.agFilterPos;
+
+			if (cdeploy == TCS_Status.POSITION_RETRACT) {
+			    switch (csfold) {
+			    case TCS_Status.POSITION_PORT_1:
+				cfold = 1;
+				break;
+			    case TCS_Status.POSITION_PORT_2:
+				cfold = 2;
+				break;
+			    case TCS_Status.POSITION_PORT_3:
+				cfold = 3;
+				break;
+			    case TCS_Status.POSITION_PORT_4:
+				cfold = 4;
+				break;
+			    case TCS_Status.POSITION_PORT_5:
+				cfold = 5;
+				break;
+			    case TCS_Status.POSITION_PORT_6:
+				cfold = 6;
+				break;
+			    case TCS_Status.POSITION_PORT_7:
+				cfold = 7;
+				break;
+			    case TCS_Status.POSITION_PORT_8:
+				cfold = 8;
+				break;
+			    }
+			} else if
+			      (cdeploy == TCS_Status.POSITION_INLINE) {
+
+			    // if agfilter shows in-line then the fold is stowed (port-0)
+			    cfold = 0;
+			} else {
+			    // we dont know for sure
+			    cfold = -1; 
+			}
+								
+			rfold = ((ngat.message.ISS_INST.MOVE_FOLD) receivedCommand).getMirror_position();
+		
+			System.err.println("ISS_MOVE_FOLD::Processing():Current Fold position: PORT-" + cfold + ", Requested: PORT-" + rfold);
+
+		}
+
+	}
+
+	/** LT fudge - set to 300 sec to allow MF and AGF commands with retries. */
+	public long calculateTimeToComplete() {
+		return 300000L;
+	}
+
+	/** Forward if the request is for a new port. */
+	public boolean doesForward() {
+
+		return false;
+
+	}
+
+
+    public COMMAND_DONE makeResponse() {
+	  
+	if (rfold != cfold) {
+	    
+	    // we will be sending something
+	    
+	    ngat.message.ISS_INST.MOVE_FOLD_DONE done = new ngat.message.ISS_INST.MOVE_FOLD_DONE("Forwarded");
+	    done.setSuccessful(true);
+	    issLog.log(2, CLASS, "-", "makeResponse", "Sending onwards...");
+	    
+	    int agFilterDeploy = ngat.message.RCS_TCS.AGFILTER.OUT;
+	    int agFilterStowed = ngat.message.RCS_TCS.AGFILTER.IN;
+	    	    
+	    boolean sendMove = false;
+	    boolean sendAgf = false;
+
+	    int agdirn = 0;
+	    // setup the MOVE_FOLD and/or AGFILTER
+	    if (cfold >= 1 && cfold <= 8 && rfold >= 1 && rfold <= 8) {
+		// deployed but need to change fold position
+		sendMove = true;
+		System.err.println("ISS_MOVE_FOLD::Outgoing():Fold is currently deployed at port-"+cfold+" , moving to new port-"+rfold);
+	    } else if
+		(cfold == 0 && rfold >= 1 && rfold <= 8) {
+		// stowed but need to deploy and shift
+		sendMove = true;
+		sendAgf = true;
+		agdirn = agFilterDeploy;
+		System.err.println("ISS_MOVE_FOLD::Outgoing():Fold is currently stowed, deploying and moving to port-"+rfold);
+	    } else if 
+		(cfold >= 1 && cfold <= 8 && rfold == 0) {
+		// deployed but stowing
+		sendAgf = true;
+		agdirn = agFilterStowed;
+		System.err.println("ISS_MOVE_FOLD::Outgoing():Fold is currently deployed, just stowing");
+	    } else if
+		  (cfold == -1 && rfold == 0) {
+		sendAgf =true;
+		agdirn = agFilterStowed;
+		System.err.println("ISS_MOVE_FOLD::Outgoing():Fold deployment is currently unknown, just stowing");
+	    } else if
+		  (cfold == -1 && rfold != 0) {
+		sendMove = true;
+		sendAgf = true;
+                agdirn = agFilterDeploy;
+		System.err.println("ISS_MOVE_FOLD::Outgoing():Fold deployment is currently unknown, deploying and moving to port-"+rfold);
+	    }
+	    
+	    int errno = 0;
+	    String errmsg = null;
+
+	    // Send MOVE_FOLD - 60 sec timeout
+	    if (sendMove) {
+		 ngat.message.RCS_TCS.MOVE_FOLD move_fold = new ngat.message.RCS_TCS.MOVE_FOLD(receivedCommand.getId());
+		 move_fold.setState(rfold);// the MOVE_FOLD maps directly to port number
+		 System.err.println("ISS_MOVE_FOLD::Outgoing():Sending move-fold command");
+		 try {
+		     JMSHandler handler1 = sendCommand(move_fold, 60000);
+		     if (handler1.isDone()) {
+			 
+			 COMMAND_DONE mf_done = handler1.getResponse();
+			 
+			 if (! mf_done.getSuccessful()) {
+			     return failed(done, mf_done.getErrorNum(), mf_done.getErrorString());
+			 }
+			 
+		     } else {
+			 return failed(done, 60001,"MOVE_FOLD timeout ?");
+		     }
+		 } catch (Exception e) {
+		     return failed(done, 60000, "Exception in move-fold forwarding: " + e);
+		 }
+	    }
+	    
+			
+			
+	    // Send AGFILTER command - 60 sec timeout
+	    if (sendAgf) {		
+		ngat.message.RCS_TCS.AGFILTER agfilter = new ngat.message.RCS_TCS.AGFILTER(receivedCommand.getId());
+		agfilter.setState(agdirn);
+		
+		// we have several tries, keep track of error messages may need them..
+		int tries = 0;
+		boolean success = false;
+		while (! success && tries < 3) {
+		    tries++;
+
+		    // send an extra ACK to the instrument
+		    ACK ack = makeAck(150000L); // 60 sec delay, 60 sec command timeout + 30 spare
+		    ack.setId("Agfilter attempt #"+tries);
+		    serverImpl.sendAck(ack);
+
+		    if (tries > 1) {
+			
+			// wait a while before checking
+			try {Thread.sleep(30000L);} catch (InterruptedException ix) {}
+
+			// maybe its arrived anyway ?
+			System.err.println("ISS_MOVE_FOLD::Outgoing():Checking agfilter before attempt#"+tries);
+			int cdeploy = StatusPool.latest().autoguider.agFilterPos;
+                        if ((agdirn == agFilterStowed && cdeploy == TCS_Status.POSITION_INLINE) ||
+			    (agdirn == agFilterDeploy && cdeploy == TCS_Status.POSITION_RETRACT)) {
+			    System.err.println("ISS_MOVE_FOLD::Outgoing():Agfilter is now in correct position, cancel attempt");
+			    success = true;
+                            continue;
+			}
+
+			// wait another while before retry
+                        try {Thread.sleep(30000L);} catch (InterruptedException ix) {}
+			// send another ack, if it fails were out of here as client is probably gone...
+			ACK ack2 = makeAck(150000L); // 60 sec delay, 60 sec command timeout + 30 spare
+			ack2.setId("Agfilter attempt #"+tries+" after delay");
+			serverImpl.sendAck(ack2);
+			
+			if (finished) {
+			    errno = 60000;
+			    errmsg = "Client has gone ? ";
+			    System.err.println("ISS_MOVE_FOLD::Outgoing():Client appears to have gone, quitting");
+			    break; 
+			}
+		    }
+
+		    System.err.println("ISS_MOVE_FOLD::Outgoing():Sending ag-filter command, attempt#"+tries);
+		    JMSHandler handler2 = null;
+		    try {
+			handler2 = sendCommand(agfilter, 60000);
+		    } catch (Exception e) {
+			errno = 60000;
+			errmsg = "Exception sending AGFILTER request: "+e;
+			continue;
+		    }
+		    if (handler2.isDone()) {
+			
+			COMMAND_DONE agf_done = handler2.getResponse();
+			
+			if (agf_done.getSuccessful()) {
+			    success = true;
+			    continue;
+			} else {
+			    errno = agf_done.getErrorNum();
+			    errmsg = agf_done.getErrorString();
+			    continue;
+			}
+			
+		    } else {
+			errno = 60001;
+			errmsg = "AGFILTER timeout ?";
+			continue;
+		    }
+		    
+		} // next try
+
+		if (! success) {
+		    return failed(done, errno, errmsg);
+		}
+
+	    }
+			    
+	    // we get here if all is well...
+	    done.setSuccessful(true);
+	    done.setErrorString("Successfully forwarded commands");
+	    done.setErrorNum(0);
+	    return done;
+	} else {
+	    // fake forwarding as nothing has changed
+	    System.err.println("ISS_MOVE_FOLD::Outgoing():Returning faked completion as no-change");
+	    
+	    ngat.message.ISS_INST.MOVE_FOLD_DONE done = new ngat.message.ISS_INST.MOVE_FOLD_DONE("Forwarded");
+	    done.setSuccessful(true);
+	    done.setErrorNum(0);
+	    done.setErrorString("Pretending to send MOVE_FOLD");
+	    issLog.log(2, CLASS, "-", "makeResponse", "Pretending to send MOVE_FOLD");
+	    return done;
+	}
+    }
+    
+    public COMMAND_DONE translateResponse(COMMAND_DONE response) {
+	super.translateResponse(response);
+	ngat.message.ISS_INST.MOVE_FOLD_DONE done = new ngat.message.ISS_INST.MOVE_FOLD_DONE(receivedCommand.getId());
+	done.setSuccessful(response.getSuccessful());
+	done.setErrorNum(response.getErrorNum());
+	done.setErrorString(response.getErrorString());
+	return done;
+    }
+
+private COMMAND_DONE failed(COMMAND_DONE done, int errno, String errmsg) {
+    done.setSuccessful(false);
+    done.setErrorString(errmsg);
+    done.setErrorNum(errno);
+    return done;
+}
+
+}

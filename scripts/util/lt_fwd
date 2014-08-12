@@ -1,0 +1,54 @@
+#!/bin/csh
+
+# ari_archive_fwd <file-path> <dest-file-path>
+
+source $DEPLOY_BIN/setup
+source $DEPLOY_BIN/class_setup
+source $DEPLOY_BIN/archive_xfer_setup
+
+echo SSLFileTransfer Client startup.
+
+# These should work.
+set KEYSTORE     = "certs/pca.private"
+set TRUSTSTORE   = "certs/itr.public"
+set KPASS        = geronimo
+
+cd $ARCHIVE_HOME
+
+# Check we have the key store (server's private key).
+if (! -e $KEYSTORE) then   
+    echo "Could not find Keystore: $KEYSTORE" 
+    exit 1
+endif
+
+# Check we have the trust store (clients' public keys).
+if (! -e $TRUSTSTORE) then
+    echo "Could not find Truststore: $TRUSTSTORE"
+    exit 2
+endif
+
+# Relay
+set RHOST = 192.168.2.32
+set RPORT = 6666
+
+# Archive
+set AHOST = 192.168.3.192
+set APORT = 6666
+
+# Just an ID for this test - you can run several of these as required.
+set ID = LT_IMG_PUSH
+set APP = ngat.net.SSLFileTransfer
+
+set EGD = -Djava.security.egd=file:/dev/urandom
+#set EGD
+
+#set DEBUG = -Djavax.net.debug=all
+set DEBUG
+
+set SSL = TLS
+
+echo "File: $1 Send to: $1:t "
+
+$JAVA -Dcpdelim=@ $DEBUG $EGD $APP @client @id $ID @auth  @key $KEYSTORE @pass $KPASS @trust $TRUSTSTORE \
+    @host $RHOST @port $RPORT @band 3 @fwd $1 @dest $2 @rhost $AHOST @rport $APORT
+

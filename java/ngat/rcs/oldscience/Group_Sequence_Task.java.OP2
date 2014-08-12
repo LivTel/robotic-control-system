@@ -1,0 +1,481 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.science;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.tocs.*;
+import ngat.rcs.calib.*;
+
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+import ngat.util.logging.*;
+import ngat.message.RCS_TCS.*;
+import ngat.message.OSS.*;
+
+import java.util.*;
+/** This Task creates a series of Tasks to carry out the
+ * Scheduling, Group and database Update operations.
+ *
+ *
+ * Outstanding:
+ * <ol>
+ *   <li>Failed Update - need to log these somewhere in format that 
+ *       OSS Repair script can use next day.  
+ * </ol>
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: Group_Sequence_Task.java,v 1.3 2008/11/14 19:59:41 eng Exp eng $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/science/RCS/Group_Sequence_Task.java,v $
+ * </dl>
+ * @author $Author: eng $
+ * @version $Revision: 1.3 $
+ */
+public class Group_Sequence_Task extends ParallelTaskImpl implements Logging {
+
+    /** ERROR_BASE for this Task type.*/
+    public static final int ERROR_BASE = 1100;
+
+    /** Errorcode: Scheduling did not return a Group.*/
+    public static final int GROUP_NOT_SET = 601101;
+
+    /** Errorcode: Scheduler was not contactable.*/
+    public static final int SCHEDULER_OFFLINE = 601102;
+
+    /** How long to TABU a group which failed on AG Acquire.*/
+    public static final long AUTOGUIDER_FAILURE_TABU_TIME = 3600000L;
+
+    /** How long to TABU a group which failed on Acquisition.*/
+    public static final long INSTRUMENT_ACQUIRE_FAILURE_TABU_TIME = 7200000L;
+
+    /** Count the number of attempts at recovery.*/
+    int recCount;
+    
+    protected Schedule_Task currentScheduleTask;
+
+    protected Group_Task    currentGroupTask;
+    
+    protected Update_Task   currentUpdateTask;
+
+    protected TelescopeStatusUpdateTask currentTelStatusUpdateTask;
+    
+    protected InstrumentUpdateTask      currentInstUpdateTask;
+
+    protected SeeingUpdateTask          seeingUpdateTask;
+    
+    protected SeeingUpdateTask          photomUpdateTask;
+
+    /** Records the time at which the Group was started i.e. When the Schedule task returns.*/
+    protected long groupStartTime;
+
+    /** Records the time at which the Group completed i.e. When the Group task returns.*/
+    protected long groupEndTime;
+
+    /** Maximum length of an observation/group sequence (msec).*/
+    protected long maxGroupLength;
+
+    protected long maxFixedIdleTime;
+
+    /** True if the Group was successfully executed to completion.*/
+    protected volatile boolean success;
+
+    ///** ScheduleDescriptor from OSS.*/
+    //protected ScheduleDescriptor schedule;
+
+    /** Mode of operation of the scheduler.*/
+    protected String scheduleMode;
+
+    /** Group returned from Scheduler.*/
+    protected Group group;
+
+    /** Group (unique) instantiation counter.*/
+    protected int groupCounter;
+
+    protected long executionTimeLimit;
+
+    /** Create a Group_Sequence_Task using the supplied settings.
+     * @param scheduleMode The mode of operation of the scheduler.
+     * @param maxGroupLength Maximum length of a group (msec).
+     * @param name The unique name/id for this TaskImpl.
+     * @param manager The Task's manager.
+     */
+    public Group_Sequence_Task(String      name,
+			       TaskManager manager,
+			       String      scheduleMode,
+			       long        maxGroupLength,
+			       long        executionTimeLimit) {
+	super(name, manager);
+	this.scheduleMode = scheduleMode;
+	this.maxGroupLength = maxGroupLength;
+	this.executionTimeLimit = executionTimeLimit;
+    }
+
+    /** Deal with failed subtask.*/
+    public void onSubTaskFailed(Task task) {   	
+	super.onSubTaskFailed(task);
+	// The whole Group is dead so quit - depends on why e.g. comms - retry?.
+	// Maybe the Group has been locked anyway ? We will? know this from
+ 	// the error code comming back with one of the OSS_ERROR_CODEs which
+	// start with 700000.
+	if (task == currentScheduleTask) {	
+	    switch (task.getErrorIndicator().getErrorCode()) {
+	    case 600002:
+		taskList.skip(currentGroupTask);
+		success = false;
+		failed(SCHEDULER_OFFLINE, "Unable to connect to OSS");
+		break;
+	    case 600004: 
+		taskList.skip(currentGroupTask);  
+		success = false;
+		failed(SCHEDULER_OFFLINE, "OSS Scheduler broke connection");
+		break;
+
+	    case 702901:
+	    case 702902:
+	    case 702903:
+	    case 702904:
+	    case 702905:
+		// let the manager (SCA) know so it can sleep
+		taskList.skip(currentGroupTask);  
+		success = false;
+		failed(task.getErrorIndicator().getErrorCode(), "There were no available groups");
+		break;
+	    default:
+		taskList.skip(currentGroupTask); 
+		success = false;
+		failed(task.getErrorIndicator().getErrorCode(),
+		       task.getErrorIndicator().getErrorString());
+	    }
+	}
+	    
+	// If the Group fails we need to tell the OSS to release it.
+	if (task == currentGroupTask) {
+	    // UPDATE_GROUP request to OSS.   
+	    ErrorIndicator err = task.getErrorIndicator();
+	    taskList.skip(currentGroupTask); 
+	    success = false;	
+	    groupEndTime = System.currentTimeMillis();
+	    currentUpdateTask.setSuccess(false);	
+	    currentUpdateTask.setDoneTime(groupEndTime);
+	    currentUpdateTask.setDetails(err.getErrorString());					  
+	    currentUpdateTask.setUsedTime(groupEndTime - groupStartTime);
+	    currentUpdateTask.setCode(err.getErrorCode());
+
+	    // Check if the errorcode indicates an autoguider problem.
+	    //if (err.getErrorCode() == AUTOGUIDER_ERROR || err.getErrorCode() == HAWK_AUTO_ERROR) {
+		
+	    if (err.getErrorCode() == MosaicSequenceTask.AUTOGUIDE_ON_TASK_FAILED) {
+	    	currentUpdateTask.setTabuTime(AUTOGUIDER_FAILURE_TABU_TIME);
+		// this is the time in the future (ms)
+	    } else if
+		(err.getErrorCode() == Observation_Sequence_Task.INSTRUMENT_ACQUISITION_FAILED) {
+		currentUpdateTask.setTabuTime(INSTRUMENT_ACQUIRE_FAILURE_TABU_TIME);
+	    }
+	    taskLog.log(1, CLASS, name, "onSubTaskFailed",
+			"GroupTask failed, DBUpdater has been setup");
+	    
+	}
+	
+	if (task instanceof InstrumentUpdateTask) {
+	    taskList.skip(task);
+	}
+
+	if (task instanceof TelescopeStatusUpdateTask) {
+	    taskList.skip(task);
+	}
+
+	if (task instanceof SeeingUpdateTask) {
+	    taskList.skip(task);
+	}
+
+	// If the Update fails - cant do much BUT log it so can be fixed in OSS 
+	// next day by manual operator - or via automated script (fix log)....
+	//##
+    }
+    
+    /** Handle aborting of subtasks.*/
+    public void onSubTaskAborted(Task task) { 
+	super.onSubTaskAborted(task);	
+    
+	// Normally just skip it.
+	if (task == currentScheduleTask ||
+	    task == currentGroupTask) {
+	    taskList.skip(currentGroupTask);		
+	}
+
+    }
+
+    /** Handle completion of subtasks.*/    
+    public void onSubTaskDone(Task task) {
+	
+	super.onSubTaskDone(task);
+	
+	// Schedule done, set group to be used by GroupSeqTask..
+	if (task == currentScheduleTask) { 
+	    
+	    //schedule = currentScheduleTask.getScheduleDescriptor();
+	    
+	    //System.err.println("GST::Got schedule: "+schedule);
+		
+	    group    = currentScheduleTask.getGroup();
+	    
+	    if (group == null) {
+		failed(GROUP_NOT_SET, "Scheduler did not return a Group");
+		return;
+	    }
+	    
+	    // #### 
+	    //group.writeXml(System.out, 1);
+	    // ####
+		
+	    // GROUP.
+	    currentGroupTask.setGroup(group);
+	    groupStartTime = System.currentTimeMillis();
+		
+	    // UPDATE.
+	    currentUpdateTask.setGroupPath(new Path(group.getFullPath()));
+	    currentUpdateTask.setKey(group.getLock());
+	    
+	    opsLog.log(1, "Scheduler succeeded: "+
+		       "\n\tGroup is:    "+group.getFullPath());
+	    //"\n\tScored:      "+schedule.getScore()+
+	    //"\n\tComplete by: "+sdf.format(new Date(schedule.getLatestTime())));	    
+	}
+
+	// GroupSeq done, set update parameters.	
+	if (task == currentGroupTask) {
+	    groupEndTime = System.currentTimeMillis();
+	    currentUpdateTask.setDoneTime(groupEndTime);
+	    success = true;	    
+	    currentUpdateTask.setSuccess(true); 	
+	    
+	    currentUpdateTask.setDetails("Completed - TBD - extra info");
+	    currentUpdateTask.setUsedTime(groupEndTime-groupStartTime);
+	    currentUpdateTask.setCode(0);
+	    
+	    opsLog.log(1, "GroupSequenceTask: Current Group has completed successfully: Have now set flags in DBUpdater");
+	
+	}   
+
+    }
+    
+    
+    public void onAborting()   {
+	super.onAborting();	
+
+	opsLog.log(1, "Aborting GroupSequence: Attempting abort-db-update."+
+		   "\nGroup: "+(group != null ? group.getFullPath() : "N/A")+
+		   "\n\tCode:    "+abortCode+
+		   "\n\tMessage: "+abortMessage);
+	
+	// What if Update is already running ?
+	if ( ! currentUpdateTask.isInitialized()) {
+	    if (group != null) {
+		Update_Task  abortUpdateTask = new Update_Task(name+"/ABORT_UPDATE", this);
+		abortUpdateTask.setGroupPath(new Path(group.getFullPath()));
+		abortUpdateTask.setKey(group.getLock());
+		abortUpdateTask.setSuccess(false);
+		abortUpdateTask.setDoneTime(System.currentTimeMillis());
+		abortUpdateTask.setDetails("Aborted : "+abortMessage); 	
+		abortUpdateTask.setCode(abortCode);  
+		taskList.addTask(abortUpdateTask);
+	    }
+	}
+	// BUGBUG What if it hasnt started, it will have been cancelled by MTA actions
+
+
+    }
+
+    public void onDisposal()   {
+	super.onDisposal();
+    }
+    
+    public void onCompletion() {
+	super.onCompletion();
+	
+	///####### EEEEEEEEEEEEEEEEEEEEEEEEEEEKKKKKKKKKKKKKKKK!!!!!!!!!!!!!!!
+
+	opsLog.log(1, "Completed Group-Sequence ["+groupCounter+"] "+(success ? "OK":"FAILED")+
+		   "\nGroup: "+group.getFullPath()+
+		   "\n\tTime used (actual):  "+((groupEndTime - groupStartTime)/1000.0)+" secs."+
+		   "\n\tTime used (nominal): "+(group.getNominalExecutionTime()/1000.0)+" secs.");
+	//"\n\tTime used (maximal): "+(schedule.getExecTime()/1000.0)+" secs.");	
+    }
+    
+    /** Overridden to carry out specific work after the init() method is called.
+     * Currently sets the group-unique id in FITS Headers.
+     */
+    public void onInit() {
+	super.onInit();
+	opsLog.log(1, "Starting Group-Sequence ["+groupCounter+"] with max group length: "+(maxGroupLength/1000)+" msec");
+	
+	// FITS set GROUP_UNIQUE_ID groupCounter
+	FITS_HeaderInfo.current_GRPUID.setValue(new Integer(groupCounter));
+
+    }
+    
+    /** Creates the TaskList for this TaskManager. An initial Schedule task is
+     * followed by Group and Update tasks - these latter are not inserted into the TL
+     * immediately but after the Schedule task completes successfully.*/
+    protected TaskList createTaskList() {
+	
+	// 1. SCHEDULE request to OSS. 
+
+	// How long can we be bothered to hang around for a FixedGroup if no Flexible is currently available
+	//long maxIdle    = 3*60*1000L; // millis to wait (3 mins)
+	maxFixedIdleTime = config.getLongValue("fixed.group.idle.time", 3*60*1000L);
+	// This prevents the scheduler from scheduling v.long groups.
+	long groupLatestTime = System.currentTimeMillis() + maxGroupLength;
+
+	// This finds the next preemption time.
+	long preemptLatestTime = System.currentTimeMillis() + executionTimeLimit;
+	
+	long latestTime = Math.min(groupLatestTime, preemptLatestTime);
+
+	// This allows us to call the scheduler and get a reply plus any overheads - it is somewhat generous !
+	long deltaTime  = 1*60*1000L; 
+
+	currentScheduleTask = 
+	    new Schedule_Task(name+"/SCHED", 
+			      this, 
+			      maxFixedIdleTime,
+			      latestTime,
+			      deltaTime, 
+			      scheduleMode);
+
+ 	taskList.addTask(currentScheduleTask);
+
+	// 2. GROUP.
+	currentGroupTask = 
+	    new Group_Task(name+"/GRPEXEC", this, null, null); 
+	taskList.addTask(currentGroupTask);
+	
+	// 3. UPDATE. 
+	currentUpdateTask = 
+	    new Update_Task(name+"/UPDATE", this);		
+	taskList.addTask(currentUpdateTask);
+    
+	// 4. Position Updates to OSS.
+	currentTelStatusUpdateTask = new 
+	    TelescopeStatusUpdateTask(name+"/TELINFO", this);
+	taskList.addTask(currentTelStatusUpdateTask);
+
+	// 5. Inst Config Updates to OSS.
+	Iterator it = Instruments.findInstrumentSet();
+	while (it.hasNext()) {
+	    
+	    String instId = (String)it.next();
+	    if (instId == null) continue;
+	    Instrument inst = Instruments.findInstrument(instId);
+	    if (inst == null) continue;
+	    	   
+	    currentInstUpdateTask =  new InstrumentUpdateTask(name+"/INFO_"+instId, this, inst);
+	    taskList.addTask(currentInstUpdateTask);
+
+	    // (??+ n*INST_INFO + ??) & SCHED & ?? & ??
+	    try {
+		taskList.sequence(currentInstUpdateTask, currentScheduleTask);
+	    } catch (TaskSequenceException tx) {
+		errorLog.log(1, CLASS, name, "createTaskList", 
+			     "Failed to create Task Sequence for Group_Sequence:"+tx);
+		failed = true;
+		errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+		errorIndicator.setErrorString("Failed to create Task Sequence for Group_Sequence.");
+		errorIndicator.setException(tx);
+		return null;
+	    }
+	}
+
+	// 6. Seeing Updates to OSS.
+	seeingUpdateTask = new 
+	    SeeingUpdateTask(name+"/SEEING", this, UPDATE_SEEING.UPDATE_SEEING);
+	taskList.addTask(seeingUpdateTask);
+
+	// Need to check we can do this.
+	photomUpdateTask = new
+	    SeeingUpdateTask(name+"/PHOTOM", this, UPDATE_SEEING.UPDATE_PHOTOM);
+	taskList.addTask(photomUpdateTask);
+
+
+	// (TEL_INFO + ??(instruments already done) + SEEING) & SCHED & GROUP & DB_UPDATE
+	try {
+	    taskList.sequence(currentTelStatusUpdateTask, currentScheduleTask);	  
+	    taskList.sequence(seeingUpdateTask,           currentScheduleTask);	  
+	    taskList.sequence(photomUpdateTask,           currentScheduleTask);	  
+	    taskList.sequence(currentScheduleTask,        currentGroupTask );
+	    taskList.sequence(currentGroupTask,           currentUpdateTask);	   
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for Group_Sequence:"+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Group_Sequence.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}
+	
+	return taskList;
+    }  
+
+    /** Sets the group (unique) instantiation counter.*/
+    public void setGroupCounter(int gc) { this.groupCounter = gc; }
+    
+}
+
+/** $Log: Group_Sequence_Task.java,v $
+/** Revision 1.3  2008/11/14 19:59:41  eng
+/** updateing
+/**
+/** Revision 1.2  2007/01/08 11:17:58  snf
+/** Changed value for IDs to GRPEXEC.
+/**
+/** Revision 1.1  2006/12/12 08:27:29  snf
+/** Initial revision
+/**
+/** Revision 1.1  2006/05/17 06:32:29  snf
+/** Initial revision
+/**
+/** Revision 1.2  2002/09/16 09:38:28  snf
+/** *** empty log message ***
+/**
+/** Revision 1.1  2001/04/27 17:14:32  snf
+/** Initial revision
+/** */

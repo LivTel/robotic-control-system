@@ -1,0 +1,52 @@
+#!/bin/csh
+
+set COND_FILE = $DEPLOY_TMP/.rcw
+
+set HLP_ACTION = 1
+set SET_ACTION = 2
+
+if (${#argv} < 1) then
+    
+    if (! -e $COND_FILE) then
+	echo "Warning: There is no startup file: $COND_FILE "
+	exit 1
+    endif
+	
+    set VAL = `cat ${COND_FILE} `
+    set action = $HLP_ACTION
+
+else
+    
+    set action = $SET_ACTION
+    set VAL = $1
+
+endif
+    
+switch ($VAL)
+  case "ENG":
+	set COND = "ENG"
+	set desc = "Engineering start"
+	breaksw 
+    case "AUTO":
+	set COND = "AUTO"
+	set desc = "Automatic start"
+	breaksw
+    case "MANUAL":
+	set COND = "MANUAL"
+	set desc = "Manual start"
+	breaksw
+    default:
+	set COND = "ENG"
+	set desc = "Unknown start option: $1 assume ENG"
+    endsw
+endif
+
+switch ($action)
+    case ${SET_ACTION}:
+	echo "Updating startup mode to: $desc "
+	echo $COND >! $COND_FILE
+	breaksw
+    case ${HLP_ACTION}:
+	echo "Using startup mode: $desc "
+	breaksw
+endsw

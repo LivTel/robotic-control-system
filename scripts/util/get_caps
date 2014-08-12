@@ -1,0 +1,46 @@
+#!/bin/csh
+
+# ---------------------
+# CAPS Weather Grabber.
+# ---------------------
+
+set DEPLOY_DATA = $DEPLOY_HOME/data
+
+set raw  = $DEPLOY_DATA/caps.raw
+set data = $DEPLOY_DATA/caps.data
+touch $data
+
+wget -q -O $raw http:/banana.ifa.hawaii.edu/data/ft/metdata
+
+while (1)
+
+    wget  -O $raw  http://192.168.4.1/metdata
+
+    set yr     = `cat $raw | cut -d"," -f1`
+    set day    = `cat $raw | cut -d"," -f2`
+    set tim    = `cat $raw | cut -d"," -f3`
+    
+
+    set tmp    = `cat $raw | cut -d"," -f4`
+    set rh     = `cat $raw | cut -d"," -f5`
+    set dew    = `cat $raw | cut -d"," -f6`
+    set wspd   = `cat $raw | cut -d"," -f7`
+    set wdir   = `cat $raw | cut -d"," -f8`
+    set vwind  = `cat $raw | cut -d"," -f9`
+    set p      = `cat $raw | cut -d"," -f10`
+    set wet    = `cat $raw | cut -d"," -f11`
+    set sol    = `cat $raw | cut -d"," -f12`
+    set ice    = `cat $raw | cut -d"," -f13`
+    set totcld = `cat $raw | cut -d"," -f14` 
+    set thncld = `cat $raw | cut -d"," -f15` 
+    set capnow = `cat $raw | cut -d"," -f16`
+    set capfor = `cat $raw | cut -d"," -f17`
+    set dis    = `cat $raw | cut -d"," -f18`
+
+    set thick = echo $totcld $thncld | awk '{ print $1 - $2 }'
+
+    echo ${yr}"-"${day}"T"${tim} $tmp $rh $dew $wspd $wdir $vwind $p $wet $sol $ice $thick $thncld $capfor $capnow $dis >&! $data
+
+    sleep 60
+
+end

@@ -1,0 +1,50 @@
+Task monitoring.
+
+Need a system to allow external entities (GUI) to watch the unfolding task lifecycle.
+ -what tasks are running
+ -which one owns which
+ -what state each task is in
+ -how long running for and to run for.
+
+The external listener will have to register with some overall thing for updates.
+Each task in the hierarchy will need to communicate via the overall manager thing what its doing,
+ie cant have each individual task with listener registrations. This means we need to pass a ref to this thing
+down to all levels of the hierarchy - grrr nasty.
+
+What sort of events to notify:
+
+ -new task hierarchy - maybe this is just a series of task-created events?
+ -task created (taskname, type/operation, owner, state)
+ -task state changed (taskid, time?, fromstate, tostate)
+ -task disposed (taskid, time?)
+
+what types of task are there?
+
+ -mode controllers - these are a special case...
+ -managers (whole lot of these not just iterator etc)
+ -executives (whole lot of operations like: slew, iconf, defocus, autoguide)
+ 
+
+// how do we process stuff ?
+
+(A) By the executive...
+
+ SomeExecTask(TaskManagementThing tm, otherparams) {
+    protected void onCompletion() {
+      tm.notifyTaskCompletion(this, otherinfo);    
+    }
+ }
+
+TmThing {
+  p void notifyTaskCompletion(Task task, otherinfo) {
+    listeners.taskStateChanged(task, TaskState.RUNNING, TaskState.COMPLETED); 
+  } 	
+}
+
+(B) By the manager...
+
+SomeManagerTask {
+  p void onSubtaskDone(Task task) {
+     tm.notifyTaskCompletion(task, otherinfo); 
+  }
+ }

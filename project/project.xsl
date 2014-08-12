@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<xsl:stylesheet 
+	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+	version="2.0">
+
+<xsl:template match="/">
+
+  <html><head><title>Project Information - <xsl:value-of select = "project/@id"/></title></head>
+     <body bgcolor="white">
+     
+     <h1><u><xsl:value-of select = "project/@title"/></u></h1>
+
+     <xsl:apply-templates select = "description"/>
+
+     <xsl:apply-templates select="project/subproject"/>
+ 
+     </body>
+  </html>
+
+</xsl:template>
+
+
+<xsl:template match="subproject">
+
+    <p/>
+    <hr color = "blue"/>
+    <span style = "display:block;font-size:22pt;font-color:blue;background:#ddee22">
+       Subproject ( <xsl:value-of select = "@id"/> ) - <xsl:value-of select = "@title"/> 
+    </span>
+
+    <p/>
+    <xsl:apply-templates select = "description"/>
+
+    <xsl:apply-templates select="workflow"/>
+
+</xsl:template>
+
+<xsl:template match="description">
+    <xsl:copy-of select="."/>
+</xsl:template>  
+
+
+<xsl:template match = "workflow">
+
+    <p/>   	
+    <hr color = "blue"/>
+    <br/>
+    <span style = "display:block;font-size:16pt;font-color:blue;background:#ccff22">
+    <u><xsl:value-of select = "@id"/></u> -    <xsl:value-of select = "../@id"/>/<xsl:value-of select = "@title"/>
+    </span>
+    
+    <p/>
+    <xsl:apply-templates select = "description"/>
+
+    <p/>
+    <div style = "display:block;position:relative;left:20;background:#ff77ee">
+      Notes associated with this workflow.
+      <ul>
+      <font color = "blue" ><xsl:apply-templates select = "note"/> </font>
+      </ul>
+    </div>
+
+    <p/>
+    <div style = "display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     Changes grouped by class
+     <table bgcolor = "#ccddee" frame = "hsides" border = "1">
+     <xsl:for-each-group select="change" group-by="classref/@name">  
+      <tr><td valign = "top"><b><xsl:value-of select="current-grouping-key()"/></b> <p/><xsl:value-of select="classref/@package"/></td>
+      <td><table>    
+      <xsl:for-each select="current-group()">
+          <tr><td valign = "top"><xsl:value-of select="@date"/></td><td> <xsl:copy-of select="detail"/></td></tr>
+      </xsl:for-each>
+      </table></td></tr>
+     </xsl:for-each-group>
+     </table>
+    </div>
+</xsl:template>
+
+<xsl:template match = "note">
+  <hr/><li><u><xsl:value-of select = "@class"/> </u>, <xsl:value-of select = "@date"/> -  <p/><xsl:copy-of select="."/> </li>
+</xsl:template>
+
+<xsl:template match = "change">
+ <tr> <td fgcolor = "blue"><xsl:value-of select="classref/@name"/></td>     
+      <td fgcolor = "blue"><xsl:value-of select="@date"/> </td> 
+      <td fgcolor = "blue"><xsl:copy-of select="detail"/></td> </tr>
+</xsl:template>
+
+</xsl:stylesheet>

@@ -1,0 +1,26 @@
+Instructions for installing the RCS.
+
+The RCS deployment will be in a tar or tar.gz file named:
+
+rcs_<scope>_yyyyMMdd_hhmm.tar
+
+scope : refers to the telescope-specific configuration.
+the other letters refer to the year,month,day,hour,minute of the build.
+
+Pre-requisits: The occ_deploy script should have been run to set the machine up
+with the occ and eng users and launch directories.
+
+
+1. If the /occ/rcs/ directory does not already exist this should be created.
+
+2. Unpack the distribution into /occ/rcs/ overwriting any previous distribution.
+
+3. If this is a first instal, run the setup script, this will setup symlinks to
+   the various startup scripts in the scripts subdirectory from the normal
+   launch location - /opt/ngat/bin/. If this is an update these links should be
+   in place already. In addition it will setup symlinks from /etc/init.d to allow
+   startup on boot. The file /occ/tmp/.conditions and /occ/tmp/.rcw will also be
+   setup, the script will ask for settings for these.
+
+
+

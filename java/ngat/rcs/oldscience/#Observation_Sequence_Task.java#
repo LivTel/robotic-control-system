@@ -1,0 +1,1835 @@
+/*   
+     Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+     This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation; either version 2 of the License, or
+     (at your option) any later version.
+
+     Robotic Control System is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU General Public License for more details.
+
+     You should have received a copy of the GNU General Public License
+     along with Robotic Control System; if not, write to the Free Software
+     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.science;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.tocs.*;
+import ngat.rcs.calib.*;
+
+import ngat.net.*;
+import ngat.util.*;
+import ngat.fits.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.astrometry.*;
+import ngat.message.RCS_TCS.*;
+import ngat.message.GUI_RCS.*;
+
+/**
+ * This Task creates a series of TCS and ICS Tasks to carry out the
+ * configuration and slewing of the Telescope and setting up of the relevant
+ * instruments followed by the actual Observation task. If the sequence
+ * represents a Standards sequence then the standard flag is set and passes down
+ * through the task hierarchy to the Expose_Task.
+ * 
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: Observation_Sequence_Task.java,v 1.15 2008/08/12 12:01:59 eng Exp
+ * eng $
+ * <dt><b>Source:</b>
+ * <dd>$Source:
+ * /home/dev/src/rcs/java/ngat/rcs/science/RCS/Observation_Sequence_Task.java,v
+ * $
+ * </dl>
+ * 
+ * @author $Author: eng $
+ * @version $Revision: 1.15 $
+ */
+public class Observation_Sequence_Task extends ParallelTaskImpl implements ErrorCodes, AutoguiderStatusListener,
+									   TrackingStatusListener {
+
+    /** ERROR_BASE for this Task type. */
+    public static final int ERROR_BASE = 1700;
+
+    /** Indicates that a configuration problem caused this Task to fail. */
+    public static final int CONFIG_ERROR = 601701;
+
+    /** Indicates that a telescope/TCS fault caused this Task to fail. */
+    public static final int TELESCOPE_ERROR = 601702;
+
+    /** Indicates that a a non-existant observation caused this Task to fail. */
+    public static final int OBSERVATION_NOT_SET_ERROR = 601703;
+
+    /** Indicates that a a non-existant InstConfig caused this Task to fail. */
+    public static final int OBSERVATION_NO_INST_CONFIG = 601704;
+
+    /** Indicates that a a non-existant TeleConfig caused this Task to fail. */
+    public static final int OBSERVATION_NO_TELESCOPE_CONFIG = 601705;
+
+    /** Indicates that a a non-existant Source caused this Task to fail. */
+    public static final int OBSERVATION_NO_SOURCE = 601706;
+
+    /** Indicates that a a non-existant instrument caused this Task to fail. */
+    public static final int INSTRUMENT_NOT_FOUND = 601707;
+
+    /** Indicates that target is/wont be visible. */
+    public static final int TARGET_NOT_VISIBLE = 601708;
+
+    /** Indicates that an instrument aquire failed. */
+    public static final int INSTRUMENT_ACQUISITION_FAILED = 601709;
+
+    /** Reference to the Observation to be performed. */
+    protected Observation observation;
+
+    /** True if this sequence represents a standard exposures. */
+    protected boolean standard;
+
+    /** True if we only want to glance at target. */
+    protected boolean glance;
+
+    /** True if this sequence refers to a single FIXED TIME observation. */
+    protected boolean fixed;
+
+    /** Holds the time for a FIXED observation if applicable. */
+    protected long fixedTime;
+
+    /**
+     * True if Tracking should continue after this sequence ends - but not if
+     * Aborted.
+     */
+    protected boolean trackAfterDone;
+
+    /**
+     * True if we should call TRACK AZ and ALT ON at start of observation
+     * sequence.
+     */
+    protected boolean trackBeforeStart;
+
+    /** True if the rotator should be floated after slew has completed. */
+    protected boolean floatAfterSlew;
+
+    /** True if the source is offset in RA dec. **/
+    protected boolean doOffsets;
+
+    /** True if we should slew to target. */
+    protected boolean doSlew;
+
+    /** True if we should rotate rotator. */
+    protected boolean doRotate;
+
+    /**
+     * True if we should switch the autoguider off at the start of the sequence.
+     */
+    protected boolean doSwitchAutoguiderOffAtStart = false;
+
+    /** True if the autoguider should be in use during the sequence. */
+    protected boolean doControlAutoguider = false;
+
+    /** True if the observation requires to do an acquisition first. */
+    protected boolean doAcquire = false;
+
+    // /** True if rotator setting should be overridden.*/
+    // protected boolean overrideRotator = false;
+
+    /** True if an aperture offset is required. */
+    protected boolean apertureOffsetRequired = false;
+
+    /** True if the inst config should be changed. */
+    protected boolean changeConfig;
+
+    /** Time to delay first exposure in sequnce to let axes settle (millis). */
+    protected long firstExposureDelay;
+
+    /**
+     * Optional (Tangent Plane) X offset to be used when floatAfterSlew is
+     * specified. This parameter is used by Planetarium mosaic requests to allow
+     * the mosaiced images to line up correctly. TP Offsets are wrt the tp as
+     * rotated by the current rotator sky PA. (arcsec).
+     */
+    protected double tpXOffset;
+
+    /**
+     * Optional (Tangent Plane) Y offset to be used when floatAfterSlew is
+     * specified. This parameter is used by Planetarium mosaic requests to allow
+     * the mosaiced images to line up correctly. TP Offsets are wrt the tp as
+     * rotated by the current rotator sky PA. (arcsec),
+     */
+    protected double tpYOffset;
+
+    /** Counts number of mosaic offsets. */
+    protected int mosaic;
+
+    /** Mosaic X cells. */
+    protected int mosaicX;
+
+    /** Mosaic Y cells. */
+    protected int mosaicY;
+
+    /** The mosaic pattern ID. */
+    protected int pattern;
+
+    /** Counts number of multrun exposures. */
+    protected int multruns;
+
+    /**
+     * Holds the time required by this observation sequence. This is a maximum
+     * time generated by the manager (could be one of several classes) to be
+     * used in the determination of unwrapping requirements.
+     */
+    protected long timeRequired;
+
+    /** Reference to the selected Instrument. */
+    protected Instrument inst;
+
+    /** The target. */
+    protected Source source;
+
+    /** TCS Alias for the Instrument to be used. */
+    protected String instAlias;
+
+    /** Reference to the ACQUIRE task. */
+    InstrumentAcquireTask acquireTask;
+
+    /** Reference to the TCS_AUTOGUIDE(OFF) task. */
+    AutoGuide_Task autoguiderStopTask;
+
+    /** Reference to the TCS_AUTOGUIDE(ON) task. */
+    AutoGuide_Task autoguiderStartTask;
+
+    /** Reference to the AGMOVE task. */
+    AgMoveTask agMoveTask;
+
+    /** Reference to the AGSELECT task. */
+    AgSelectTask agSelectTask;
+
+    /** Reference to the AGWAVELENGTH task. */
+    AgWavelengthTask agWavelengthTask;
+
+    /** Reference to the TCS_SLEW task. */
+    SlewTask slewTask;
+
+    /** Reference to the ICS_CONFIG task. */
+    InstConfigTask instConfigTask;
+
+    /** Reference to the Rotator task. */
+    RotatorTask rotatorTask;
+
+    /** Reference to the Rotator Float Task. */
+    RotatorTask rotatorFloatTask;
+
+    /** Reference to the Rotator CardinalPointing Task. */
+    RotatorCardinalPointingTask cardinalTask;
+
+    /**
+     * Reference to a TP Offset Task for performing optional Tangent Plane
+     * offset.
+     */
+    TangentPlaneOffsetTask tpOffsetTask;
+
+    /** Reference to the TCS_UNWRAP task. */
+    UnwrappingTask unwrapTask;
+
+    /** Reference to the Observation task. */
+    Observation_Task observationTask;
+
+    StopTask stopAzTask;
+    StopTask stopAltTask;
+    StopTask stopRotTask;
+
+    /** Reference to the ApertureOffsetTask. */
+    ApertureOffsetTask apertureTask;
+
+    /** Reference to the TCS_TRACK(ALT, OFF) task. */
+    Track_Task trackOffAltTask;
+
+    /** Reference to the TCS_TRACK(AZ, OFF) task. */
+    Track_Task trackOffAzTask;
+
+    /** Reference to the TCS_TRACK(ROT, OFF) task. */
+    Track_Task trackOffRotTask;
+
+    /** Reference to the TCS_TRACK(AZ, ON) task. */
+    Track_Task trackOnAzTask;
+
+    /** Reference to the TCS_TRACK(ALT, ON) task. */
+    Track_Task trackOnAltTask;
+
+    /** Reference to the TCS_TRACK(ROT, ON) task. */
+    Track_Task trackOnRotTask;
+
+    /** Reference to the MetRef Pressure task. */
+    MetRef_Task metRefPressureTask;
+
+    /** Reference to the MetRef Humidity task. */
+    MetRef_Task metRefHumidityTask;
+
+    /** Reference to the MetRef Temperature task. */
+    MetRef_Task metRefTemperatureTask;
+
+    /** Reference to the MetRef Wavelength task. */
+    MetRef_Task metRefWavelengthTask;
+
+    /** Reference to the INSTRUMENT Selection task. */
+    InstrumentSelectTask instSelectTask;
+
+    /** ###TEMP obsruns.#### */
+    int obsRuns = 0;
+
+    /** Counts the number of completed exposures. */
+    protected int exposuresCompleted = 0;
+
+    /**
+     * Count the number of attempts at recovery. This is a total number of
+     * re-attempted commands of all types. ##May want to do per command ?##
+     */
+    int retryCount;
+
+    /**
+     * The maximum number of retries for a subtask - when this limit is reached
+     * a different strategy may be invoked.
+     */
+    int retryLimitGeneral = 4;
+
+    private TrackingMonitor tm;
+
+    private AutoguiderMonitor am;
+
+    /**
+     * Create an Observation_Task By default the observation is NOT at a fixed
+     * time.
+     * 
+     * @param standard
+     *            True if this sequence represents standard exposures.
+     * @param name
+     *            The unique name/id for this TaskImpl - should be based on the
+     *            COMMAND_ID.
+     * @param manager
+     *            The Task's manager.
+     */
+    public Observation_Sequence_Task(String name, TaskManager manager) {
+	super(name, manager);
+	this.standard = false;
+	this.fixed = false;
+	this.trackAfterDone = false;
+	this.trackBeforeStart = true;
+	this.floatAfterSlew = false;
+	this.changeConfig = true;
+	this.doSlew = true;
+	this.doRotate = true;
+
+	tm = RCS_Controller.controller.getTrackingMonitor();
+	am = RCS_Controller.controller.getAutoguiderMonitor();
+
+    }
+
+    /**
+     * Create an Observation_Task using the supplied Observation and settings.
+     * By default the observation is NOT at a fixed time.
+     * 
+     * @param observation
+     *            The Observation to perform.
+     * @param standard
+     *            True if this sequence represents standard exposures.
+     * @param name
+     *            The unique name/id for this TaskImpl - should be based on the
+     *            COMMAND_ID.
+     * @param manager
+     *            The Task's manager.
+     */
+    public Observation_Sequence_Task(String name, TaskManager manager, Observation observation, boolean standard) {
+	this(name, manager);
+	this.observation = observation;
+	this.standard = standard;
+
+	// Work out the TCS name of the Instrument.
+	System.err.println("OST:: Looking up IC: " + observation.getInstrumentConfig());
+	inst = Instruments.findInstrumentFor(observation.getInstrumentConfig());
+
+	instAlias = Instruments.findAliasFor(inst.getName());
+    }
+
+    /**
+     * Create an Observation_Task using the supplied Observation and settings.
+     * 
+     * @param observation
+     *            The Observation to perform.
+     * @param standard
+     *            True if this sequence represents standard exposures.
+     * @param fixed
+     *            True if this observation sequence refers to a fixed time
+     *            exposure.
+     * @param fixedTime
+     *            The time for a fixed time exposure to take place.
+     * @param track
+     *            True if Tracking should continue after this sequence - normal
+     *            for Planetarium operations but NOT for Science operations.
+     * @param name
+     *            The unique name/id for this TaskImpl - should be based on the
+     *            COMMAND_ID.
+     * @param manager
+     *            The Task's manager.
+     */
+    public Observation_Sequence_Task(String name, TaskManager manager, Observation observation, boolean standard,
+				     boolean fixed, long fixedTime, boolean trackAfterDone) {
+	this(name, manager, observation, standard);
+	this.fixed = fixed;
+	this.fixedTime = fixedTime;
+	this.trackAfterDone = trackAfterDone;
+    }
+
+    /** Sets the reference to the Observation to be performed. */
+    public void setObservation(Observation observation) {
+	this.observation = observation;
+    }
+
+    /** Set true if this sequence represents standard exposures. */
+    public void setStandard(boolean standard) {
+	this.standard = standard;
+    }
+
+    /** Set true if we only want to glance at target. */
+    public void setGlance(boolean glance) {
+	this.glance = glance;
+    }
+
+    /** Set true if this sequence refers to a single FIXED TIME observation. */
+    public void setFixed(boolean fixed) {
+	this.fixed = fixed;
+    }
+
+    /** Sets the time for a FIXED observation if applicable. */
+    public void setFixedTime(long fixedTime) {
+	this.fixedTime = fixedTime;
+    }
+
+    /**
+     * Set true if Tracking should continue after this sequence ends - but not
+     * if Aborted.
+     */
+    public void setTrackAfterDone(boolean track) {
+	this.trackAfterDone = track;
+    }
+
+    /**
+     * Set true if Rotator should be floated after the slew but before a tangent
+     * plane offset.
+     */
+    public void setFloatAfterSlew(boolean floatAfterSlew) {
+	this.floatAfterSlew = floatAfterSlew;
+    }
+
+    /** Set true if we should track ON all axes at start. */
+    public void setTrackBeforeStart(boolean track) {
+	this.trackBeforeStart = track;
+    }
+
+    /** Set treu if an aperture offset is required. */
+    public void setApertureOffsetRequired(boolean ap) {
+	this.apertureOffsetRequired = ap;
+    }
+
+    /** Set true if an acquisition (by nominated ACQ instrument) is required. */
+    public void setDoAcquire(boolean aq) {
+	this.doAcquire = aq;
+    }
+
+    /** Set true if we do a slew. */
+    public void setDoSlew(boolean doSlew) {
+	this.doSlew = doSlew;
+    }
+
+    /** Set true if we do rotation. */
+    public void setDoRotate(boolean doRotate) {
+	this.doRotate = doRotate;
+    }
+
+    /** Sets the Tangent Plane X offset. */
+    public void setTpXOffset(double tpXOffset) {
+	this.tpXOffset = tpXOffset;
+    }
+
+    /** Sets the Tangent Plane Y offset. */
+    public void setTpYOffset(double tpYOffset) {
+	this.tpYOffset = tpYOffset;
+    }
+
+    /**
+     * Sets the time to delay first exposure in sequence to let axes settle
+     * (millis).
+     */
+    public void setFirstExposureDelay(long firstExposureDelay) {
+	this.firstExposureDelay = firstExposureDelay;
+    }
+
+    /** Sets whether to switch the autoguider off before starting. */
+    public void setSwitchAutoguiderOffAtStart(boolean ag) {
+	this.doSwitchAutoguiderOffAtStart = ag;
+    }
+
+    /** Sets whether to control the autoguider before and after exposing. */
+    public void setControlAutoguider(boolean ag) {
+	this.doControlAutoguider = ag;
+    }
+
+    /**
+     * Deal with failed subtask. Delegates to appropriate handleXXXTaskFailed()
+     * method. Note: When a subtask fails - the SLEW MUST be cancelled with a
+     * TRACK_OFF this may have to be done be the task's manager if it cannot do
+     * so itself.
+     */
+    public void onSubTaskFailed(Task task) {
+	synchronized (taskList) {
+	    super.onSubTaskFailed(task);
+	    // Delegate to appropriate handler.
+	    if (task instanceof InstConfigTask) {
+		handleInstConfigTaskFailed(task);
+	    } else if (task instanceof InstrumentAcquireTask) {
+		handleInstrumentAcquireTaskFailed(task);
+	    } else if (task instanceof Abort_Task) {
+		handleAbortTaskFailed(task);
+	    } else if (task instanceof Reboot_Task) {
+		handleRebootTaskFailed(task);
+	    } else if (task instanceof MetRef_Task) {
+		handleMetRefTaskFailed(task);
+	    } else if (task instanceof SlewTask) {
+		handleSlewTaskFailed(task);
+	    } else if (task instanceof InstrumentSelectTask) {
+		handleInstSelectTaskFailed(task);
+	    } else if (task instanceof UnwrappingTask) {
+		handleUnwrapTaskFailed(task);
+	    } else if (task instanceof AutoGuide_Task) {
+		handleAutoguideTaskFailed(task);
+	    } else if (task instanceof AgMoveTask) {
+		handleAgMoveTaskFailed(task);
+	    } else if (task instanceof AgWavelengthTask) {
+		handleAgWavelengthTaskFailed(task);
+	    } else if (task instanceof AgSelectTask) {
+		handleAgSelectTaskFailed(task);
+	    } else if (task instanceof RotatorTask) {
+		handleRotatorTaskFailed(task);
+	    } else if (task instanceof Observation_Task) {
+		handleObservationTaskFailed(task);
+	    } else if (task instanceof Track_Task) {
+		handleTrackTaskFailed(task);
+	    }
+	}
+    }
+
+    public void onSubTaskAborted(Task task) {
+	super.onSubTaskAborted(task);
+    }
+
+    public void onSubTaskDone(Task task) {
+	super.onSubTaskDone(task);
+	// record last acquiisition image
+	// but - only if we actually need to i.e. if this exposure HAD to do an
+	// acquire !
+
+	if (task instanceof InstrumentAcquireTask && doAcquire) {
+	    String filename = ((InstrumentAcquireTask) task).getLastAcquireImageFileName();
+	    FITS_HeaderInfo.current_ACQIMG.setValue(filename);
+	    taskLog.log(1, "Recording acquisition image filename: " + filename);
+	}
+
+    }
+
+    public void onAborting() {
+	synchronized (taskList) {
+	    super.onAborting();
+	    // Abort any ICS tasks.
+	    // taskList.addTask(new Abort_Task(name+"**(EM_ABORT)",
+	    // this,
+	    // inst.getName()));
+
+	    // Stop TCS tracking.
+	    // taskList.addTask(new Track_Task(name+"**(EM_TRACKALTOFF)",
+	    // this,
+	    // TRACK.ALTITUDE,
+	    // TRACK.OFF));
+	    // taskList.addTask(new Track_Task(name+"**(EM_TRACKAZOFF)",
+	    // this,
+	    // TRACK.AZIMUTH,
+	    // TRACK.OFF));
+	    // taskList.addTask(new Track_Task(name+"**(EM_TRACKROTOFF)",
+	    // this,
+	    // TRACK.ROTOR,
+	    // TRACK.OFF));
+	    taskList.addTask(new AutoGuide_Task(name + "**(EM_AGSTOP)", this, null, AUTOGUIDE.OFF));
+
+	    Abort_Task abortTask = new Abort_Task(name + "-(SCIABORT)", this, inst.getName());
+	    abortTask.setDelay(10000L); // WHY ??
+	    taskList.addTask(abortTask);
+
+	}
+    }
+
+    public void onDisposal() {
+	super.onDisposal();
+
+	tm.removeTrackingStatusListener(this);
+	am.removeGuideStatusListener(this);
+    }
+
+    public void onFailure() {
+	super.onFailure();
+	opsLog.log(1, "Failed Observation-Sequence." + "\n\tCode:      " + errorIndicator.getErrorCode()
+		   + "\n\tReason:    " + errorIndicator.getErrorString() + "\n\tException: "
+		   + errorIndicator.getException());
+
+	String obsPathName = observation.getFullPath();
+	ObservationStatusInfo info = new ObservationStatusInfo(System.currentTimeMillis(), obsPathName,
+							       ObservationStatusInfo.FAILED, "Failed due to: " + errorIndicator.getErrorString());
+	info.setErrorCode(errorIndicator.getErrorCode());
+
+	Telemetry.getInstance().publish("OBS", info);
+
+    }
+
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Observation-Sequence.");
+
+	String obsPathName = observation.getFullPath();
+	ObservationStatusInfo info = new ObservationStatusInfo(System.currentTimeMillis(), obsPathName,
+							       ObservationStatusInfo.COMPLETED, "Observation completed");
+
+	Telemetry.getInstance().publish("OBS", info);
+
+    }
+
+    /** Overridden to set the current TelescopeConfig. */
+    public void preInit() {
+	super.preInit();
+
+	// // If this is set we try cardinal pointing
+	// overrideRotator = (config.getProperty("override.rotator.setting") !=
+	// null);
+
+	// when SET, the AGSTART commands from ICS will be ignored completely.
+	// when UNSET, the AGSTART commands will be forwarded appropriately.
+	// overrideAutoguider = (config.getProperty("override.autoguider") !=
+	// null);
+
+	if (observation == null) {
+	    errorLog.log(1, CLASS, name, "preInit", "No observation is set");
+	    failed = true;
+	    errorIndicator.setErrorCode(OBSERVATION_NOT_SET_ERROR);
+	    errorIndicator.setErrorString("No observation is set.");
+	    return;
+	}
+
+	if (observation.getInstrumentConfig() == null) {
+	    errorLog.log(1, CLASS, name, "preInit", "Observation has no InstrumentConfig.");
+	    failed = true;
+	    errorIndicator.setErrorCode(OBSERVATION_NO_INST_CONFIG);
+	    errorIndicator.setErrorString("Observation has no InstrumentConfig.");
+	    return;
+	}
+
+	inst = Instruments.findInstrumentFor(observation.getInstrumentConfig());
+
+	if (inst == null) {
+	    errorLog.log(1, CLASS, name, "preInit", "Instrument was not found.");
+	    failed = true;
+	    errorIndicator.setErrorCode(INSTRUMENT_NOT_FOUND);
+	    errorIndicator.setErrorString("Instrument was not found.");
+	    return;
+	}
+
+	instAlias = Instruments.findAliasFor(inst.getName());
+
+	if (observation.getTelescopeConfig() == null) {
+	    taskLog.log(1, CLASS, name, "preInit", "Observation has no TelescopeConfig - assuming default.");
+	    observation.setTelescopeConfig(TelescopeConfig.getDefault());
+	    // failed = true;
+	    // errorIndicator.setErrorCode(OBSERVATION_NO_TELESCOPE_CONFIG);
+	    // errorIndicator.setErrorString("Observation has no TelescopeConfig.");
+	    // return;
+	}
+
+	// Old stuff
+	ISS_Server.currentTelescopeConfig = observation.getTelescopeConfig();
+
+	// New stuff
+	double lastFocusOffset = ISS.getInstance().currentFocusOffset;
+
+	ISS.getInstance().currentTelescopeConfig = observation.getTelescopeConfig();
+	ISS.getInstance().currentInstrumentConfig = observation.getInstrumentConfig();
+	ISS.getInstance().currentFocusOffset = observation.getFocusOffset();
+
+	ISS.getInstance().currentAutoguiderUsageMode = observation.getAutoGuiderUsageMode();
+
+	// Override forwarding of AG START commands by ISS to TCS.
+	// ngat.rcs.iss.ISS_AG_START_CommandImpl.setOverrideForwarding(overrideAutoguider);
+
+	// We never override forwarding of AG STOP commands by ISS to TCS.
+	// ngat.rcs.iss.ISS_AG_STOP_CommandImpl.setOverrideForwarding(false);
+
+	// Really new stuff....### TBD ###
+	// InstrumentRegistry ir =
+	// (InstrumentRegistry)Naming.lookup("rmi://localhost:1099/InstrumentRegistry");
+	// iss.setTelescopeConfig(observation.getTelescopeConfig());
+
+	source = observation.getSource();
+
+	if (source == null) {
+	    errorLog.log(1, CLASS, name, "preInit", "Observation has no Source.");
+	    failed = true;
+	    errorIndicator.setErrorCode(OBSERVATION_NO_SOURCE);
+	    errorIndicator.setErrorString("Observation has no Source.");
+	    return;
+	}
+
+	// Try for offsets now.
+
+	double dra = observation.getSourceOffsetRA();
+	double ddec = observation.getSourceOffsetDec();
+
+	if (Math.abs(dra) > 0.0 || Math.abs(ddec) > 0.0) {
+	    tpXOffset = dra;
+	    tpYOffset = ddec;
+	    doOffsets = true;
+	}
+
+	// // Can we get to it..
+	// Position target = source.getPosition();
+	// if (fixed && (target.getAltitude(fixedTime) < limit)) {
+	// errorLog.log(1, CLASS, name, "preInit",
+	// "Fixed time Observation: Target will not be visible");
+	// failed = true;
+	// errorIndicator.setErrorCode(TARGET_NOT_VISIBLE);
+	// errorIndicator.setErrorString("Fixed time Observation: Target will not be visible");
+	// return;
+	// }
+
+	// if (! fixed && (target.getAltitude() < limit)) {
+	// errorLog.log(1, CLASS, name, "preInit",
+	// "Target is not visible");
+	// failed = true;
+	// errorIndicator.setErrorCode(TARGET_NOT_VISIBLE);
+	// errorIndicator.setErrorString("Target is not visible");
+	// return;
+	// }
+
+	// Work out the time for the Obs.
+	// Tobs = M*(Toffset + N*(Texp + Tro)).
+	mosaic = 1;
+	pattern = observation.getMosaic().getPattern();
+	mosaicX = observation.getMosaic().getCellsRA();
+	mosaicY = observation.getMosaic().getCellsDec();
+	switch (pattern) {
+	case Mosaic.CROSS:
+	    mosaic = mosaicX + mosaicY - 1;
+	    break;
+	case Mosaic.ARRAY:
+	    mosaic = mosaicX * mosaicY;
+	    break;
+	case Mosaic.SINGLE:
+	    mosaic = 1;
+	    break;
+	case Mosaic.HORIZONTAL:
+	    mosaic = 3;
+	    break;
+	case Mosaic.VERTICAL:
+	    mosaic = 3;
+	    break;
+	}
+
+	// Multruns.
+	multruns = observation.getNumRuns();
+
+	// Switch off any unwanted Tasks.
+
+	// Inst_Sel and Inst_Cfg.
+	Instrument currInst = Instruments.currentInstrument;
+
+	if (currInst != null) {
+
+	    String cid = currInst.getName();
+
+	    if (inst.getName().equals(cid)) {
+		taskLog.log(2, CLASS, name, "preInit", "##Switch off INST_SEL task as Inst has not changed.");
+		// taskList.skipTask(instSelTask);
+
+		if (currInst.getConfig() != null) {
+		    taskLog.log(2, CLASS, name, "onInit", "Inst Currently using: " + currInst.getConfig().toString());
+
+		    if (observation.getInstrumentConfig().sameAs(currInst.getConfig())) {
+			taskLog.log(2, CLASS, name, "preInit",
+				    "##Switch off INST_CFG task as InstConfig has not changed.");
+			changeConfig = false;
+		    }
+
+		} else
+		    taskLog.log(2, CLASS, name, "preInit", "Current inst: " + cid + " Is not yet configured.");
+
+	    }
+
+	    if (Math.abs(observation.getFocusOffset() - lastFocusOffset) > 0.01) {
+		taskLog.log(2, CLASS, name, "preInit", "##Switch on INST_CFG task as focus offset changed: Last="
+			    + lastFocusOffset + " Current=" + observation.getFocusOffset());
+		changeConfig = true;
+	    }
+
+	}
+
+	// Tel_Cfg.
+
+	// Slew. ### NOTE the SRC values are still in Degrees need to change in
+	// Translator........
+	double currRA = Math.toRadians(StatusPool.latest().source.srcRa);
+	double currDec = Math.toRadians(StatusPool.latest().source.srcDec);
+	Position currPos = new Position(currRA, currDec);
+	double delta = observation.getSource().getPosition().getAngularDistance(currPos);
+	taskLog.log(3, CLASS, name, "preInit", "\n\tTarget:   " + observation.getSource().getPosition().toString()
+		    + "\n\tCurrent:  " + currPos.toString() + "\n\tDistance: " + 3600.0 * Math.toDegrees(delta)
+		    + " arcsec.");
+
+	if (3600.0 * Math.toDegrees(delta) < 5.0) {
+	    taskLog.log(2, CLASS, name, "preInit",
+			"## Switch off SLEW as the target is more or less the same as current position.");
+	}
+
+	// Predicted time requirement inc. Readout and Dprt times.
+	timeRequired = (long) (mosaic * (multruns * (observation.getExposeTime() + 10000L + 2000L)));
+
+	// These are in parallel and can vary widely, also rot has a 5 sec delay
+	// also there is a 30 second axis settling time after slew.
+	// strictly we should be using max(slew, rot) and calculating these
+	if (doSlew || doRotate)
+	    timeRequired += 60000L;
+
+	// Add any settling time.
+	timeRequired += firstExposureDelay;
+
+    }
+
+    /**
+     * Overridden to carry out specific work after the init() method is called.
+     * Sets a number of FITS headers relating to the observation.
+     */
+    public void onInit() {
+	Source source = observation.getSource();
+	Position target = source.getPosition();
+	String strFixed = (fixed ? "Fixed Time: " + fixedTime : "Flexible Time");
+	ModalTask cmt = (ModalTask) RCS_Controller.controlAgent.getCurrentModalTask();
+	String rootId = RCS_Controller.controller.getTelescopeId() + "_" + (cmt != null ? cmt.getAgentId() : "???")
+	    + "_" + (cmt != null ? cmt.getAgentVersion() : "???");
+
+	String strStd = (standard ? "Standard" : "Generic");
+
+	String mos = "";
+	switch (pattern) {
+	case Mosaic.SINGLE:
+	    mos = "SINGLE";
+	    break;
+	case Mosaic.CROSS:
+	    mos = "CROSS (" + mosaicX + "," + mosaicY + ")";
+	    break;
+	case Mosaic.ARRAY:
+	case Mosaic.GRID:
+	    mos = "ARRAY (" + mosaicX + "," + mosaicY + ")";
+	    break;
+	case Mosaic.HORIZONTAL:
+	    mos = "HORIZONTAL " + mosaicX;
+	    break;
+	case Mosaic.VERTICAL:
+	    mos = "VERTICAL " + mosaicY;
+	    break;
+	default:
+	    mos = observation.getMosaic().toString();
+	}
+
+	opsLog.log(1, "Started Observation-Sequence." + "\nObservation: " + observation.getName()
+		   + "\n    Program:    " + rootId + " : " + strFixed + " : " + strStd + "\n   Multruns:    "
+		   + observation.getNumRuns() + "\n   Exposure:    " + (observation.getExposeTime() / 1000.0f) + " secs"
+		   + (observation.isConditionalExposure() ? " (Time-adjustable)." : " (Fixed-duration).")
+		   + "\n     Mosaic:    " + mos + "\n     Target:    " + source.getName() + "\n         RA:    "
+		   + Position.toHMSString(target.getRA()) + "\n        Dec:    " + Position.toDMSString(target.getDec())
+		   + "\n         HA:    " + Position.toHMSString(target.getHA()) + "\n    Azimuth:    "
+		   + Position.toDegrees(target.getAzimuth(), 3) + "\n   Altitude:    "
+		   + Position.toDegrees(target.getAltitude(), 3) + "\n    Offsets:    " + tpXOffset + " asec (RA) "
+		   + tpYOffset + " asec (Dec)" + "\n Instrument:    " + inst.getName() + "\n   InstConf:    "
+		   + observation.getInstrumentConfig().toString() + "\n    FOffset:    " + observation.getFocusOffset()
+		   + "\n        A/G:    " + TelescopeConfig.toAgModeString(observation.getAutoGuiderUsageMode())
+		   + "\n    Rotator:    " + TelescopeConfig.toRotatorModeString(observation.getRotatorMode())
+		   + "\n      Angle:    " + Position.toDegrees(observation.getRotatorAngle(), 3) + " degs"
+		   + "\n     Source:    " + observation.getSource().toString() + "\n   Tracking:    "
+		   + (observation.getNonSiderealTracking() ? "NON_SIDEREAL" : "SIDEREAL") + "\n  Est. Time:    "
+		   + (timeRequired / 1000.0) + " secs." + "\n   Exposing:    "
+		   + (mosaic * multruns * (observation.getExposeTime() / 1000.0f)) + " secs.");
+
+	FITS_HeaderInfo.current_OBSID.setValue(observation.getName());
+
+	switch (source.getFrame()) {
+	case Source.FK4:
+	    FITS_HeaderInfo.current_RADECSYS.setValue("FK4");
+	    break;
+	case Source.FK5:
+	    FITS_HeaderInfo.current_RADECSYS.setValue("FK5");
+	    break;
+	default:
+	    FITS_HeaderInfo.current_RADECSYS.setValue("UNKNOWN(" + source.getFrame() + ")");
+	}
+
+	FITS_HeaderInfo.current_EQUINOX.setValue(new Double(source.getEquinox()));
+	// FITS_HeaderInfo.current_CAT_RA.setValue(FITS_HeaderInfo.toHMSString(target.getRA()));
+	// FITS_HeaderInfo.current_CAT_DEC.setValue(FITS_HeaderInfo.toDMSString(target.getDec()));
+	FITS_HeaderInfo.current_CAT_EPOC.setValue(new Double(source.getEpoch()));
+	FITS_HeaderInfo.current_CAT_NAME.setValue(source.getName());// ###DISPOSE##
+	FITS_HeaderInfo.current_OBJECT.setValue(source.getName());
+
+	if (source instanceof ExtraSolarSource) {
+	    // -----------------------
+	    // EXTRASOLAR Source type.
+	    // -----------------------
+	    FITS_HeaderInfo.current_SRCTYPE.setValue("EXTRASOLAR");
+	    FITS_HeaderInfo.current_PM_RA.setValue(new Double(((ExtraSolarSource) source).getPmRA()));
+	    FITS_HeaderInfo.current_PM_DEC.setValue(new Double(((ExtraSolarSource) source).getPmDec()));
+	    FITS_HeaderInfo.current_PARALLAX.setValue(new Double(((ExtraSolarSource) source).getParallax()));
+	    // FITS_HeaderInfo.current_RADVEL =
+	    // ((ExtraSolarSource)source).getRadialVelocity();
+	    FITS_HeaderInfo.current_RATRACK.setValue(new Double(0.0));
+	    FITS_HeaderInfo.current_DECTRACK.setValue(new Double(0.0));
+	} else {
+	    // -------------------------
+	    // SOLAR-SYSTEM Source type.
+	    // -------------------------
+	    String type = "";
+	    if (source instanceof MajorPlanet) {
+		type = "MAJORPLANET";
+	    } else if (source instanceof MinorPlanet) {
+		type = "MINORPLANET";
+	    } else if (source instanceof Comet) {
+		type = "COMET";
+	    } else if (source instanceof CatalogSource) {
+		int srcType = ((CatalogSource) source).getCatalogId();
+		switch (srcType) {
+		case CatalogSource.MOON:
+		    type = "MOON";
+		    break;
+		case CatalogSource.MERCURY:
+		case CatalogSource.VENUS:
+		case CatalogSource.MARS:
+		case CatalogSource.JUPITER:
+		case CatalogSource.SATURN:
+		case CatalogSource.URANUS:
+		case CatalogSource.NEPTUNE:
+		case CatalogSource.PLUTO:
+		    type = "MAJORPLANET";
+		    break;
+		default:
+		    type = "CAT-SRC-TYPE-" + srcType;
+		    break;
+		}
+	    } else if (source instanceof EphemerisSource) {
+		type = "EPHEMERIS";
+	    } else
+		type = "UNKNOWN-TYPE";
+
+	    FITS_HeaderInfo.current_SRCTYPE.setValue(type);
+	    FITS_HeaderInfo.current_PM_RA.setValue(new Double(0.0));
+	    FITS_HeaderInfo.current_PM_DEC.setValue(new Double(0.0));
+	    FITS_HeaderInfo.current_PARALLAX.setValue(new Double(0.0));// ##
+	    // MOON
+	    // ##
+	    // FITS_HeaderInfo.current_RADVEL.setValue(new Double(0.0));// ##
+	    // MOON ##
+	    FITS_HeaderInfo.current_RATRACK.setValue(new Double(((SolarSystemSource) source).getNsTrackRA()));
+	    FITS_HeaderInfo.current_DECTRACK.setValue(new Double(((SolarSystemSource) source).getNsTrackDec()));
+
+	}
+
+	// Moon dist to target (degs).
+	Position moon = Astrometry.getLunarPosition();
+	FITS_HeaderInfo.current_MOONDIST.setValue(new Double(Math.toDegrees(target.getAngularDistance(moon))));
+
+	Position sun = Astrometry.getSolarPosition();
+	double angle = moon.getAngularDistance(sun);
+	FITS_HeaderInfo.current_MOONFRAC.setValue(new Double(0.5 * (1.0 + Math.cos(Math.PI - angle))));
+
+	// Telemetry.
+	String program = rootId + " : " + strFixed + " : " + strStd;
+
+	ObservationInfo info = new ObservationInfo(System.currentTimeMillis());
+	info.setObservation(observation);
+	info.setProgramId(program);
+	info.setFixed(fixed);
+	info.setStandard(standard);
+
+	Telemetry.getInstance().publish("OBS", info);
+
+	// register for Tracking alerts - the alert thresholds will have been
+	// setup elsewhere hopefully !
+	tm.addTrackingStatusListener(this);
+	// register for Auto-guider alerts - the alert thresholds will have been
+	// setup elsewhere hopefully !
+	am.addGuideStatusListener(this);
+
+    }
+
+    /**
+     * Creates the TaskList for this TaskManager. A series of Offset and Expose
+     * Tasks are created depending on the Observation's mosaic settings.
+     */
+    protected TaskList createTaskList() {
+
+	taskLog.log(2, CLASS, name, "createTaskList", "Enter.createTaskList()");
+
+	// find the instrument.
+	InstrumentConfig ic = observation.getInstrumentConfig();
+	Instrument inst = Instruments.findInstrumentFor(ic);
+
+	// Find the target.
+	Source source = observation.getSource();
+	Position target = source.getPosition();
+
+	if (doAcquire) {
+	    String acqInstName = inst.getAcquisitionInstrumentName();
+	    double ara = target.getRA();
+	    double adec = target.getDec();
+	    int ax = (int) inst.getAcquisitionOffsetX();
+	    int ay = (int) inst.getAcquisitionOffsetY();
+
+	    int acqMode = observation.getAcquisitionMode();
+
+	    acquireTask = new InstrumentAcquireTask(name + "/ACQUIRE", this, acqInstName, ara, adec, ax, ay, acqMode);
+	    taskList.addTask(acquireTask);
+
+	}
+
+	if (doSwitchAutoguiderOffAtStart) {
+	    // Switch the Autoguider OFF (may already be so.).
+	    autoguiderStopTask = new AutoGuide_Task(name + "/AG_OFF", this, observation.getTelescopeConfig(),
+						    AUTOGUIDE.OFF);
+	    taskList.addTask(autoguiderStopTask);
+	    taskLog.log(2, CLASS, name, "createTaskList", "Adding initial autoguide off task");
+	}
+
+	// agSelectTask = new AgSelectTask(name+"/AG_SEL", this,
+	// AGSELECT.CASSEGRAIN);
+	// taskList.addTask(agSelectTask);
+
+	if (trackBeforeStart) {
+	    // Switch on Tracking -- shouldnt it be on ??
+	    trackOnAzTask = new Track_Task(name + "/TRK_ON_ALT", this, TRACK.AZIMUTH, TRACK.ON);
+	    taskList.addTask(trackOnAzTask);
+
+	    trackOnAltTask = new Track_Task(name + "/TRK_ON_AZ", this, TRACK.ALTITUDE, TRACK.ON);
+	    taskList.addTask(trackOnAltTask);
+
+	    // Add rotator stuff.
+	    trackOnRotTask = new Track_Task(name + "/TRK_ON_ROT", this, TRACK.ROTATOR, TRACK.ON);
+	    taskList.addTask(trackOnRotTask);
+
+	    taskLog.log(2, CLASS, name, "createTaskList", "Adding 3 track on tasks");
+
+	}
+
+	// Select the instrument to use.
+	// instSelectTask = new InstrumentSelectTask(name+"/I_SEL",
+	// this,
+	// inst.getName(),
+	// instAlias);
+	// taskList.addTask(instSelectTask);
+
+	// AG Filter slide.
+	// taskList.addTask(new AgFilter_Task(name+"_AgFilter", manager, );
+
+	// // AG Move slide.
+	// agMoveTask = new AgMoveTask(name+"/AGMOVE",
+	// this,
+	// observation.getTelescopeConfig());
+	// //taskList.addTask(agMoveTask);
+
+	// -------------------
+	// Slew the telescope.
+	// -------------------
+
+	if (doSlew) {
+
+	    if (doOffsets) { // Add offsets here.
+
+		slewTask = new SlewTask(name + "/SLEW", this, observation.getSource(), tpXOffset, tpYOffset);
+
+	    } else {
+
+		slewTask = new SlewTask(name + "/SLEW", this, observation.getSource());
+
+	    }
+	    taskLog.log(2, CLASS, name, "createTaskList", "Adding slew task");
+
+	    // do we want the target to be NS-Tracked ?
+	    slewTask.setNsTracking(observation.getNonSiderealTracking());
+
+	    taskList.addTask(slewTask);
+	}
+
+	// -------------------------
+	// Configure the Instrument.
+	// -------------------------
+
+	// This is a fudge to get the wavelength of the new config without
+	// setting it yet..
+	// after all the ICT could fail then we would have the wrong IC in the
+	// Inst.
+	InstrumentConfig old = inst.getConfig("old");
+
+	// ##### NEED TO CATCH BAD CONFIG HERE !!!!!
+	taskLog.log(2, CLASS, name, "createTaskList", "Checking instrument setup...");
+
+	double wavelength = 0.0;
+	try {
+	    inst.configure(ic);
+	    wavelength = inst.getCurrentWavelength();
+	    inst.configure(old);
+	} catch (Exception e) {
+	    taskLog.log(1, CLASS, name, "createTaskList", "Failed to create Tasklist: Illegal Instrument config: " + e);
+	    e.printStackTrace();
+	    failed = true;
+	    errorIndicator.setErrorCode(CONFIG_ERROR);
+	    errorIndicator.setErrorString("Failed to create Tasklist: Illegal Instrument config");
+	    errorIndicator.setException(e);
+	    return null;
+
+	}
+
+	// #####
+
+	if (changeConfig) {
+	    instConfigTask = new InstConfigTask(name + "/INST_CFG", this, ic);
+	    taskList.addTask(instConfigTask);
+	    taskLog.log(2, CLASS, name, "createTaskList", "Adding inst cfg task");
+
+	}
+
+	if (apertureOffsetRequired) {
+
+	    int number = Instruments.findApertureNumber(inst.getName());
+
+	    apertureTask = new ApertureOffsetTask(name + "/AP_OFF", this, number);
+	    taskList.addTask(apertureTask);
+	    taskLog.log(2, CLASS, name, "createTaskList", "Adding aperture offset task");
+	}
+
+	// // ----------------------------
+	// // Meteorology/Refraction data.
+	// // ----------------------------
+	// // Grab Status.Meteorology data.
+	// TCS_Status status = StatusPool.latest();
+	// metRefPressureTask = new MetRef_Task(name+"/MET_PRS", this,
+	// MetRef_Task.PRESSURE_DATA, status.meteorology.pressure);
+	// //taskList.addTask(metRefPressureTask);
+
+	// metRefTemperatureTask = new MetRef_Task(name+"/MET_TMP", this,
+	// MetRef_Task.TEMPERATURE_DATA, status.meteorology.extTemperature);
+	// //taskList.addTask(metRefTemperatureTask);
+
+	// metRefHumidityTask = new MetRef_Task(name+"/MET_HUM", this,
+	// MetRef_Task.HUMIDITY_DATA, status.meteorology.humidity );
+	// t//askList.addTask(metRefHumidityTask);
+
+	// metRefWavelengthTask = new MetRef_Task(name+"/MET_WAV", this,
+	// MetRef_Task.WAVELENGTH_DATA, wavelength); /// #### TEMP ####
+	// //taskList.addTask(metRefWavelengthTask);
+
+	// agWavelengthTask = new AgWavelengthTask(name+"/AGWAVE", this,
+	// wavelength);
+	// //taskList.addTask(agWavelengthTask);
+
+	// Telescope (Rotator) Configuration.
+	// TelescopeConfig teleConfig = observation.getTelescopeConfig();
+	// double angle = teleConfig.getSkyAngle();
+	// int mode = 0;
+	// switch (teleConfig.getRotatorAngleMode()) {
+	// case TelescopeConfig.ROTATOR_MODE_MOUNT:
+	// mode = ROTATOR.MOUNT;
+	// break;
+	// case TelescopeConfig.ROTATOR_MODE_SKY:
+	// mode = ROTATOR.SKY;
+	// break;
+	// default:
+	// mode = ROTATOR.SKY;
+	// angle = 0.0;
+	// }
+
+	// if (teleConfig.getUseParallacticAngle()) {
+	// mode = ROTATOR.VERTICAL;
+	// angle = 0.0;
+	// }
+
+	if (doRotate) {
+
+	    int rotMode = observation.getRotatorMode();
+	    double rotAngle = observation.getRotatorAngle();
+
+	    switch (rotMode) {
+	    case TelescopeConfig.ROTATOR_MODE_SKY:
+
+		rotatorTask = new RotatorTask(name + "/ROT_SKY", this, rotAngle, ROTATOR.SKY);
+		rotatorTask.setDelay(2000L);
+		taskList.addTask(rotatorTask);
+		break;
+
+	    case TelescopeConfig.ROTATOR_MODE_VERTICAL:
+
+		rotatorTask = new RotatorTask(name + "/ROT_VERT", this, 0.0, ROTATOR.VERTICAL);
+		rotatorTask.setDelay(2000L);
+		taskList.addTask(rotatorTask);
+		break;
+
+	    case TelescopeConfig.ROTATOR_MODE_VFLOAT:
+
+		rotatorTask = new RotatorTask(name + "/ROT_VFLT", this, 0.0, ROTATOR.VFLOAT);
+		rotatorTask.setDelay(2000L);
+		taskList.addTask(rotatorTask);
+		break;
+
+	    case TelescopeConfig.ROTATOR_MODE_MOUNT:
+		// ALWAYS (MOUNT + FLOAT) - sched will not send stuff outside
+		// limits !
+		rotatorTask = new RotatorTask(name + "/ROT_MNT", this, rotAngle, ROTATOR.MOUNT);
+		rotatorTask.setDelay(5000L);
+		taskList.addTask(rotatorTask);
+		rotatorFloatTask = new RotatorTask(name + "/ROT_FLOAT", this, 0.0, ROTATOR.FLOAT);
+		taskList.addTask(rotatorFloatTask);
+		break;
+
+	    case TelescopeConfig.ROTATOR_MODE_FLOAT:
+
+		rotatorTask = new RotatorTask(name + "/ROT_FLOAT_CUR", this, 0.0, ROTATOR.FLOAT);
+		rotatorTask.setDelay(2000L);
+		taskList.addTask(rotatorTask);
+		break;
+
+	    default:
+
+	    }
+
+	}
+
+	// tpOffsetTask = new TangentPlaneOffsetTask(name+"/TPOFFSET", this,
+	// observation.getSource(),
+	// tpXOffset,
+	// tpYOffset,
+	// angle);
+	// taskList.addTask(tpOffsetTask);
+	// }
+
+	// unwrappingTask = new UnwrappingTask(name+"/UNWRAP",
+	// this,
+	// timeRequired);
+	// //taskList.addTask(unwrappingTask);
+
+	// -----------------------------------
+	// Do the observation mosaic sequence.
+	// -----------------------------------
+	if (fixed) {
+	    observationTask = new Observation_Task(name + "/OBS_FIX", this, observation, standard, fixed, fixedTime);
+	} else {
+	    observationTask = new Observation_Task(name + "/OBS_FLEX", this, observation, standard);
+	}
+
+	if (glance)
+	    observationTask.setGlance(glance);
+
+	// Delay bofore first exposure in sequence for axis settling
+	if (firstExposureDelay > 0L) {
+	    observationTask.setDelay(firstExposureDelay);
+	    taskLog.log(3, CLASS, name, "onInit", "Setting exposure delay for axis settling to: "
+			+ (firstExposureDelay / 1000) + " secs.");
+	}
+
+	// Pass AG control onto the ObsTask.
+	if (doControlAutoguider) {
+	    observationTask.setDoControlAutoguider(true);
+	    taskLog.log(2, CLASS, name, "createTaskList", "Passed AG control request to OT");
+	}
+
+	taskList.addTask(observationTask);
+
+	// --------------------------------------------
+	// Finally Switch off tracking (sometimes).
+	// --------------------------------------------
+
+	// NO Track_Off if true..
+	if (trackAfterDone) {
+
+	    taskLog.log(3, CLASS, name, "onInit",
+			"## Switch off TRACK_OFF tasks at end of run as Tracking is continuous.");
+	} else {
+
+	    trackOffAzTask = new Track_Task(name + "/TRK_OFF_AZ", this, TRACK.AZIMUTH, TRACK.OFF);
+	    taskList.addTask(trackOffAzTask);
+
+	    trackOffAltTask = new Track_Task(name + "/TRK_OFF_ALT", this, TRACK.ALTITUDE, TRACK.OFF);
+	    taskList.addTask(trackOffAltTask);
+
+	    trackOffRotTask = new Track_Task(name + "/TRK_OFF_ROT", this, TRACK.ROTATOR, TRACK.OFF);
+	    taskList.addTask(trackOffRotTask);
+
+	}
+
+	// Link Tasks:
+	try {
+
+	    // Always do an unwrap check here.
+	    UnwrappingTask unwrapTask = new UnwrappingTask(name + "/UWCHK", this, timeRequired);
+	    taskList.addTask(unwrapTask);
+
+	    // A bunch of useful but entirely pointless task to act as a barrier
+	    // point...
+	    BarrierTask noop1 = new BarrierTask(name + "/BARRIER_1", this);
+	    taskList.addTask(noop1);
+
+	    BarrierTask noop2 = new BarrierTask(name + "/BARRIER_2", this);
+	    taskList.addTask(noop2);
+
+	    // SEQUENCING
+
+	    if (doSwitchAutoguiderOffAtStart) {
+		taskList.sequence(autoguiderStopTask, noop1);
+		taskList.sequence(autoguiderStopTask, noop1);
+	    }
+
+	    if (trackBeforeStart) {
+		taskList.sequence(noop1, trackOnAzTask);
+		taskList.sequence(noop1, trackOnAltTask);
+		taskList.sequence(noop1, trackOnRotTask);
+		taskList.sequence(trackOnAzTask, noop2);
+		taskList.sequence(trackOnAltTask, noop2);
+		taskList.sequence(trackOnRotTask, noop2);
+	    } else {
+		taskList.sequence(noop1, noop2);
+	    }
+
+	    if (doRotate) {
+
+		taskList.sequence(noop2, rotatorTask);
+
+		// Only if in MOUNT+FLOAT
+		if (rotatorFloatTask != null) {
+		    taskList.sequence(rotatorTask, rotatorFloatTask);
+		    taskList.sequence(rotatorFloatTask, unwrapTask);
+		} else {
+		    taskList.sequence(rotatorTask, unwrapTask);
+		}
+
+	    }
+
+	    if (doSlew) {
+		taskList.sequence(noop2, slewTask);
+		taskList.sequence(slewTask, unwrapTask);
+	    }
+
+	    if (changeConfig) {
+		taskList.sequence(noop2, instConfigTask);
+		taskList.sequence(instConfigTask, unwrapTask);
+	    }
+
+	    // what if there is no slew, rot or instcfg ?
+	    if ((!doSlew) && (!doRotate) && (!changeConfig)) {
+		taskList.sequence(noop2, unwrapTask);
+	    }
+
+	    // All done unless we are stopping tracking on axes
+
+	    // Sequence the ApertureOffset after the unwrap test if required..
+	    if (apertureOffsetRequired) {
+		if (doAcquire) {
+		    // APAQ
+		    InstConfigTask ic2Task = new InstConfigTask(name + "/IC2_RECONFIG", this, ic);
+		    taskList.addTask(ic2Task);
+		    taskLog.log(2, CLASS, name, "createTaskList", "Adding IC2_RECONFIG task");
+		    taskList.sequence(unwrapTask, apertureTask);
+		    taskList.sequence(apertureTask, acquireTask);
+		    taskList.sequence(acquireTask, ic2Task);
+		    taskList.sequence(ic2Task, observationTask);
+
+		} else {
+		    // APNOAQ
+		    taskList.sequence(unwrapTask, apertureTask);
+		    taskList.sequence(apertureTask, observationTask);
+		}
+	    } else {
+		if (doAcquire) {
+		    // NOAPAQ
+		    InstConfigTask ic2Task = new InstConfigTask(name + "/IC2_RECONFIG", this, ic);
+		    taskList.addTask(ic2Task);
+		    taskLog.log(2, CLASS, name, "createTaskList", "Adding IC2_RECONFIG task");
+		    taskList.sequence(unwrapTask, acquireTask);
+		    taskList.sequence(acquireTask, ic2Task);
+		    taskList.sequence(ic2Task, observationTask);
+		} else {
+		    // NOAPNOAQ
+		    taskList.sequence(unwrapTask, observationTask);
+		}
+
+	    }
+
+	    if (!trackAfterDone) {
+		taskList.sequence(observationTask, trackOffAzTask);
+		taskList.sequence(observationTask, trackOffAltTask);
+		taskList.sequence(observationTask, trackOffRotTask);
+
+	    }
+
+	    // acquire is done after slew/rotate/config and before observation
+
+	    // taskList.sequence(observationTask, autoguiderStopTask);
+
+	} catch (Exception tx) {
+	    taskLog.log(1, CLASS, name, "createTaskList", "Failed to create Task Sequence for Observation_Sequence: "
+			+ tx);
+	    tx.printStackTrace();
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Observation_Sequence.");
+	    errorIndicator.setException(tx);
+	    failed(errorIndicator);
+	    return null;
+	}
+
+	taskLog.log(2, CLASS, name, "createTaskList", "Exit.createTaskList()");
+
+	return taskList;
+    }
+
+    // ### WE HAVE SYNCH-LOCK ON TASKLIST ##
+
+    /**
+     * Handle failure of InstConfig_Task. ### WE ALREADY HAVE SYNCH-LOCK ON
+     * TASKLIST ##
+     */
+    protected void handleInstConfigTaskFailed(Task task) {
+	InstConfigTask icTask = (InstConfigTask) task;
+	// Categorize codes:
+	// RETRY(times) -Send an ABORT command. Backoff (2**count)*delay then
+	// Retry command.
+	// After (times) ABORT task.
+	// REBOOT(level) -Subsystem error - try REBOOT at level then maybe
+	// level+1 etc.
+	// On failing at level 4, try ICSD_Reboot. Eventually go FATAL.
+	// ABORT -Give up and move onto next (higher level) Task. Manager's
+	// responsibility.
+	// FATAL -Give up - Callout to ops staff - needs human intervention.
+
+	// CCS Generated Errors.
+	// CCS_CONFIG_NO_CONFIG = 100800; - ABORT
+	// CCS_CONFIG_BAD_CLASS = 100801; - ABORT
+	// CCS_CONFIG_BAD_FILTER = 100802; - ABORT
+	// CCS_CONFIG_BAD_WINDOW = 100803; - ABORT
+	// CCS_CONFIG_FILTER_MOVE_FAILED = 100804; - RETRY(n)
+	// CCS_CONFIG_FOCUS_OFFSET_FAILED = 100805; - RETRY(n)
+	// CCS_CONFIG_UNIQUE_ID_FAILED = 100806; - RETRY(n)
+	// CCS_CONFIG_BAD_BINNING = 100807; - ABORT
+
+	// CCS_GENERIC_COMMAND_ABORTED - OK
+
+	// Task JMS-Protocol and Network Generated Errors.
+	// RCS_CONNECTION_RESOURCE_ERROR = 600001; - FATAL
+	// NET_JMS_CONNECTION_FAILED = 600002; - RETRY / -> REBOOT / ->
+	// POWER_TOGGLE
+	// NET_JMS_GENERAL_COMMS_ERROR = 600003; - RETRY / -> REBOOT
+	// NET_JMS_RESPONSE_ERROR = 600004; - RETRY (but maybe CCD is switched
+	// off -> REBOOT(3)
+	// NET_JMS_DESPATCH_ERROR = 600005; - RETRY
+	// NET_JMS_TIMEOUT_ERROR = 600006; - RETRY
+
+	// RCS Task-Specific Generated Errors.
+	// RCS_INSTCONFIG_UNKNOWN_INSTRUMENT = 600301; - ABORT
+	// Note: This is InstConfig_Task.UNKNOWN_INSTRUMENT
+
+	switch (task.getErrorIndicator().getErrorCode()) {
+	case CCS_CONFIG_NO_CONFIG:
+	case CCS_CONFIG_BAD_CLASS:
+	case CCS_CONFIG_BAD_FILTER:
+	case CCS_CONFIG_BAD_WINDOW:
+	case CCS_CONFIG_BAD_BINNING:
+	case InstConfigTask.UNKNOWN_INSTRUMENT:
+	case RCS_CONNECTION_RESOURCE_ERROR:
+	    failed(CONFIG_ERROR, "Instrument CONFIG failed fatally - aborting", null);
+	    break;
+	case CCS_CONFIG_FILTER_MOVE_FAILED:
+	case CCS_CONFIG_FOCUS_OFFSET_FAILED:
+	case CCS_CONFIG_UNIQUE_ID_FAILED:
+	case NET_JMS_CONNECTION_FAILED:
+	case NET_JMS_GENERAL_COMMS_ERROR:
+	case NET_JMS_DESPATCH_ERROR:
+	case NET_JMS_RESPONSE_ERROR:
+	case NET_JMS_TIMEOUT_ERROR:
+	    // retry ;
+	    int runs = icTask.getRunCount();
+	    System.err.println("OST::IC Failed - on Attempt: " + runs);
+	    if (runs < 3) {
+		resetFailedTask(icTask);
+		icTask.setDelay(10000L);
+	    } else {
+		System.err.println("** Too many fails [" + task.getName() + "] - abandoning.");
+		failed(CONFIG_ERROR, "Instrument CONFIG failed after 2 attempts - aborted");
+	    }
+	    break;
+	    // case RCS_CONNECTION_RESOURCE_ERROR:
+	    // fatal - callout;
+	    // break;
+	case CCS_GENERIC_COMMAND_ABORTED:
+	    // Ok we should expect this but only if weve sent an ABORT!
+	    // Hopefully this is the current command being aborted by the ICS.
+	    System.err.println("ICT Failure -- should have denied and been aborted......");
+	    break;
+	default:
+	    failed(103, "Failed for some reason with code: " + task.getErrorIndicator().getErrorCode());
+	}
+    }
+
+    /** Handle failure of an Abort_Task. */
+    protected void handleAbortTaskFailed(Task task) {
+	Abort_Task abTask = (Abort_Task) task;
+	int runs = abTask.getRunCount();
+	errorLog.log(1, CLASS, name, "handleAbortTaskFailed", "AbortTask failed..on run " + abTask.getRunCount());
+
+	failed(104, "Failed during observation sequence - unable to abort instrument controller");
+
+    }
+
+    /** Handle failure of an UnwrappingTask. */
+    protected void handleUnwrapTaskFailed(Task task) {
+	UnwrappingTask uTask = (UnwrappingTask) task;
+
+	errorLog.log(1, CLASS, name, "handleUnwrapTaskFailed", "Skip: UnwrappingTask failed due to: "
+		     + task.getErrorIndicator());
+
+	// failed(104,
+	// "Failed during observation sequence - unable to unwrap axes");
+
+	taskList.skip(task);
+
+    }
+
+    /** Handle failure of a Reboot_Task. */
+    protected void handleRebootTaskFailed(Task task) {
+	Reboot_Task rbTask = (Reboot_Task) task;
+
+	// Reboot failed so step up level max 3.
+	int level = rbTask.getLevel();
+	if (level < 3) {
+	    resetFailedTask(rbTask);
+	    level++;
+	    rbTask.setLevel(level);
+	} else {
+	    // Give up the instrument must be dead call OPS.
+	    errorLog.log(1, CLASS, name, "handleRebootTaskFailed",
+			 "****ICS reboot 3 failed - aborting to recovery mode.");
+	    failed(102, "ICS-Reboot failed at level " + level + " - aborting task", null);
+
+	    String id = inst.getName();
+	    String err = id + "_OFFLINE";
+	    System.err.println("****Sending recovery code: " + err);
+	    EventQueue.postEvent(err);
+	}
+    }
+
+    /** Handle failure of a Slew_Task. */
+    protected void handleSlewTaskFailed(Task task) {
+	SlewTask sTask = (SlewTask) task;
+
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog.log(1, CLASS, name, "handleSlewTaskFailed", "Task: " + task.getName() + " failed..on run " + runs);
+	if (runs < 3) {
+	    resetFailedTask(sTask);
+	    sTask.setDelay(5000L);
+	} else if (runs >= 3) {
+	    failed(TELESCOPE_ERROR, "Slew failed - ##TEMP## aborting", null);
+	    // TCS Generated Errors.
+	    // TCS_BAD_PARAM = 589911; -
+	    // TCS_BAD_RANGE = 589912; -
+	    // TCS_ENG_REJECT = 589916; -
+	    // TCS_STATE_REJECT = 589924; -
+	    // TCS_TIMED_OUT = 589926; -
+	    // TCS_NET_PARSE = 589927; -
+	    // Parsing and bad range codes should not occur unless the
+	    // translator
+	    // is set up incorrectly -> FATAL. IO and TIMEOUT are possible -
+	    // RETRY / FATAL
+	    // Rejected - should have detected via status mechanism already and
+	    // should not have sent the command !
+	    // Other codes are TCS internal errors and we can only ABORT /
+	    // WAIT(long) / CALLOUT.
+	}
+    }
+
+    /** Handle failure of InstrumentAcquireTask. */
+    protected void handleInstrumentAcquireTaskFailed(Task task) {
+	ErrorIndicator err = task.getErrorIndicator();
+	errorLog.log(1, CLASS, name, "handleInstrumentAcquireTaskFailed", "Task: " + task.getName() + " failed");
+	// set to special code to alert manager.
+	failed(INSTRUMENT_ACQUISITION_FAILED, "Subtask failure (OBS) due: " + err.getErrorString(), null);
+    }
+
+    /** Handle failure of Autoguide_Task. */
+    protected void handleAutoguideTaskFailed(Task task) {
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog
+	    .log(1, CLASS, name, "handleAutoguideTaskFailed", "Task: " + task.getName() + " failed..on run " + runs);
+	if (runs < 3) {
+	    resetFailedTask(task);
+	} else if (runs >= 3) {
+	    failed(TELESCOPE_ERROR, "Autoguide failed - ##TEMP## aborting", null);
+	}
+    }
+
+    /** Handle failure of MetRef_Task. */
+    protected void handleMetRefTaskFailed(Task task) {
+	taskList.skip(task);
+	// failed(TELESCOPE_ERROR, "MetRef failed - ##TEMP## aborting", null);
+    }
+
+    /** Handle failure of InstrumentSelectTask. */
+    protected void handleInstSelectTaskFailed(Task task) {
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog.log(1, CLASS, name, "handleInstSelectTaskFailed", "Task: " + task.getName() + " failed..on run "
+		     + runs);
+	if (runs < 3) {
+	    resetFailedTask(task);
+	} else if (runs >= 3) {
+	    failed(TELESCOPE_ERROR, "InstSelect failed - ##TEMP## aborting", null);
+	}
+    }
+
+    /** Handle failure of AgFilter_Task. */
+    protected void handleAgFilterTaskFailed(Task task) {
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog.log(1, CLASS, name, "handleAgFilterTaskFailed", "Task: " + task.getName() + " failed..on run " + runs);
+	if (runs < 3) {
+	    resetFailedTask(task);
+	} else if (runs >= 3) {
+	    failed(TELESCOPE_ERROR, "AgFilter failed - ##TEMP## aborting", null);
+	}
+    }
+
+    /** Handle failure of AgMove_Task. */
+    protected void handleAgMoveTaskFailed(Task task) {
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog.log(1, CLASS, name, "handleAgMoveTaskFailed", "Task: " + task.getName() + " failed..on run " + runs);
+	if (runs < 3) {
+	    resetFailedTask(task);
+	} else if (runs >= 3) {
+	    failed(TELESCOPE_ERROR, "AgMove failed - ##TEMP## aborting", null);
+	}
+    }
+
+    /** Handle failure of AgWavelengthTask. */
+    protected void handleAgWavelengthTaskFailed(Task task) {
+	taskList.skip(task);
+	// failed(TELESCOPE_ERROR, "AgWavelength failed - ##TEMP## aborting",
+	// null);
+    }
+
+    /** Handle failure of AgSelectTask. */
+    protected void handleAgSelectTaskFailed(Task task) {
+	taskList.skip(task);
+	// failed(TELESCOPE_ERROR, "AgSelect failed - ##TEMP## aborting", null);
+    }
+
+    /** Handle failure of Track_Task. */
+    protected void handleTrackTaskFailed(Task task) {
+	Track_Task tTask = (Track_Task) task;
+
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog.log(1, CLASS, name, "handleTrackTaskFailed", "Task: " + task.getName() + " failed..on run " + runs);
+	if (runs < 3) {
+	    resetFailedTask(tTask);
+	    tTask.setDelay(10000L);
+	} else if (runs >= 3) {
+	    failed(TELESCOPE_ERROR, "Track failed - ##TEMP## aborting", null);
+	}
+    }
+
+    /**
+     * Handle failure of Rotator_Task. Depending on whetehr this is an exercise
+     * task or not we may try to reverse direction. After 3 goes we give up on
+     * the exercise.
+     */
+    protected void handleRotatorTaskFailed(Task task) {
+
+	RotatorTask rTask = (RotatorTask) task;
+
+	int runs = ((JMSMA_TaskImpl) task).getRunCount();
+	errorLog.log(1, CLASS, name, "handleRotatorTaskFailed", "Task: " + task.getName() + " failed..on run " + runs);
+
+	// NORMAL ROTATOR
+	if (runs < 3) {
+	    resetFailedTask(rTask);
+	    rTask.setDelay(10000L);
+	} else {
+	    failed(TELESCOPE_ERROR, "Rotator failed - ##TEMP## aborting", null);
+	}
+    }
+
+    /** Handle failure of Observation_Task. */
+    protected void handleObservationTaskFailed(Task task) {
+	// ### no special handling for now....just pass the code up to manager
+
+	ErrorIndicator err = task.getErrorIndicator();
+
+	int code = err.getErrorCode();
+
+	// if (code = MosaicSequenceTask.AUTOGUIDE_ON_TASK_FAILED) {
+	// // We should detect a problem with the AG acquisition and reset the
+	// ISS override temporarily if the obs
+	// // was of the AG_OPT type
+	// int agmode = observation.getAutoGuiderUsageMode();
+	// taskLog.log(2, CLASS, name, "handleObservationTaskFailed",
+	// "Detected failed autoguider during observation, obs requirements are: "+
+	// TelescopeConfig.toAgModeString(agmode));
+
+	// if (agmode == TelescopeConfig.AGMODE_OPTIONAL) {
+	// taskLog.log(2, CLASS, name, "handleObservationTaskFailed",
+	// "Temporarily re-enabling ISS autoguider start command override");
+	// ngat.rcs.iss.ISS_AG_START_CommandImpl.setOverrideForwarding(true);
+	// resetFailedTask(task);
+	// return;
+	// }
+
+	// AG fail but we need the AG so pass failure up stack (mgr will set
+	// TABU on this obs).
+	// }
+
+	failed(err.getErrorCode(), "Subtask failure (OBS) due: " + err.getErrorString());
+
+    }
+
+    public void sigMessage(Task source, int category, Object message) {
+
+	// here we could compile an ObsStatusUpdateInfo with the groupID in it
+	// as well as the filename
+
+	switch (category) {
+	case Exposure_Task.EXPOSURE_FILE:
+
+	    String obsPathName = observation.getFullPath();
+	    Path obsPath = new Path(obsPathName);
+
+	    String tagName = obsPath.getTagByName();
+	    String userName = obsPath.getUserByName();
+	    String propName = obsPath.getProposalByName();
+	    String grpName = obsPath.getGroupByName();
+	    String obsName = observation.getName();
+	    // opsLog.log(1, "Program:"+
+	    // tagName+" : "+userName+" : "+propName+" : "+grpName+" : "+obsName+": Exposure Completed, File: "+message);
+	    obsLog.log(1, "SCA Program:" + tagName + " : " + userName + " : " + propName + " : " + grpName + " : "
+		       + obsName + ": Exposure Completed, File: " + message);
+
+	    exposuresCompleted++;
+
+	    break;
+
+	case Exposure_Task.EXPOSURE_DATA:
+
+	    // These will have Red and Exp infos.
+
+	    break;
+	default:
+	    super.sigMessage(source, category, message);
+	}
+    }
+
+    /** Returns the number of exposures successfully completed. */
+    public int getExposuresCompleted() {
+	return exposuresCompleted;
+    }
+
+    /** Notification that guide was lost. */
+    public void guideLockLost() {
+	taskLog.log(1, CLASS, name, "guideLockLost", "OST - received [AG_LOCK_LOST] notification");
+
+	TelescopeConfig agConfig = observation.getTelescopeConfig();
+
+	AutoguiderReAcquisitionTask autoguiderReStartTask = 
+	    new AutoguiderReAcquisitionTask(name + "/AUTO_REACQUIRE",
+					    this, 
+					    timeRequired, 
+					    System.currentTimeMillis() - runStartTime, 
+					    agConfig);
+
+	taskList.addTask(autoguiderReStartTask);
+
+	taskLog.log(1, CLASS, name, "guideLockLost", "OST - Attempting autoguider re-acquisition after lock lost...");
+
+    }
+
+    /** Notification that tracking was lost. */
+    public void trackingLost() {
+	taskLog.log(1, CLASS, name, "trackingLost", "OST - received [TRACKING_LOST] notification");
+
+	// A nasty fix to disable rot corr - weird !
+	if (System.getProperty("no.correct.rotator.tracking") != null) {
+	    taskLog.log(1, CLASS, name, "trackingLost", "WARNING - Rotator tracking correction is disabled");
+	    return;
+	}
+
+	int rotMode = observation.getRotatorMode();
+	double rotAngle = observation.getRotatorAngle(); // not relevant unless
+	// SKY in which case
+	// it may be a
+	// calculated CP
+	// angle.
+	double rotActual = StatusPool.latest().mechanisms.rotPos;
+	double rotDemand = StatusPool.latest().mechanisms.rotDemand;
+	RotatorCorrectionTask rotCorrTask = new RotatorCorrectionTask(name + "/ROT_CORR", this, rotMode, rotAngle,
+								      rotActual, rotDemand);
+
+	taskList.addTask(rotCorrTask);
+
+	taskLog.log(1, CLASS, name, "trackingLost", "OST - Attempting rotator correction after tracking lost...");
+
+    }
+
+}
+
+/**
+ * $Log: Observation_Sequence_Task.java,v $ /** Revision 1.15 2008/08/12
+ * 12:01:59 eng /** focus offsets /** /** Revision 1.14 2008/03/25 11:18:49 snf
+ * /** added barirers yto OBsseq /** /** Revision 1.13 2008/01/07 10:48:43 snf
+ * /** typo /** /** Revision 1.12 2008/01/07 10:47:56 snf /** typo /** /**
+ * Revision 1.11 2008/01/07 10:45:56 snf /** added set acqimg file in fits
+ * headers /** /** Revision 1.10 2007/11/12 14:12:59 snf /** added acquisition
+ * mode param /** /** Revision 1.9 2007/10/25 09:59:19 snf /** commented any
+ * fits ra/dec setting /** /** Revision 1.8 2007/09/27 13:16:30 snf /** added
+ * sequencing for acquisition task /** /** Revision 1.7 2007/07/05 11:34:22 snf
+ * /** checkin /** /** Revision 1.6 2007/03/26 08:01:19 snf /** chnaged aperture
+ * constructor to use number not inst name, OST looks up number first /** /**
+ * Revision 1.5 2007/03/26 07:53:03 snf /** added aperture offset task. /** /**
+ * Revision 1.4 2007/01/08 11:20:50 snf /** *** empty log message *** /** /**
+ * Revision 1.3 2006/12/13 13:06:33 snf /** changed dodgy spelling /** /**
+ * Revision 1.2 2006/12/13 09:59:11 snf /** Added code to check obs for
+ * nsTracking requirment and mod to SlewTask params. /** /** Revision 1.1
+ * 2006/12/12 08:27:29 snf /** Initial revision /** /** Revision 1.1 2006/05/17
+ * 06:32:29 snf /** Initial revision /** /** Revision 1.2 2002/09/16 09:38:28
+ * snf /** *** empty log message *** /** /** Revision 1.1 2001/04/27 17:14:32
+ * snf /** Initial revision /**
+ */
+

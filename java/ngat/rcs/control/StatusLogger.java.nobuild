@@ -1,0 +1,179 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.control;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+
+import ngat.message.RCS_TCS.*;
+import ngat.util.*;
+import ngat.util.logging.*;
+
+import java.util.*;
+import java.text.*;
+import java.net.*;
+import java.io.*;
+
+/** This class represents the mechanism for logging (weather) status information.
+ * The actual implementation will probably use some form of database to allow the
+ * status data to recorded. This temporary version just uses a FileLogHandler with
+ * a rotating file.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: StatusLogger.java.nobuild,v 1.1 2006/05/17 06:33:59 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/control/RCS/StatusLogger.java.nobuild,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class StatusLogger implements Observer {
+
+    // Datagram stuff.
+    protected byte[] msg;
+
+    protected DatagramPacket packet;
+    
+    protected DatagramSocket socket;
+
+    protected InetAddress address;
+
+    protected ByteArrayOutputStream baos;
+    
+    protected ObjectOutputStream oos;
+  
+    protected Object lock;
+
+    /** Single remote host.*/
+    String host;
+
+    /** Single port for remote.*/
+    int port;
+
+    /** Create a StatusLogger.
+     */
+    public StatusLogger() throws Exception {
+
+	// To multicast.	
+	socket       = new DatagramSocket();
+
+	// Synchronization lock for updater(s).
+	lock = new Object();
+
+    }
+
+    public void configure(File file) throws Exception {
+	ConfigurationProperties config = new ConfigurationProperties();
+	config.load(new FileInputStream(file));
+	configure(config);
+    }
+    
+    public void configure(ConfigurationProperties config) throws Exception {
+	
+	host = config.getProperty("host");
+	if (host == null)
+	    throw new IllegalArgumentException("StatusLogger: No host specified");
+
+	address = InetAddress.getByName(host);
+	
+	port = config.getIntValue("port");
+	       
+    }
+
+    /** We can expect status from the TCS and various ICS. There is
+     * a synchronization lock to prevent multiple threads from blocking.*/ 
+    public void update(Observable source, Object arg) {
+	synchronized (lock) {
+
+	    System.err.println("StatLog::Received object: "+arg.getClass().getName()+" from: "+source);
+	  
+	    if (arg instanceof TCS_Status) {
+		TCS_Status tcs_status = (TCS_Status)arg;
+	
+		try {
+		    baos = new ByteArrayOutputStream(10000);	    
+		    oos  = new ObjectOutputStream(baos);
+		    //System.err.println(sdf.format(time)+ " Built OOS = "+oos);
+		    oos.flush();
+		    //System.err.println(sdf.format(time)+ " OOS flushed (1) - stream header OK");
+		    
+		    if (Math.random() < 0.2) {
+			oos.writeObject(tcs_status.state);
+			System.err.println("Writing STATE");
+		    } else if
+			(Math.random() < 0.4) {
+			oos.writeObject(tcs_status.mechanisms);
+			System.err.println("Writing MECHS");
+		    } else {
+			oos.writeObject(tcs_status.meteorology);
+			System.err.println("Writing METEO");
+		    }
+		    
+		    //System.err.println(sdf.format(time)+ " OOS wrote object: "+record.toString());
+		    oos.flush();
+		    oos.close();
+		    //System.err.println(sdf.format(time)+ " OOS flushed (2) - record OK");
+		    byte[] buffer = baos.toByteArray();
+		    //System.err.println("Sending buffer: size: "+buffer.length);
+		    packet = new DatagramPacket(buffer, buffer.length, address, port);	    
+		    socket.send(packet);	
+		} catch (IOException iox) {
+		    System.err.println("StatLog::Error sending status: "+iox);		    
+		}
+	    }
+	}
+    }
+    
+}
+
+/** $Log: StatusLogger.java.nobuild,v $
+/** Revision 1.1  2006/05/17 06:33:59  snf
+/** Initial revision
+/**
+/** Revision 1.4  2002/09/16 09:38:28  snf
+/** *** empty log message ***
+/**
+/** Revision 1.2  2001/04/27 17:14:32  snf
+/** backup
+/**
+/** Revision 1.1  2001/02/16 17:44:27  snf
+/** Initial revision
+/** */

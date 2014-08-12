@@ -1,0 +1,14 @@
+
+# Used to do grouping of records on surname
+
+<xsl:key name="contacts-by-surname" match="contact" use="surname" />
+<xsl:template match="records">
+	<xsl:for-each select="contact[count(. | key('contacts-by-surname', surname)[1]) = 1]">
+		<xsl:sort select="surname" />
+		<xsl:value-of select="surname" />,<br />
+		<xsl:for-each select="key('contacts-by-surname', surname)">
+			<xsl:sort select="forename" />
+			<xsl:value-of select="forename" /> (<xsl:value-of select="title" />)<br />
+		</xsl:for-each>
+	</xsl:for-each>
+</xsl:template>

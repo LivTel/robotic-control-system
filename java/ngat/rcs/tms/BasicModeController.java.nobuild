@@ -1,0 +1,36 @@
+package ngat.rcs.tmm;
+
+import ngat.rcs.tmm.manager.*;
+
+import java.rmi.*;
+import java.rmi.server.*;
+
+public class BasicModeController extends UnicastRemoteObject implements TaskModeController {
+
+    DefaultModalTask dma;
+
+    public BasicModeController(DefaultModalTask dma) throws RemoteException {
+	super();
+	this.dma = dma;
+    }
+
+
+    /** Return true if wants control at time.*/
+    public boolean wantsControl(long time) throws RemoteException {
+	return dma.willWantControlAt(time);
+    }
+
+    /** Returns the mode's priority.*/
+    public int getPriority() throws RemoteException {
+	return dma.getAgentPriority();
+    }
+
+    /** Returns the name of the mode.*/
+    public String getModeName() throws RemoteException {
+	return dma.getAgentId();
+    }
+
+    public String getModeDescription() throws RemoteException {
+	return "BMC: "+dma.getAgentId()+"_"+dma.getAgentVersion()+", "+dma.getAgentDesc()+", P"+dma.getAgentPriority();
+    }
+}

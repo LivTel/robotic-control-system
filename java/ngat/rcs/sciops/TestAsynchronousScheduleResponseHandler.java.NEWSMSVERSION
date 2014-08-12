@@ -1,0 +1,62 @@
+/**
+ * 
+ */
+package ngat.rcs.sciops;
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+import ngat.sms.AsynchronousScheduleResponseHandler;
+import ngat.sms.ScheduleItem;
+
+/**
+ * @author eng
+ *
+ */
+public class TestAsynchronousScheduleResponseHandler extends UnicastRemoteObject implements
+		AsynchronousScheduleResponseHandler, AsynchronousResponseHandler {
+	
+	/** The schedule item returned.*/
+	private ScheduleItem sched;
+	
+	private AsynchronousRemoteCallTask task;
+
+	/**
+	 * @throws RemoteException
+	 */
+	public TestAsynchronousScheduleResponseHandler(AsynchronousRemoteCallTask task) throws RemoteException {
+		super();
+		this.task = task;
+	}
+
+	/* (non-Javadoc)
+	 * @see ngat.rcs.sciops.AsynchronousScheduleResponseHandler#asynchronousScheduleFailure(java.lang.String)
+	 */
+	public void asynchronousScheduleFailure(int code, String message) throws RemoteException {
+		task.asynchronousErrorReceived(this, code, message);
+	}
+
+	/* (non-Javadoc)
+	 * @see ngat.rcs.sciops.AsynchronousScheduleResponseHandler#asynchronousScheduleResponse(ngat.sms.ScheduleItem)
+	 */
+	public void asynchronousScheduleResponse(ScheduleItem sched) throws RemoteException {
+		// save the schedule item locally.
+		this.sched = sched;
+
+		// now let the responder know
+		task.asynchronousResponseReceived(this);
+		
+	}
+
+	/**
+	 * @return the sched
+	 */
+	public ScheduleItem getSched() {
+		return sched;
+	}
+
+	public void asynchronousScheduleProgress(String message) throws RemoteException {
+		System.err.println("TASR:: Received scheduling progress report: "+message);
+	}
+
+}

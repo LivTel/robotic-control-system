@@ -1,0 +1,52 @@
+Spec for classes which perform monitoring of stuff...
+
+-Create and configure the monitor at startup.
+
+-Attach it to something which provides status to be monitored (eg Telescope.System monitoring)
+
+-Set it going - it may very well be passive and just receives updates when the source flashes it.
+
+-Provide a mechanism for interested parties to add and remove themselves as listeners for any alerts.
+
+-Provide a mechanism to enable/disable the firing of alerts.A mechanism to allow the alert trigger to reset.
+
+-A mechanism to trigger alerts. May include time period: eg - if status goes to x for at least n seconds
+
+-Once an alert has been fired (to all registered parties) it should be disabled and not be able to fire again until reset.
+
+-May want to set a flag to indicate to a recovery mode that something needs fixing .. an instance might be the AG
+ If it goes to some state or is being refused by MCP as (not ready) we might do a AGSELECT and AGFOCUS before the next group
+ either in Recovery mode via RCA or as part of science mode.
+
+-RCA must reset the monitor via some setting so it does not keep triggering - ie we dont want to waste lots of time in recovery mode
+ this might be a recording of how recently it triggered or how many triggers in last xxx time period.
+
+
+-Sometimes the listener will want to further filter the trigger decision - eg an Ag Guide Lost might be ignored if this is
+ a very short exposure or we are very near the end of a long exposure - cant see how this sort of decision can be made by
+ the monitor it has to be the receiver's decision.
+
+
+
+Things we might want to monitor.
+
+-Tracking on each axis
+-Autoguider lock
+-Instrument offline/impairment
+
+When in the occurance of a sequence should we start and stop monitoring ?
+
+AG: ON     - When the AG is switched on with mandatory and succeeds. 
+    IGNORE - When we switch on optional whether we succeed or not.
+    OFF    - When we switch AG off (even if it wasnt switched on).
+
+TRK: ON  - When we have completed a slew or rotate.
+     OFF - When we either finish (tracking switched off) or
+	   When another slew is attempted.
+(note we may change over to a stop,trackoff,track on mentallity soon so this would be handy)
+
+INST: ON - After we have configured an instrument.
+      OFF - After we have totally done - ie axes are off again.
+
+
+

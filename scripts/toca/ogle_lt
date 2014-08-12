@@ -1,0 +1,7 @@
+#!/bin/csh
+
+# Get the OGLE targets and send to LT via non-existant ltproxy
+
+/home/planet/getit
+cat output4.txt | awk '{print "/home/planet/add_event_lt" $0}' >! lt_list
+source lt_list

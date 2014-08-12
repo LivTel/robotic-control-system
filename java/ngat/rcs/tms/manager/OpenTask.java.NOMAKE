@@ -1,0 +1,137 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs;
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.util.logging.*;
+import ngat.phase2.nonpersist.*;
+import ngat.message.RCS_TCS.*;
+
+import java.util.*;
+import java.text.*;
+
+/** This Task manages the opening of the dome and other mechanisms
+ * as a result of an THREAT CLEAR received by the RCS Controller.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: OpenTask.java.NOMAKE,v 1.1 2006/05/17 06:33:38 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/tmm/manager/RCS/OpenTask.java.NOMAKE,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class OpenTask extends ParallelTaskImpl implements Logging {
+  
+    int recCount;
+
+    Enclosure_Task   enclosureTask;
+
+    MirrorCover_Task mirrorCoverTask;
+  
+    static final SimpleDateFormat sd1 = new SimpleDateFormat("yyyyMMdd");
+     
+    /** Create an OpenTask using the supplied settings.
+     * @param name The unique name/id for this TaskImpl - 
+     * should be based on the COMMAND_ID.
+     * @param manager The Task's manager.
+     */
+    public OpenTask(String      name,
+		    TaskManager manager) {
+	super(name, manager);	
+    }
+  
+    
+    public void onSubTaskFailed(Task task) {
+	synchronized (taskList) {
+	    super.onSubTaskFailed(task);
+	    //if (((JMSMA_TaskImpl)task).getRunCount() < 2) {
+	    //resetFailedTask(task);
+	    //} else {
+	    failed(555, "Temporary fail open operation due to subtask failure.."+task.getName(), null);
+	    //}
+	}
+    }
+    
+   
+    public void onSubTaskAborted(Task task) {
+	super.onSubTaskAborted(task);
+    }
+    
+    public void onSubTaskDone(Task task) {
+	super.onSubTaskDone(task);
+    }
+    
+    public void onAborting() {
+	super.onAborting();
+    }
+    
+    public void onDisposal() {
+	super.onDisposal();
+    }
+    
+    public void onCompletion() {
+	super.onCompletion();
+    }
+    
+    /** Overridden to carry out specific work after the init() method is called.*/
+    public void onInit() {
+	super.onInit();
+	taskLog.log(WARNING, 1, CLASS, name, "onInit",
+		    "The MirrorCoverTask is not usable currently with Telescope Simulator");
+    }
+    
+    /** Creates the TaskList for this TaskManager. */
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+	
+	enclosureTask   = new Enclosure_Task(name+"/ENC_OPEN", this, ENCLOSURE.BOTH, ENCLOSURE.OPEN);	
+	//mirrorCoverTask = new MirrorCover_Task(name+"/MIR_COVER_OPEN", this, MIRROR_COVER.OPEN);
+	taskList.addTask(enclosureTask);	
+	//  taskList.addTask(mirrorCoverTask);
+//  	try {
+//  	    taskList.sequence(enclosureTask, mirrorCoverTask);
+//  	} catch (TaskSequenceException tx) {
+//  	    errorLog.log(1, CLASS, name, "createTaskList", 
+//  			 "Failed to create Task Sequence for Observation_Sequence: "+tx);
+//  	    failed = true;
+//  	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+//  	    errorIndicator.setErrorString("Failed to create Task Sequence for Observation_Sequence.");
+//  	    errorIndicator.setException(tx);
+//  	    return null;
+//  	}
+	
+	return taskList;
+    }
+ 
+}
+
+/** $Log: OpenTask.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:33:38  snf
+/** Initial revision
+/**
+/** Revision 1.1  2002/09/16 09:38:28  snf
+/** Initial revision
+/**
+/** Revision 1.1  2001/04/27 17:14:32  snf
+/** Initial revision
+/** */

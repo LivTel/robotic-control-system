@@ -1,0 +1,190 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs;
+
+import ngat.phase2.*;
+import ngat.util.logging.*;
+
+import java.util.*;
+/** 
+*
+* <dl>
+* <dt><b>RCS:</b>
+* <dd>$Id: GRB_Alert_Task.java.NOMAKE,v 1.1 2006/05/17 06:33:38 snf Exp $
+* <dt><b>Source:</b>
+* <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/tmm/manager/RCS/GRB_Alert_Task.java.NOMAKE,v $
+* </dl>
+* @author $Author: snf $
+* @version $Revision: 1.1 $
+*/
+public class GRB_Alert_Task extends ParallelTaskImpl implements Logging {
+    
+    // 601301 error configing
+
+    public static final int NUMBER_OBSERVATIONS = 5;
+
+    protected static final float[] expose = 
+	new float[] {1000.0f, 2000.0f, 4000.0f, 8000.0f, 16000.0f};
+    
+    /** A Group to hold the GRB coordinates and configuration info.*/
+    //Group grbGroup;
+
+    /** A supplied ID for this GRB trigger - from GCN.*/
+    String grbId;
+    
+    /** The target coordinate RA.*/
+    static double grbRA;
+
+    /** The target coordinate Dec. */
+    static double grbDec;
+
+    Observation[] obos;
+    
+    /** Create a GRB task with the specified parameters.
+     * ### The Config info etc should be extracted from some config file ###
+     * ### ALL this needs to do really is to stick the coordinates in.   ###
+     */
+    public GRB_Alert_Task(String name, TaskManager manager,
+			  String grbId) {
+	super(name, manager);	
+	this.grbId  = grbId;
+	//grbGroup = new Group("GRB-Alert-Group:"+grbId);
+	
+	ExtraSolarSource grbSrc = new ExtraSolarSource("GRB-Alert-Source");
+	grbSrc.setRA(grbRA);
+	grbSrc.setDec(grbDec);
+	grbSrc.setPmRA(0.0);
+	grbSrc.setPmDec(0.0);
+	grbSrc.setParallax(0.0);
+	grbSrc.setRadialVelocity(0.0);
+	grbSrc.setEpoch(2000.0f);
+	grbSrc.setEquinox(2000.0f);
+	grbSrc.setEquinoxLetter('J');
+	grbSrc.setFrame(Source.FK5);
+	
+	CCDConfig grbInstConfig = new CCDConfig("GRB-Alert-CCD-Config");
+	grbInstConfig.setLowerFilterWheel("clear");
+	grbInstConfig.setUpperFilterWheel("clear");
+	CCDDetector detector = new CCDDetector();
+	detector.setXBin(1);
+	detector.setYBin(1);
+	detector.clearAllWindows();
+	try {
+	    grbInstConfig.setDetector(0, detector);
+	} catch (IllegalArgumentException e) {
+	    taskLog.log(1, "GRB_Alert_Task", name, "Constructor", 
+		       "Failed to configure CCD Detector: "+e);
+	    failed = true;
+	    errorIndicator = 
+		new BasicErrorIndicator(601301, "Failed to configure CCD Detector:", e);
+	    return;
+	    // FATAL
+	}
+	TelescopeConfig  grbTeleConfig = new TelescopeConfig("GRB-Alert-Tele-Config");
+	grbTeleConfig.setAutoGuiderUsageMode(TelescopeConfig.AGMODE_OPTIONAL);
+	grbTeleConfig.setRotatorAngleMode(TelescopeConfig.ROTATOR_MODE_SKY);
+	grbTeleConfig.setSkyAngle(0.0);
+	grbTeleConfig.setFocusOffset(0.0f);
+	grbTeleConfig.setGuideProbePosition(0.0);
+	grbTeleConfig.setAutoGuiderStarSelectionMode(TelescopeConfig.STAR_SELECTION_RANK);
+	grbTeleConfig.setAutoGuiderStarSelectionEnabled(true);
+	grbTeleConfig.setAutoGuiderStarSelection1(1);
+	grbTeleConfig.setAutoGuiderStarSelection2(1);
+	
+	PipelineConfig   grbPipeConfig = new PipelineConfig("GRB-Alert-Pipe-Config");
+	
+	// Create a series of Observations of increasing length.
+	// ### These need configuring and the filter choices setting ####
+	
+	obos = new Observation[NUMBER_OBSERVATIONS];
+	Observation obs = null;
+	for (int i = 0; i < NUMBER_OBSERVATIONS; i++) {	    
+	    obs = new Observation("GRB-Alert-Obs-"+i);	    
+	    obs.setMosaicArray(false);
+	    obs.setMosaicCross(false);
+	    obs.setNumRuns(1);
+	    obs.setExposeTime(expose[i]);
+	    obs.setSource(grbSrc);
+	    obs.setInstrumentConfig(grbInstConfig);
+	    obs.setTelescopeConfig(grbTeleConfig);
+	    obs.setPipelineConfig(grbPipeConfig);
+	    obos[i] = obs;
+	    //grbGroup.addObservation(obs);
+	}
+
+    }
+      
+    /** Overridden to carry out specific work after the init() method is called.*/
+    public void onInit() {
+	super.onInit();
+	FITS_HeaderInfo.current_TAGID.setValue   ("GRB-Tag"); 
+	FITS_HeaderInfo.current_USERID.setValue  ("GRB-User");
+	FITS_HeaderInfo.current_PROPID.setValue  ("GRB-Prop"); 
+	FITS_HeaderInfo.current_GROUPID.setValue ("GRB-Group");	
+	FITS_HeaderInfo.current_COMPRESS.setValue("PROFESSIONAL");	
+    }
+    
+    /** Creates the TaskList for this TaskManager. A series of Offset and Expose
+     * Tasks are created depending on the Observation's mosaic settings.*/
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+	Observation observation = null;
+	//Iterator it = grbGroup.listAllObservations();
+	Task currTask = null;
+	Task prevTask = null;
+	int count = 0;
+	//while (it.hasNext()) {
+	for (int i = 0; i < NUMBER_OBSERVATIONS; i++) {
+	    //observation = (Observation)it.next();
+	    observation = obos[i];
+	    currTask = new Observation_Sequence_Task(name+"/Obs_Seq_"+count,
+						     this,
+						     observation,
+						     false);
+	    System.err.println("***************GRB Obs: Expose: "+observation.getExposeTime()+" millis.");
+	    taskList.addTask(currTask);
+	    // Not first task, sequence to last.
+	    if (count != 0 ) {
+		try {
+		    taskList.sequence(prevTask, currTask);
+		    System.err.println("***************Sequence: "+prevTask.getName()+" : "+currTask.getName());
+		} catch (TaskSequenceException tx) {
+		    System.err.println("***************TASK SEQUNE ERROR: "+tx);
+		    failed = true;
+		}
+	    }
+	    prevTask = currTask;
+	    count++;
+	}
+	
+	return taskList;
+    }
+       
+    /** Set the RA for GRB source (rads).*/
+    public static void setGrbRA (double in) { grbRA = in; }
+
+    /** Set the Dec for GRB source (rads).*/
+    public static void setGrbDec(double in) { grbDec = in; }
+
+}
+
+/** $Log: GRB_Alert_Task.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:33:38  snf
+/** Initial revision
+/** */

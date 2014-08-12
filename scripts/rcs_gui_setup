@@ -1,0 +1,39 @@
+#!/bin/csh
+
+# -----------------------
+# RCS GUI Setup script.
+# -----------------------
+
+# RCS Common environment.
+setenv RCS_GUI_HOME /home/occ/rcsgui
+setenv RCS_GUI_CLASS ${RCS_GUI_HOME}/class
+setenv MISC_CLASS   /occ/misc/class
+setenv RCS_HOME /occ/rcs
+
+# Setup any extra CLASSPATH here.
+echo $CLASSPATH | grep ${RCS_GUI_CLASS}  > /dev/null
+if ( $status != 0 ) then
+    setenv CLASSPATH ${CLASSPATH}:${RCS_GUI_CLASS}
+    echo "Add Gui classes"
+endif
+
+# Add misc classes for PCR 
+echo $CLASSPATH | grep ${MISC_CLASS}  > /dev/null
+if ( $status != 0 ) then
+    setenv CLASSPATH ${CLASSPATH}:${MISC_CLASS}
+    echo "Add Misc classes"
+endif
+
+# Add rcs classes for ccd-status etc
+#echo $CLASSPATH | grep ${RCS_HOME} 
+#> /dev/null
+#if ( $status != 0 ) then
+    setenv CLASSPATH ${CLASSPATH}:${RCS_HOME}
+    echo "Add RCS classes"
+#endif 
+
+echo "RCS_GUI_Setup done"
+
+
+
+

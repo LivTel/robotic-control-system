@@ -1,0 +1,3 @@
+#!/bin/csh
+
+set SCRIPT = /occ/rcs/scripts/util/get_system

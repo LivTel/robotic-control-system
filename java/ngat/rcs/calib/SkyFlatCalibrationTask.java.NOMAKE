@@ -1,0 +1,402 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.net.*;
+import ngat.fits.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+import ngat.astrometry.*;
+import ngat.util.*;
+import ngat.util.logging.*;
+import ngat.message.RCS_TCS.*;
+
+import java.io.*;
+import java.util.*;
+
+/** This Task carries out the Instrument sky flat calibration.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: SkyFlatCalibrationTask.java,v 1.1 2006/12/12 08:25:56 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/SkyFlatCalibrationTask.java,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class SkyFlatCalibrationTask extends CalibrationTask {
+
+    /** ERROR_BASE for this Task type.*/
+    public static final int ERROR_BASE = 900;
+
+    /** Default time available for an instrument twilight calibration.*/
+    public static final long DEFAULT_TWILIGHT_CALIB_TIME = 15*60*1000L;
+    
+    TwilightCalibrationTask twilightTask;
+    
+    Task twiTrkAz;
+    Task twiTrkAlt;
+  
+    Task twiSlew;
+    Task twiRot;
+    Task twiRotFlt;
+
+    /** Instrument ID.*/
+    String twilightInstId;
+
+    /** Time until twilight is over (ms) (ie. sunrise).*/
+    long twilightTime;
+
+    /** Time we can actually observe for (ms).*/
+    long timeAvailable;
+
+    /** ### Temp feature.*/
+    long startExposing;
+
+
+    /** The area to observe.*/
+    private ExtraSolarSource blankArea;
+
+    /** Magniutde of blank field (if known).*/
+    private double blankFieldMagnitude;
+
+    /** Create a SkyFlatCalibrationTask using the supplied settings. 
+     * @param name The unique name/id for this TaskImpl - 
+     * should be based on the COMMAND_ID.
+     * @param manager The Task's manager.
+     */
+    public SkyFlatCalibrationTask(String      name,
+				  TaskManager manager,
+				  File        configFile,
+				  File        historyFile,
+				  Long        maxDuration,
+				  Integer     invokation) {
+	super(name, manager, configFile, historyFile, maxDuration, invokation);
+
+    }
+
+    /** COnfigure this task.*/
+    protected void configure() throws IOException , IllegalArgumentException {
+	ConfigurationProperties config = new ConfigurationProperties();	
+	config.load(new FileInputStream(configFile));
+       
+	twilightInstId = config.getProperty("twilight.instrument");
+
+	// The available time in millis. (read as seconds).
+	timeAvailable    = 1000L*config.getLongValue("max.time", DEFAULT_TWILIGHT_CALIB_TIME);
+	    
+
+    }
+
+    /** */
+	public void onSubTaskFailed(Task task) {
+	super.onSubTaskFailed(task); 
+	failed(555, "Temporary fail Sky Flats operation due to subtask failure.."+task.getName(), null);
+    }	
+    
+    /** */
+    public void onSubTaskAborted(Task task) {
+	super.onSubTaskAborted(task);
+    }
+    
+    /** */
+    public void onSubTaskDone(Task task) {
+	super.onSubTaskDone(task);	
+    }
+    
+    /** */
+    public void onAborting() {
+	super.onAborting();
+    }
+    
+    /** */ 
+    public void onDisposal() {
+	super.onDisposal();
+    }    
+
+    /** */
+    public void onCompletion() {
+	super.onCompletion();	
+	taskLog.log(WARNING, 1, CLASS, name, "onCompletion",
+		    "Completed Sky Flats operation");
+    }
+
+    /** Overriden to write to the Ops log after failure, prior to disposal.*/
+    public void onFailure() {
+	super.onFailure();
+	opsLog.log(1, "Failed Sky-Flats Calibration"+
+		   "\n\tCode:      "+errorIndicator.getErrorCode()+
+		   "\n\tReason:    "+errorIndicator.getErrorString()+
+		   "\n\tException: "+errorIndicator.getException());
+    }
+    
+     /** Generate parameters for subtasks.*/
+    public void preInit() {
+	
+	super.preInit();
+
+	long now = System.currentTimeMillis();
+
+	if (twilightInstId == null) {
+	    failed(566, 
+		   "Fail Sky Flats operation due to no instrument specified");
+	}
+	
+	long sunrise = RCS_Controller.controller.getObsDate().getSunrise();
+	if (sunrise < now)
+	    sunrise += 24*3600*1000L;
+	long ttsunrise = sunrise - now;
+
+	// ### TEMP Work out when we will actually want to start exposing i.e. sun elev = -8.8 degs
+
+	Position sun = Astrometry.getSolarPosition();
+	double alt = Math.abs(sun.getAltitude());
+
+	// This is when we expect to start exposing hopefully (now+ttx)	
+	//  just interpolate for sun hitting this elevation
+	double ttx = ((alt-Math.toRadians(8.8))/alt) * (double)ttsunrise;
+	
+	if (ttx < 0.0)
+	    ttx = 0.0;
+
+	// allow 10 minutes less than the actual time between sun at -8.8 and sunrise
+	twilightTime = ttsunrise - (long)ttx - 10*60*1000L;
+	
+	// Delay exposure after slew for ttx - 2 minutes assumed for slew!
+	startExposing = (long)ttx - 2*60*1000L;
+
+	if (startExposing < 0L)
+	    startExposing = 0L;
+
+	// If this is excessive > 80M, something is badly wrong so ignore..
+	if (twilightTime > 80*60*1000L) {	    
+	    taskLog.log(WARNING, 1, CLASS, name, "preInit",
+			"** Calculated twilight calib time: "+
+			(twilightTime/1000)+" secs looks too long, aborting");
+	    
+	    failed(565, 
+		   "Fail Sky Flats operation due to dubious time calculation");		
+	}
+
+	// If its too short we also fail
+	if (twilightTime < 5*60*1000L) {
+	    taskLog.log(WARNING, 1, CLASS, name, "preInit",
+			"** Calculated twilight calib time: "+
+			(twilightTime/1000)+" secs looks too short, aborting");
+	    
+	    failed(567, 
+		   "Fail Sky Flats operation due to dubious time calculation");
+	}
+
+
+    }
+
+    /** Overridden to carry out specific work after the init() method is called.*/
+    public void onInit() {
+	super.onInit();
+	taskLog.log(INFO, 1, CLASS, name, "onInit",
+		    "Starting Sky Flats operation: "+
+		    "Waiting for "+(startExposing/1000)+" secs after slew before exposing"+
+		    ", Time available: "+(twilightTime/1000)+" secs.");
+
+
+	FITS_HeaderInfo.current_TELMODE.setValue("CALIBRATION");
+
+	FITS_HeaderInfo.current_TAGID.setValue   ("CALIB"); 
+	FITS_HeaderInfo.current_USERID.setValue  ("CALIB");
+	FITS_HeaderInfo.current_PROPID.setValue  ("CALIB"); 
+	FITS_HeaderInfo.current_GROUPID.setValue ("FLATS");
+
+	FITS_HeaderInfo.current_GRPUID.setValue(new Integer(-1));
+	FITS_HeaderInfo.current_GRPSEECO.setValue("NONE");
+	FITS_HeaderInfo.current_GRPLUNCO.setValue("NONE");
+	FITS_HeaderInfo.current_GRPNUMOB.setValue(new Integer(-1));
+
+	FITS_HeaderInfo.current_GRPTIMNG.setValue("NONE");
+	FITS_HeaderInfo.current_GRPMONP.setValue(new Double(0.0));
+	FITS_HeaderInfo.current_GRPMONWN.setValue(new Double(0.0));
+	
+	FITS_HeaderInfo.current_RADECSYS.setValue("FK5");	
+	FITS_HeaderInfo.current_EQUINOX.setValue(new Double(blankArea.getEquinox()));
+	Position target = blankArea.getPosition();
+
+	FITS_HeaderInfo.current_CAT_RA.setValue(FITS_HeaderInfo.toHMSString(target.getRA()));
+	FITS_HeaderInfo.current_CAT_DEC.setValue(FITS_HeaderInfo.toDMSString(target.getDec()));
+	FITS_HeaderInfo.current_CAT_EPOC.setValue(new Double(blankArea.getEpoch()));
+	FITS_HeaderInfo.current_CAT_NAME.setValue(blankArea.getName());
+	FITS_HeaderInfo.current_OBJECT.setValue(blankArea.getName());
+	FITS_HeaderInfo.current_SRCTYPE.setValue("EXTRASOLAR");
+
+	FITS_HeaderInfo.current_PM_RA.setValue(new Double(blankArea.getPmRA()));
+	FITS_HeaderInfo.current_PM_DEC.setValue(new Double(blankArea.getPmDec()));
+	FITS_HeaderInfo.current_PARALLAX.setValue(new Double(blankArea.getParallax()));
+	//FITS_HeaderInfo.current_RADVEL   = blankArea.getRadialVelocity();
+	FITS_HeaderInfo.current_RATRACK.setValue(new Double(0.0));
+	FITS_HeaderInfo.current_DECTRACK.setValue(new Double(0.0));	
+
+    }
+
+    /** Creates the TaskList for this TaskManager. */
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+
+	twiTrkAz = new Track_Task(name+"/TT_AZ_ON",
+				  this,
+				  TRACK.AZIMUTH,
+				  TRACK.ON);
+	taskList.addTask(twiTrkAz);
+	
+	twiTrkAlt = new Track_Task(name+"/TT_ALT_ON",
+				   this,
+				   TRACK.ALTITUDE,
+				   TRACK.ON);
+	taskList.addTask(twiTrkAlt);
+	
+	// Create a target area near ra=lst.
+	double lst = JSlalib.getGMST(System.currentTimeMillis(), RCS_Controller.controller.getLongitude());
+       
+	blankArea = null;
+
+	// Check we have any BAs.
+
+	double domeLimit = RCS_Controller.controller.getDomelimit();
+
+	// Locate a blank area nearest to LST.			
+	Standards standards = Standards.getStandards(twilightInstId);
+	if (standards == null) {
+	    taskLog.log(INFO, 1, CLASS, name, "onInit",	
+			"Could not find standard listing for: "+twilightInstId);
+	} else {
+	    Standards.FieldSet blankFields = standards.getBlankFields(); 	  
+	    if (blankFields == null) {	
+		taskLog.log(INFO, 1, CLASS, name, "onInit",	
+			    "Could not find Blank fields for: "+twilightInstId);
+	    } else {	
+		blankFields.pickHighestField();
+		Standards.Standard blankStdDesc = (Standards.Standard)blankFields.getCurrentHighestField();
+		if (blankStdDesc == null) {
+		    taskLog.log(INFO, 1, CLASS, name, "onInit",	
+				"Could not determine highest blank field for: "+twilightInstId);
+		} else {
+		    blankArea           = blankStdDesc.getField();
+		    blankFieldMagnitude = blankStdDesc.getMagnitude();
+		    
+		    if (blankArea.getPosition().getAltitude() < domeLimit) {
+			taskLog.log(INFO, 1, CLASS, name, "onInit",	
+				    "Highest blank field is too low to observe");
+		    } 
+		}
+	    }	
+	}
+
+	// No blanks visible, use default.
+	if (blankArea == null ) {
+
+	    // RA = LST, Dec = 70-colat
+	    double dec = Math.toRadians(70.0) - RCS_Controller.controller.getLatitude();
+	    blankArea = new ExtraSolarSource("blankarea@"+Math.rint(Math.toDegrees(lst)/15.0)+"H"+Math.rint(Math.toDegrees(dec))+"D");
+	    // blankarea@22H15D
+	    blankArea.setRA(lst);
+	    blankArea.setDec(dec);
+	    blankArea.setFrame(Source.FK5);
+	    blankArea.setEquinox(2000.0f);
+	    blankArea.setEpoch(2000.0f);
+	    blankArea.setEquinoxLetter('J');
+	}
+
+	
+	twiSlew = new SlewTask(name+"/TT_SLEW",
+			       this,
+			       blankArea);
+	taskList.addTask(twiSlew);
+	
+	twiRot = new RotatorTask(name+"/TT_ROTMNT",
+				 this,
+				 0.0,
+				 ROTATOR.MOUNT);
+	taskList.addTask(twiRot);
+	twiRot.setDelay(5000L);
+
+	twiRotFlt = new RotatorTask(name+"/TT_ROTFLT",
+				    this,
+				    0.0,
+				    ROTATOR.FLOAT);
+	
+	taskList.addTask(twiRotFlt);
+
+	
+	twilightTask = new TwilightCalibrationTask(name+"/TT_CALIB",
+						   this,
+						   twilightInstId,
+						   twilightTime);
+	taskList.addTask(twilightTask);
+	twilightTask.setDelay(startExposing);
+	// 2 minute delay after slewing.
+
+	// (TrkAz+TrkAlt)&(Slew+(RotMnt:D5&RotFlt))&Cal
+	try {
+	    taskList.sequence(twiTrkAz,  twiSlew);
+	    taskList.sequence(twiTrkAlt, twiSlew);
+	    taskList.sequence(twiTrkAz,  twiRot);
+	    taskList.sequence(twiTrkAlt, twiRot);	    
+	    taskList.sequence(twiSlew,   twilightTask);
+	    taskList.sequence(twiRot,    twiRotFlt);
+	    taskList.sequence(twiRotFlt, twilightTask);
+
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for TemporaryAutoFlatsTask: "+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for TemporaryAutoFlatsTask.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}
+
+	return taskList;	
+
+    }
+
+}

@@ -1,0 +1,102 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.pos;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+
+import ngat.message.POS_RCS.*;
+
+/** Thread class which is used to despatch requests to the POS_Queue and 
+ * to waiting POS clients asynchronously.
+ *
+ * <dl>	
+ * <dt><b>RCS:</b>
+ * <dd>$Id: POS_Despatcher.java.NOMAKE,v 1.1 2006/05/17 06:31:58 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/pos/RCS/POS_Despatcher.java.NOMAKE,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class POS_Despatcher extends Thread {
+
+    static int count = 0;
+
+    protected POS_Despatcher() {
+	super("POS_Despatcher ["+(++count)+"]");
+	// E.g. POS_Despatcher [12]
+    }
+
+    /** Block: Skip any aborted processes waiting for the next pending one, then execute it.*/
+    public void run() {
+	ProcessDescriptor pd = null;
+	System.err.println("POS_Despatcher :: "+getName()+" Waiting for a ProcessDescriptor");
+	try {
+	    do {
+		pd = (ProcessDescriptor)POS_Queue.getInstance().look();
+		// Skip over any aborted ones.
+		if (pd.getState() == ProcessDescriptor.ABORTED) {
+		    System.err.println("POS_Despatcher :: "+getName()+" Skipping aborted process:");
+		    POS_Queue.getInstance().get(); // Remove it from the queue
+		}
+	    } while (pd.getState() != ProcessDescriptor.PENDING);
+	    // Blocking read of POS_Q. - does not remove from queue just sets to executing.
+	    pd = (ProcessDescriptor)POS_Queue.getInstance().exec();
+	    System.err.println("POS_Despatcher :: "+getName()+" Got a ProcessDescriptor:");
+	    ((POS_CommandProcessor)pd.getHandler()).processCommand();
+	} catch (InterruptedException e) {
+	    System.err.println("POS_Despatcher :: "+getName()+" INTERRUPTED READING POS_QUEUE - quitting");
+	}
+    }
+
+    /** Signal to start a thread to read from the POS_Queue.*/
+    public static void ready() {
+	System.err.println("POS_Despatcher ::  READY()");
+	new POS_Despatcher().start();
+    }
+
+
+}
+
+/** $Log: POS_Despatcher.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:31:58  snf
+/** Initial revision
+/** */

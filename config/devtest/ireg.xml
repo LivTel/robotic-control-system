@@ -1,0 +1,554 @@
+<xml>
+
+  <!-- ==================================== -->
+  <!-- RATCAM                               -->
+  <!-- ==================================== -->
+
+<!--  <instrument name="RATCAM" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>RATCAM</name>
+      <class>camera.optical</class>
+    </descriptor>
+
+    <config>
+
+      <filterset name="lower">
+	<filter>
+	  <name>clear</name>
+	  <class></class>
+	  <central-wavelength> 5500.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-I</name>
+	  <class></class>
+	  <central-wavelength> 7782.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-Z</name>
+	  <class></class>
+	  <central-wavelength> 9000.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-R</name>
+	  <class></class>
+	  <central-wavelength> 6252.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>H-Alpha-100</name>
+	  <class></class>
+	  <central-wavelength> 6563.0 </central-wavelength>
+	</filter>
+      </filterset>
+
+      <filterset name="upper">
+	<filter>
+	  <name>clear</name>
+	  <class></class>
+	  <central-wavelength> 5500.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>Bessell-B</name>
+	  <class></class>
+	  <central-wavelength> 4200.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-G</name>
+	  <class></class>
+	  <central-wavelength> 4820.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-U</name>
+	  <class></class>
+	  <central-wavelength> 3530.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>Bessell-V</name>
+	  <class></class>
+	  <central-wavelength> 5550.0 </central-wavelength>
+	</filter>
+      </filterset>
+
+      <capabilities>
+	<sky-model-provider>true</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>0.0</rotator-offset>
+
+	<aperture-offset x="-30" y="-8" />
+	
+	<acquisition priority="1">
+        <target name="RATCAM" x="1024" y="1024" />
+	<target name="IO:THOR" x="880" y="910" />
+	<target namet="IO:O" x="1024" y="1024" />
+	<target name="RISE" x="800" y="510" />	
+	<target name="RINGO2" x="1024" y="1024" />	
+
+
+	<target name="FRODO" x="1025.8" y="641.8" />
+      </acquisition>
+
+      </capabilities>
+
+      <detector>
+	<array-size width="2048" height="2048" />
+	<plate-scale>0.135</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <dprt />
+      <morning-skyflats>
+	<start-offset>
+	  1200000
+	</start-offset>
+	<end-offset>
+	  4000000
+	</end-offset>
+	<window>2000000</window>
+	<interval>82400000</interval>
+      </morning-skyflats>
+      <evening-skyflats>
+	<start-offset>
+	  300000
+	</start-offset>
+	<end-offset>
+	  3600000
+	</end-offset>
+	<window>2700000</window>
+	<interval>82400000</interval>
+      </evening-skyflats>
+      <priority> 1 </priority>
+      <history file="/occ/rcs/instruments/ratcam.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="6783" interval="20000" />
+    
+  </instrument> -->
+
+
+
+  <!-- ==================================== -->
+  <!-- THOR                                 -->
+  <!-- ==================================== -->
+
+ <!-- <instrument name="IO:THOR" type="TipTiltImager" enabled="true">
+
+    <descriptor>
+      <name>IO:THOR</name>
+      <class>camera.tiptilt</class>
+    </descriptor>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>-180.0</rotator-offset> 
+	<aperture-offset x="-16" y="-41" />
+	
+      </capabilities>
+
+      <detector>
+	<array-size width="512" height="512" />
+	<plate-scale>0.44</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/io:thor.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="8472" interval="20000" />
+    
+  </instrument>  -->
+
+
+  <!-- ==================================== -->
+  <!-- IO_OPTICAL                                -->
+  <!-- ==================================== -->
+
+  <instrument name="IO:O" type="Imager" enabled = "true">
+
+    <descriptor>
+      <name>IO:O</name>
+      <class>camera.optical</class>
+    </descriptor>
+
+    <config>
+      <filterset name="wheel">
+	<filter>
+	  <name>Bessell-B</name>
+	  <class></class>
+	  <central-wavelength> 4200.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>Bessell-V</name>
+	  <class></class>
+	  <central-wavelength> 5250.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-U</name>
+	  <class></class>
+	  <central-wavelength> 3530.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-G</name>
+	  <class></class>
+	  <central-wavelength> 4820.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-R</name>
+	  <class></class>
+	  <central-wavelength> 6252.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-I</name>
+	  <class></class>
+	  <central-wavelength> 7782.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-Z</name>
+	  <class></class>
+	  <central-wavelength> 9000.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>H-Alpha-6566</name>
+	  <class></class>
+	  <central-wavelength> 6566.0 </central-wavelength>
+	</filter>
+
+	<filter>
+	  <name>H-Alpha-6634</name>
+	  <class></class>
+	  <central-wavelength> 6634.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>H-Alpha-6705</name>
+	  <class></class>
+	  <central-wavelength> 6705.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>H-Alpha-6755</name>
+	  <class></class>
+	  <central-wavelength> 6755.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>H-Alpha-6822</name>
+	  <class></class>
+	  <central-wavelength> 6822.0 </central-wavelength>
+	</filter>
+
+      </filterset>
+
+      <filterset name="lower_slide">
+        <filter>
+            <name>ND1.5</name>  
+            <class> </class>
+            <central-wavelength> 5500.0 </central-wavelength>
+        </filter>    
+        <filter>
+            <name>clear</name>  
+            <class> </class>
+            <central-wavelength> 5500.0 </central-wavelength>
+        </filter>    
+      </filterset>
+
+      <filterset name="upper_slide">
+        <filter>
+            <name>ND3</name>  
+            <class> </class>
+            <central-wavelength> 5500.0 </central-wavelength>
+        </filter>    
+        <filter>
+            <name>clear</name>  
+            <class> </class>
+            <central-wavelength> 5500.0 </central-wavelength>
+        </filter>    
+      </filterset>
+
+
+
+      <capabilities>
+	<sky-model-provider>true</sky-model-provider>
+	<focus-instrument>true</focus-instrument>
+	<rotator-offset>-50.0</rotator-offset>
+	<aperture-offset x="0" y="0" />
+
+	<acquisition priority="2">
+	<target name="IO:O" x="2048" y="2048" />
+        <target name="FRODO" x="2367" y="2017" />
+	</acquisition>
+      </capabilities>
+
+      <detector>
+	<array-size width="1024" height="1024" />
+	<plate-scale>0.44</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>  
+      <morning-skyflats>
+	<start-offset>
+	  1200000
+	</start-offset>
+	<end-offset>
+	  4000000
+	</end-offset>
+	<window>2000000</window>
+	<interval>82400000</interval>
+      </morning-skyflats>
+      <evening-skyflats>
+	<start-offset>
+	  300000
+	</start-offset>
+	<end-offset>
+	  3600000
+	</end-offset>
+	<window>2700000</window>
+	<interval>82400000</interval>
+      </evening-skyflats>
+      <priority> 5 </priority>
+      <history file="/occ/rcs/instruments/io:o.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="7979" interval="20000" />		
+
+  </instrument>
+
+
+
+
+  <!-- ==================================== -->
+  <!-- RISE                                 -->
+  <!-- =================192.168.1.26=================== -->
+
+  <instrument name="RISE" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>RISE</name>
+      <class>camera.optical.fast</class>
+    </descriptor>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>true</focus-instrument>
+	<!-- <rotator-offset>45.0</rotator-offset> -->
+	<!-- RJS. Change from 45 to -90 when RISE moved port in Nov 2012 -->
+	<rotator-offset>-90.0</rotator-offset> 
+	<!-- For old port. Moved Nov 2012 <aperture-offset x="30" y="-100" /> -->
+	<!-- Following installed RJS 2012-11-24 -->
+	<aperture-offset x="0" y="+50" />
+      </capabilities>
+
+      <detector>
+	<array-size width="256" height="256" />
+	<plate-scale>0.67</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/rise.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="6777" interval="30000">
+
+      <health>
+          <failLowTemperature>   10.0  </failLowTemperature> 
+	  <warnLowTemperature>   15.0  </warnLowTemperature> 
+	  <warnHighTemperature>  25.0  </warnHighTemperature> 
+	  <failHighTemperature>  35.0  </failHighTemperature> 
+      </health>
+
+    </monitor>
+    
+  </instrument>
+
+
+
+  <!-- ==================================== -->
+  <!-- SPRAT                               -->
+  <!-- ==================================== -->
+
+<instrument name="SPRAT" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>SPRAT</name>
+      <class>camera.grismatic</class>
+    </descriptor>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>-90.0</rotator-offset> 
+	<aperture-offset x="0" y="+50" />
+      </capabilities>
+
+      <detector>
+	<array-size width="256" height="256" />
+	<plate-scale>0.67</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/sprat.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="2324" interval="30000" />
+    
+  </instrument>
+
+  <!-- ==================================== -->
+  <!-- IO_INFRARED                          -->
+  <!-- ==================================== -->
+
+<instrument name="IO:I" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>IO:I</name>
+      <class>camera.infrared</class>
+    </descriptor>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>-90.0</rotator-offset> 
+	<aperture-offset x="0" y="+50" />
+      </capabilities>
+
+      <detector>
+	<array-size width="256" height="256" />
+	<plate-scale>0.67</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/io:i.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="4556" interval="30000" />
+
+         
+  </instrument>
+
+  <!-- ==================================== -->
+  <!-- RINGO3                               -->
+  <!-- ==================================== -->
+
+  <instrument name="RINGO3" type="Polarimeter" enabled="true">
+
+    <descriptor>
+      <name>RINGO3</name>
+      <class>polarimeter</class>
+    </descriptor>
+
+ <subcomponent name = "D" class = "" prefix = ":" configurable = "false">
+                  <temperature>
+                    <suffix>.0.0</suffix>
+                  </temperature>
+                </subcomponent>
+                <subcomponent name = "E" class = "" prefix = ":" configurable = "false">
+                  <temperature>
+                    <suffix>.1.0</suffix>
+                  </temperature>
+                </subcomponent>
+                <subcomponent name = "F" class = "" prefix = ":" configurable = "false">
+                  <temperature>
+                    <suffix>.1.1</suffix>
+                  </temperature>
+                </subcomponent>
+
+
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>true</focus-instrument>
+	<rotator-offset> -135.1 </rotator-offset> 
+	<aperture-offset x="57" y="-47" />
+      </capabilities>
+
+      <detector>
+	<array-size width="256" height="256" />
+	<plate-scale>0.87</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/ringo3.calib.dat" />
+    </calibration>
+
+    <monitor host="localhost" port="1112" interval="30000" />
+    
+  </instrument>
+
+
+
+
+
+  <!-- ==================================== -->
+  <!-- FRODO                                -->
+  <!-- ==================================== -->
+
+  <instrument name="FRODO" type="DualBeamSpectrograph" enabled="true">
+
+    <descriptor>
+      <name>FRODO</name>
+      <class>dual.beam.spec</class>
+    </descriptor>
+
+   <subcomponent name = "RED" prefix = "_" class = "" configurable = "true">
+                   <temperature>
+                     <prefix>red.</prefix>
+                   </temperature>
+                </subcomponent>
+
+                <subcomponent name = "BLUE" prefix = "_" class = "" configurable = "true">
+                   <temperature>
+                     <prefix>blue.</prefix>
+                   </temperature>
+                </subcomponent>
+
+
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>0.0</rotator-offset> 
+	<aperture-offset x="-37" y="-34" />
+      </capabilities>
+
+      <detector>
+	<array-size width="1024" height="1024" />
+	<plate-scale>0.44</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/frodo.calib.dat" />
+    </calibration>
+
+
+    <monitor host="localhost" port="7083" interval="20000" /> 
+
+
+    
+  </instrument>
+
+</xml>

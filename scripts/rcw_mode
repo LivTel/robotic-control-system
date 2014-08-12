@@ -1,0 +1,22 @@
+#!/bin/csh
+
+if (${#argv} < 1) then
+	echo "Usage: rcw_mode [ AUTO | ENG ]"
+	set current_mode = `cat /occ/tmp/.rcw`
+	echo "Current mode is $current_mode"
+	exit 1
+endif
+
+if ($1 =~ "ENG") then
+  echo "Engineering start"
+  echo "ENG" > /occ/tmp/.rcw
+else if ($1 =~ "AUTO") then
+  echo "Automatic start"
+  echo "AUTO" > /occ/tmp/.rcw
+else if ($1 =~ "MANUAL") then
+    echo "Manual start "
+    echo "MANUAL" > /occ/tmp/.rcw
+else
+  echo "Unknown start option: $1 assume ENG"
+  echo "ENG" > /occ/tmp/.rcw
+endif

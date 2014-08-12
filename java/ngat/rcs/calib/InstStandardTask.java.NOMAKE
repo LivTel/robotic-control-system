@@ -1,0 +1,179 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs;
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+
+import java.util.*;
+import java.text.*;
+
+/** This Task creates a series of TCS and ICS Tasks to carry out the
+ * configuration and slewing of the Telescope and setting up of the 
+ * relevant instruments for an Instrument Standard series of Observations.. 
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: InstStandardTask.java.NOMAKE,v 1.1 2006/05/17 06:31:23 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/InstStandardTask.java.NOMAKE,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class InstStandardTask extends ParallelTaskImpl {
+  
+    int recCount;
+
+    static final SimpleDateFormat sd1 = new SimpleDateFormat("yyyyMMdd");
+    
+    /** Reference to the Source Field.*/
+    protected Source source;
+
+    /** Reference to the specific Instrument to be calibrated.*/
+    protected Instrument instrument;
+
+    /** Name of the Instrument to use.*/
+    protected String instId;
+
+    /** Designator to identify whether the lead or trailing (or other) source
+     * is being used in this group of observations.*/
+    protected String designator;
+
+    /** Create an Observation_Task using the supplied Observation and settings.
+     * @param source Reference to the Source Field. 
+     * @param instId Name of the specific Instrument to be calibrated.
+     * @param designator Identifies whether the lead or trailing (or other) source
+     * is being used in this group of observations.
+     * @param name The unique name/id for this TaskImpl.
+     * @param manager The Task's manager.
+     */
+    public InstStandardTask(String      name,
+			    TaskManager manager,  
+			    String      instId,
+			    Source      source,			  
+			    String      designator) {
+	super(name, manager);
+	this.source     = source;
+	this.instId     = instId;
+	this.designator = designator;
+	
+	instrument = Instruments.findInstrument(instId);
+
+    }
+  
+    public void onSubTaskFailed(Task task) {
+	synchronized (taskList) {
+	    super.onSubTaskFailed(task);
+	    taskList.skip(task);
+	}
+    }
+
+    /** Overridden to carry out specific work after the init() method is called.*/
+    public void onInit() {
+	FITS_HeaderInfo.current_TAGID.setValue    ("LT-ADMIN"); 
+	FITS_HeaderInfo.current_USERID.setValue   ("LT-RCS");
+	FITS_HeaderInfo.current_PROPID.setValue   ("LT-CALIBRATION"); 
+	
+	FITS_HeaderInfo.current_GROUPID.setValue  ("LT-STANDARD-GROUP/"+
+						   Standards.getStandardCount()+"/"+
+						   instId+"/"+designator); 		
+	FITS_HeaderInfo.current_COMPRESS.setValue ("NONE");	
+    }
+    
+    /** Creates the TaskList for this TaskManager. */
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+
+	Observation      observation      = null;
+	
+	// Set the Date from previous/most-recent 12.00 Noon.
+	Calendar now = new GregorianCalendar();
+	now.setTime(new Date());
+	if (now.get(Calendar.HOUR_OF_DAY) < 12)
+	    now.roll(Calendar.DATE, false);
+	
+	// Iterate over standard observations set for this instrument.
+	int stdCount = 0;
+	Observation[] standards = instrument.getStandards();
+	if (standards != null)
+	    stdCount = standards.length;
+	
+	Task currentObservationSequence  = null;
+	Task previousObservationSequence = null;
+	
+	try {
+	    
+	    for (int count = 0; count < stdCount; count++) {	    
+		observation = standards[count];
+		observation.setName("STANDARD-"+Standards.getStandardCount()+
+				    "-"+sd1.format(now.getTime())+
+				    "-"+instId+
+				    "-conf("+count+")-"+designator);
+		
+		// Naming: E.g. STANDARD-3-20010412-RATCAM-conf(4)-LEAD
+		
+		// Notes:
+		// 1. The exposure-time and configs are stored in Instrument as its Standards Set.
+		// 2. We do NOT do mosaics, offsets, pipelining of standards.
+		// 3. The Source is ALWAYS an ExtraSolarSource. 
+		// 4. It may have non-zero proper-motion, parallax and radial-velocity.
+		Moaic mosaic = new Mosaic();
+		mosaic.setPattern(Mosaic.SINGLE);
+		observation.setMosaic(mosaic); // SINGLE.
+		observation.setSource(source);
+		
+		currentObservationSequence = 
+		    new Observation_Sequence_Task(name+"/"+instId+"_Seq_"+count,
+						  this,
+						  observation,
+						  true);
+		taskList.addTask(currentObservationSequence);
+		
+		if (previousObservationSequence != null) {
+		    taskList.sequence(previousObservationSequence, currentObservationSequence);		   
+		}
+		previousObservationSequence =  currentObservationSequence;
+	    }
+	    
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for Instrument_Standards: "+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Instrument_Standards.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}
+	
+	return taskList;
+    }
+    
+}
+
+/** $Log: InstStandardTask.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/**
+/** Revision 1.1  2002/09/16 09:38:28  snf
+/** Initial revision
+/** */
+

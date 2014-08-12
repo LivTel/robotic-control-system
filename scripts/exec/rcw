@@ -1,0 +1,186 @@
+#!/bin/csh 
+
+# ---------------------------------------------------
+# Launcher for: Robotic Control Watchdog (RCW).
+# ---------------------------------------------------
+
+
+# rcw [ start | stop ] <model>
+
+if (${#argv} < 2) then
+    echo "Usage: rcw [ start | stop ] <model>"
+    echo "       model: scope"
+    exit 1
+endif
+
+source /opt/ngat/etc/cshrc
+
+source ${DEPLOY_BIN}/class_setup
+source ${DEPLOY_BIN}/rcx_setup
+
+set model = $2
+
+source $RCS_CONFIG/${model}_rcw_args
+
+set DAT = `date -u +"%j"`
+set RCW_CONSOLE_LOG_FILE = ${DEPLOY_TMP}/rcw_${model}.log
+
+$DEPLOY_ETC/log_roll $RCW_CONSOLE_LOG_FILE 100000 3
+
+
+set APP = ngat.rcs.RCSWatchdog2
+
+#
+# StartCodes. ( These are exit codes for various RCS halts).
+#
+set WATCHDOG_CODE    = 24
+
+set REBOOT_CODE      = 23
+set HALT_CODE        = 24
+set SHUTDOWN_CODE    = 25
+
+set START_MANUAL_CODE = 20
+set START_ENG_CODE    = 21
+set START_AUTO_CODE   = 22
+
+set PID = $DEPLOY_TMP/rcw_${model}.pid
+
+switch ($1)
+
+    case stop:
+
+	echo "Robotic Control Watchdog stopping"  >>& $RCW_CONSOLE_LOG_FILE
+	
+	if (! -e $PID) then
+	    echo "Cannot locate a PID file: $PID "  >>& $RCW_CONSOLE_LOG_FILE
+	    exit 1
+	endif
+	set AID = `cat $PID` 
+    
+	if ($AID == "") then
+	    echo "$PID does not contain a valid PID for the RCW" >>& $RCW_CONSOLE_LOG_FILE
+	    exit 2
+	endif
+
+	set BID = `ps -ef | grep $AID | awk '{if ($3 == '$AID') print $2}'`
+
+	kill -9 $AID  
+
+	su -c "$DEPLOY_BIN/rcx stop" occ
+	
+	kill -9 $BID
+
+	rm -f $PID
+
+	breaksw
+
+    case start:
+
+	echo "Robotic Control Watchdog starting" >>& $RCW_CONSOLE_LOG_FILE
+
+	echo $$ > $PID
+      
+	set RCW_CFG = $DEPLOY_TMP/.rcw
+ 
+	# Check startup mode. If we have a RCW_CFG file then use it
+	# otherwise we use default mode from rcw_args.
+
+	
+	if (! -e $RCW_CFG) then
+	    set mode = $INIT_MODE
+	else
+	    set mode = `cat ${RCW_CFG}`
+	endif
+ 
+	if ($mode =~ "ENG") then
+	    echo "RCS will start in Engineering mode" >>& $RCW_CONSOLE_LOG_FILE
+	    set code = $START_ENG_CODE
+	else if ($mode =~ "MANUAL") then
+	    echo "RCS will start in Manual/Engineering mode" >>& $RCW_CONSOLE_LOG_FILE
+	    set code = $START_MANUAL_CODE
+	else if ($mode =~ "AUTO") then
+	    echo "RCS will start in Automatic mode and start operations at sunset" >>& $RCW_CONSOLE_LOG_FILE
+	    set code = $START_AUTO_CODE
+	else
+	    echo "RCW2 Will start" >& $RCW_CONSOLE_LOG_FILE
+	    set code = $WATCHDOG_CODE
+	endif
+
+	echo "Testwhile - start in 20 seconds" >>& $RCW_CONSOLE_LOG_FILE
+
+	while (1) 
+
+	    sleep 20
+
+	    # while code != STOP_CODE = stop RCW as well as RCS
+	    switch (${code})
+
+
+	    case ${START_MANUAL_CODE}:
+	    
+		echo "Starting RCS in manual mode" occ  >>& $RCW_CONSOLE_LOG_FILE	
+		su -c "$DEPLOY_BIN/rcx manual" occ
+		set code = $status
+		breaksw
+
+	    case ${START_ENG_CODE}:
+	    
+		echo "Starting RCS in engineering mode" >>& $RCW_CONSOLE_LOG_FILE
+		su -c "$DEPLOY_BIN/rcx eng" occ  >>& $RCW_CONSOLE_LOG_FILE
+		set code = $status
+		breaksw
+
+	    case ${START_AUTO_CODE}:
+	    
+		echo "Starting RCS in automatic mode" >>& $RCW_CONSOLE_LOG_FILE
+		su -c "$DEPLOY_BIN/rcx auto" occ >>& $RCW_CONSOLE_LOG_FILE
+		set code = $status
+		breaksw
+
+	    case ${HALT_CODE}:
+		
+		echo "Starting RCW2"  >>& $RCW_CONSOLE_LOG_FILE 
+		$JAVA -DRCW $APP -port $RCW_PORT -status $code >>& $RCW_CONSOLE_LOG_FILE 
+		set code = $status
+		breaksw
+
+	    case ${SHUTDOWN_CODE}:
+		
+		echo "Attempting to shutdown the OCC"  >>& $RCW_CONSOLE_LOG_FILE
+
+		#/sbin/shutdown -h now
+		/sbin/reboot
+
+		if ($status != 0) then
+		    echo "Unable to shutdown system on remote command: "  >>& $RCW_CONSOLE_LOG_FILE 	   
+		endif   
+		breaksw
+
+	    case ${REBOOT_CODE}:
+		
+		echo "Attempting to reboot the OCC"  >>& $RCW_CONSOLE_LOG_FILE
+	
+		/sbin/reboot
+	
+		if ($status != 0) then
+		    echo "Unable to reboot system on remote command: "  >>& $RCW_CONSOLE_LOG_FILE
+		endif   
+		breaksw
+
+	    default:
+		echo "Starting RCW2 on bad exit code $code"  >>& $RCW_CONSOLE_LOG_FILE
+                $JAVA -DRCW $APP -port $RCW_PORT -status $code >>& $RCW_CONSOLE_LOG_FILE
+                set code = $status
+                breaksw
+
+
+	    endsw
+	   	
+	    echo "RCW process exit with status $code" >>& $RCW_CONSOLE_LOG_FILE
+ 
+	end
+	breaksw
+endsw
+
+echo "Leaving RCW Wrapper"  >>& $RCW_CONSOLE_LOG_FILE
+rm -f $PID

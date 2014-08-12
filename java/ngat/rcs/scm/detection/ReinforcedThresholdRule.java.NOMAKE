@@ -1,0 +1,191 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.scm.detection;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+
+/** Implements a Rule which triggers after the monitor variable crosses 
+ * the specified threshold level in the given direction and stays above 
+ * it for long enough to establish a reasonable confidence that the 
+ * trigger condition is valid. This effectively imposes a form of 
+ * filtering in that small fluctuations in the monitored variable are
+ * smoothed out. A lag is introduced in the response of this Rule due
+ * to the need for the confidence level to build.
+ * <br><br> 
+ * <dl>
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/scm/detection/RCS/ReinforcedThresholdRule.java.NOMAKE,v $
+ * </dl>
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: ReinforcedThresholdRule.java.NOMAKE,v 1.1 2006/05/17 06:35:17 snf Exp $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class ReinforcedThresholdRule extends SimpleThresholdRule {
+    
+    /** Specifies the climb rate for the confidence function. The
+     * confidence level is incremented by this amount each time a
+     * reading is obtained from the filter i.e. each time the rule
+     * is invoked.*/
+    double climb;
+
+    /** Specifies the trigger level for the confidence function.*/
+    double confLimit;
+
+    /** Records the confidence level.*/
+    protected double conf;
+    
+    /** Create a ReinforcedThresholdRule using the specified parameters.
+     * @param filter The Filter which supplies the readings to monitor.
+     * @param threshold Threshold level for triggerring the Rule.
+     * @param dirn Direction in which the monitored variable must be
+     * changing to trigger the Rule.
+     * @param climb Rate of change of confidence that triggerring 
+     * condition has been satisfied.
+     * @param confLimit Confidence limit at which to trigger the Rule.
+     */
+    public ReinforcedThresholdRule(Filter filter, double threshold, int dirn, 
+				   double climb, double confLimit) {
+	super(filter, threshold, dirn);
+	this.climb = climb;
+	this.confLimit = confLimit;
+	conf = 0.0;
+    }
+
+    /** Create a ReinforcedThresholdRule using the specified parameters
+     * and with threshold crossing in the UP direction.
+     * @param filter The Filter which supplies the readings to monitor.
+     * @param threshold Threshold level for triggerring the Rule.
+     * @param climb Rate of change of confidence that triggerring 
+     * condition has been satisfied.
+     * @param confLimit Confidence limit at which to trigger the Rule.
+     */
+    public ReinforcedThresholdRule(Filter filter, double threshold,
+				   double climb, double confLimit) {
+	this(filter, threshold, UP, climb, confLimit);
+    }
+    
+    /** Tests the supplied Number field to see if it has crossed
+     * the threshold level in the specified direction while the
+     * Rule is enabled and increments the confidence if so. If the 
+     * monitored variable drops below the trigger level before the
+     * Rule fires, the confidence is decremented.
+     * @param number The number field to test against the threshold 
+     * condition.
+     * @return True if the number satisfies the threshold test and
+     * the confidence has built up to the required level.
+     */
+    public boolean checkCondition(Number number) {
+	double arg = number.doubleValue();
+	switch (dirn) {
+	case UP:
+	    if (enabled()) {
+		if (arg > threshold) {
+		    conf += climb;
+		    if (conf > confLimit) {
+			conf = 0.0;
+			disable();
+			return true;
+		    }
+		} else {
+		    conf -= climb;
+		    conf = Math.max(conf, 0.0);
+		} 
+	    }
+	    else if
+		(disabled() && arg < threshold) {
+		conf = 0.0;
+		enable();
+	    }	
+	    return false;
+	case DOWN:
+	    if (enabled() && arg < threshold) {
+		conf += climb;
+		if (conf > confLimit) {
+		    conf = 0.0;
+		    disable();
+		    return true;
+		}
+	    } 
+	    else if
+		(disabled() && arg > threshold) {
+		conf = 0.0;
+		enable();
+	    }	
+	    return false;
+	default:
+	    return false;
+	}
+    }
+
+    /** Set the climb rate for the confidence function.
+     * @param climb The rate of climb at which the confidence level builds
+     * per received filter reading update.*/
+    public void setClimb(double climb) { this.climb = climb; }
+
+    /** 'return The climb rate for the confidence function.*/
+    public double getClimb() { return climb; }
+
+    /** Set the trigger level for the confidence function.
+     * @param confLimit The confidence level at which the Rule is triggerred.*/
+    public void setConfLimit(double confLimit) { this.confLimit = confLimit; }
+    
+    /** @return The trigger level for the confidence function.*/
+    public double getConfLimit() { return confLimit; }
+    
+    
+    /** @return The confidence level with which the Rule has (may) be triggerred.*/
+    public double getConfidence() { return conf;}
+    
+}
+
+/** $Log: ReinforcedThresholdRule.java.NOMAKE,v $
+/** Revision 1.1  2006/05/17 06:35:17  snf
+/** Initial revision
+/**
+/** Revision 1.2  2000/12/22 14:40:37  snf
+/** Backup.
+/**
+/** Revision 1.1  2000/12/14 15:09:43  snf
+/** Initial revision
+/** */

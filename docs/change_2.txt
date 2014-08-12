@@ -1,0 +1,4 @@
+The TO server protocol has a block for the duration of the handler timeout after calling the handler.handleRequest(command) method.
+After this period the PSI will return an error unless the task has actually completed. This timeout is non adjustable - unlike JMS which allows ACKs to be propagated to the PSI thread. When the Task completes or fails it calls sendReply() or sendError() on the PSI which sends the reply and sets the volatile 'completed' flag - this is currently only used to send a TIMED_OUT message if the block times out.
+
+This change is to cause the timeout block to repeat until the completed flag IS set - i.e. the Task has either completed or errored. Later some attempt will be used to back-propagate ACK information also.

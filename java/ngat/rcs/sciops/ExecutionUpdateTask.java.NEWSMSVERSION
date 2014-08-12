@@ -1,0 +1,140 @@
+/**
+ * 
+ */
+package ngat.rcs.sciops;
+
+import java.rmi.Naming;
+import java.util.Set;
+
+import ngat.phase2.IExecutionFailureContext;
+import ngat.rcs.tmm.TaskManager;
+import ngat.sms.ExecutionResourceBundle;
+import ngat.sms.ExecutionUpdater;
+import ngat.sms.GroupItem;
+import ngat.sms.ScheduleDespatcher;
+import ngat.sms.ScheduleItem;
+
+/**
+ * @author eng
+ * 
+ */
+public class ExecutionUpdateTask extends RemoteCallTask {
+
+	/** Updater, will handle completion results. */
+	private ExecutionUpdater xu;
+
+	/** The group that has been executed. */
+	private GroupItem group;
+
+	/** Failure information - if applicable. */
+	private IExecutionFailureContext efc;
+
+	/** Resources used during execution. */
+	private ExecutionResourceBundle erb;
+
+	/** QOS compliance measurements. */
+	private Set qosMetrics;
+
+	
+	/**
+	 * @param name The name of the task.
+	 * @param manager The task's manager.
+	 * @param xu The Updater to receive notification of success or failure.
+	 * @param efc Failure context - if null then succeeded.
+	 * @param erb Resource usage.
+	 * @param qosMetrics QOS metrics.
+	 */
+	public ExecutionUpdateTask(String name, TaskManager manager, ExecutionUpdater xu, GroupItem group, IExecutionFailureContext efc,
+			ExecutionResourceBundle erb, Set qosMetrics) {
+		super(name, manager);
+		this.xu = xu;
+		this.group = group;
+		this.efc = efc;
+		this.erb = erb;
+		this.qosMetrics = qosMetrics;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see ngat.rcs.sciops.RemoteCallTask#makeRemoteCall()
+	 */
+	protected void makeRemoteCall() throws Exception {
+
+		System.err.println("Sending group update to: "+xu);
+		
+		if (efc == null) {
+			// Notify the XU that the group succeeded.
+			xu.groupExecutionCompleted(group, System.currentTimeMillis(), erb, qosMetrics);
+
+		} else {
+			// Notify the XU that the group failed.
+			xu.groupExecutionAbandoned(group, System.currentTimeMillis(), erb, efc, qosMetrics);
+		}
+
+		done = true;
+		freeLock();
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see ngat.rcs.sciops.RemoteCallTask#onDisposal()
+	 */
+	protected void onDisposal() {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see ngat.rcs.sciops.RemoteCallTask#onInit()
+	 */
+	protected void onInit() {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see ngat.rcs.tmm.Task#init()
+	 */
+	public void init() {
+		// TODO Auto-generated method stub
+
+	}
+
+	/**
+	 * @return the group
+	 */
+	public GroupItem getGroup() {
+		return group;
+	}
+
+	/**
+	 * @return the efc
+	 */
+	public IExecutionFailureContext getExecutionFailureContext() {
+		return efc;
+	}
+
+	/**
+	 * @return the erb
+	 */
+	public ExecutionResourceBundle getExecutionResourceBundle() {
+		return erb;
+	}
+
+	/**
+	 * @return the qosMetrics
+	 */
+	public Set getQosMetrics() {
+		return qosMetrics;
+	}
+
+	
+	
+}

@@ -1,0 +1,113 @@
+#!/bin/csh
+
+set logfile = "lt-xrf.log"
+
+set date_string = `date +%y%m%d-%H%M%S`
+
+echo
+echo "------------------------------------------------------"  | tee -a $logfile
+echo "GRB Add event LT at `date -u` "  | tee -a $logfile 
+echo "------------------------------------------------------"  | tee -a $logfile
+
+if ($# != 4) then
+    echo "Wrong number of arguments (should be 4)" | tee -a $logfile
+    exit 1
+endif
+
+set targetname = $date_string"-"$1
+set targetra = $2
+set targetdec = $3
+set menu = $4
+
+
+echo "TARGET    =" $targetname | tee -a $logfile
+echo "RA        =" $targetra | tee -a $logfile
+echo "DEC       =" $targetdec | tee -a $logfile
+echo "MENU      =" $menu | tee -a $logfile
+
+source /proxy/bin/setup
+source /proxy/bin/class_setup
+
+setenv CLASSPATH ${CLASSPATH}:/proxy/misc/class
+#echo "Sourced all environments " | tee -a $logfile
+#echo $CLASSPATH | tee -a $logfile
+
+set KS = "-Djavax.net.ssl.keyStore=/home/planet/certs/TmcAdmin_LTProxy.private"
+set KP = "-Djavax.net.ssl.keyStorePassword=geronimolt"
+set TS = "-Djavax.net.ssl.trustStore=/home/planet/certs/oar.public"
+
+set EGD = -Djava.security.egd=file:/dev/urandom
+
+echo "Ready to add target..."  | tee -a $logfile
+
+# This has NOT been updated to use ngat.util.CommandTokenizer.
+java $KS $KP $TS $EGD -DHOST=ltproxy -DPORT=6510 -DSECURE AddTarget /LT_Phase2_001/JMU/Bersier.David/JL06B09 $targetname $targetra $targetdec >>& $logfile
+
+if ($status == 0) then
+    echo "Target was added OK"  | tee -a $logfile
+else
+    echo "**** There was an error adding target - so not bothering to add the group"  | tee -a $logfile
+    exit 1
+endif
+
+sleep 5
+
+echo "Ready to add Group and One Observation..."  | tee -a $logfile
+
+switch ($menu)
+
+case "A":
+
+    echo "Menu A selected..." | tee -a $logfile
+
+    set interval = 2.0
+    set exptime = 600.0
+    set multrun = 3
+    set filter = "RATCam-SDSS-R-2"
+    
+    set groupname = $targetname"-Menu-"$menu"-"$filter
+    java $KS $KP $TS $EGD AddObsGroup --host ltproxy --port 6510 --secure \
+	--proposal /LT_Phase2_001/JMU/Bersier.David/JL06B09 \
+	--gid $groupname --priority 5 --expires-in 18 --period-h $interval \
+	--target $targetname --config $filter \
+	--expose $exptime --runs $multrun  >>& $logfile
+
+    if ($status != 0) then
+	echo "**** There was an error adding the group"  | tee -a $logfile
+	exit 1
+    endif
+breaksw
+
+case "B":
+
+    echo "Menu B selected..." | tee -a $logfile
+
+    set interval = 18.0
+    set exptime = 600.0
+    set multrun = 5
+    set filter = "RATCam-SDSS-R-2"
+
+    set groupname = $targetname"-Menu-"$menu"-"$filter
+    java $KS $KP $TS $EGD AddObsGroup --host ltproxy --port 6510 --secure \
+	--proposal /LT_Phase2_001/JMU/Bersier.David/JL06B09 \
+	--gid $groupname --priority 5 --expires-in 18 --period-h $interval \
+	--target $targetname --config $filter \
+	--expose $exptime --runs $multrun  >>& $logfile
+
+    if ($status != 0) then
+	echo "**** There was an error adding the group"  | tee -a $logfile
+	exit 1
+    endif
+breaksw
+
+
+default:
+    echo "**** no valid menu option ****" | tee -a $logfile
+    exit 1
+endsw
+
+echo "ALL DONE OK!" | tee -a $logfile
+
+echo "<p><b>ALL DONE OK!</b>"
+
+echo | tee -a $logfile

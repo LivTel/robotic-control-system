@@ -1,0 +1,27 @@
+#!/bin/csh
+
+# Usage gnuit <dir> <system>
+
+set base = $1
+set sys = $2
+cd $1
+
+/
+
+foreach file (*)
+    echo test $file
+    if (-d $file) then
+	echo "--> $file "
+	/home/dev/src/rcs/java/gnuit $file
+    else       
+        echo $file " -> " ${file}.gnu
+
+	cat $file | grep GNU
+
+	# If we found the string (status 0) we dont need to gnu the file.
+	if ($status != 0) then
+	    cat /home/dev/src/rcs/java/gnu.txt $file > ${file}.gnu
+	    cp 
+	endif
+    endif
+end

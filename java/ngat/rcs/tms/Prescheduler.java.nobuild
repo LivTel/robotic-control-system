@@ -1,0 +1,201 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.tmm;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+import ngat.rcs.calib.*;
+
+
+import ngat.util.*;
+import ngat.net.*;
+import ngat.util.logging.*;
+
+import java.util.*;
+
+/** Carries out the Prescheduling task. Sends regular
+ * (configurable-parameter) PRESCHEDULE requests to the OSS to compile
+ * the list of schedulable Groups over a specified period.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: Prescheduler.java,v 1.1 2006/05/17 06:32:59 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/tmm/RCS/Prescheduler.java,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class Prescheduler extends ControlThread implements Logging {
+    
+    /** Default value (millis) for PRESCHEDULE request interval (15 minutes).*/
+    public static final long DEFAULT_INTERVAL = 15*60*1000L;
+    
+     /** Default initial delay before first PRESCHEDULE request (30 secs).*/
+    public static final long DEFAULT_INIT_DELAY = 30*1000L;
+
+    /** The interval (msecs) between sending PRESCHEDULE requests
+     * to the OSS.*/
+    protected long interval;
+
+    /** Name/id of this Prescheduler.*/
+    protected String id;
+
+    /** Reference to the currently executing Client instance.*/
+    protected PreschedulerClient client;
+    
+    /** Error logging.*/
+    protected Logger errorLog;
+    
+    /** Counter, keeps track of client number.*/
+    protected int clientNo;
+
+    /** True if Prescheduled Groups are available at this time.*/
+    boolean availableGroups;
+
+    /** The count of available prescheduled Groups.*/
+    int schedulableGroupCount;
+
+    /** The end time for the current preschedule period.*/
+    long schedulePeriodEnd;
+    
+    /** The start time for the current preschedule period.*/
+    long schedulePeriodStart;
+    
+    /** Initial delay before first request is sent.*/
+    long initDelay;
+
+    /** A singleotn instance - we only ever need one of these.*/
+    protected static Prescheduler instance = null;
+
+    /** Create a Prescheduler with default interval.
+     * Runs repeatedly - i.e. PERMANENT.*/
+    public Prescheduler() {
+	this("PRESCHEDULER", DEFAULT_INTERVAL, DEFAULT_INIT_DELAY);
+    }
+    
+    /** Create a Prescheduler with specified interval.
+     * Runs repeatedly - i.e. PERMANENT.*/
+    public Prescheduler(String id, long interval, long initDelay) {
+	super("PRESCHEDULER", true);
+	this.interval = interval;
+	this.id = id;
+	this.initDelay = initDelay;
+    }
+    
+    /** Returns the singleton instance.*/
+    public static Prescheduler getInstance() { return instance; }
+    
+    /** Set the singleton instance.
+     * @param instance The instance to use as the singleton.*/
+    public static void setInstance(Prescheduler in) {
+	instance = in;
+    }
+
+    /** Overridden to make this pause for initDelay.*/
+    public void initialise() {
+	try { Thread.sleep(initDelay);} catch (InterruptedException e){}
+    }
+
+    /** Create PrescheduleClients and sleep for interval. The sleep interval is the same
+     * as the float period for Group start times.*/
+    public void mainTask() {
+	try {
+	    clientNo++;
+	    long maxIdle = 30*60*1000L; // 30 minutes?
+	    long latestTime = System.currentTimeMillis() + 2*3600*1000L; // NOW + 2 hours?
+	    client = new PreschedulerClient(RCS_SubsystemConnectionFactory.getInstance(), 
+					    "OSS_COMMAND", 
+					    this,
+					    maxIdle, // This is a config parameter ?
+					    latestTime, // This is determined by the TimeSequencer
+					    interval);
+	    client.exec();
+	} catch (UnknownResourceException ue) {
+	    errorLog.log(ERROR, 1, "Prescheduler", id, "update", 
+			 "Failed to create client: ["+clientNo+"] : "+ue);
+	}
+	try { Thread.sleep(interval);} catch (InterruptedException e){}
+    }
+    
+    public void shutdown() {}
+        
+    /** Sets the interval between status requests.
+     * @param interval The interval (msecs).*/
+    public void setInterval(long interval) { this.interval = interval; }
+
+    /** @return The interval between status requests.*/
+    public long getInterval() { return interval; }
+    
+    /** Set True if Prescheduled Groups are available at this time.*/
+    public void setAvailableGroups(boolean availableGroups) 
+    { this.availableGroups = availableGroups;}
+
+    /** Returns True if Prescheduled Groups are available at this time.*/
+    public boolean getAvailableGroups() { return availableGroups;}
+
+    /** Set the start time for the current preschedule period.*/
+    public void setSchedulePeriodStart(long schedulePeriodStart)
+    { this.schedulePeriodStart = schedulePeriodStart;}
+
+    /** Returns the start time for the current preschedule period.*/
+    public long getSchedulePeriodStart() {  return schedulePeriodStart;}
+
+    /** Set the end time for the current preschedule period.*/
+    public void setSchedulePeriodEnd(long schedulePeriodEnd) 
+    { this.schedulePeriodEnd = schedulePeriodEnd;}
+
+    /** Returns the end time for the current preschedule period.*/
+    public long getSchedulePeriodEnd() {  return schedulePeriodEnd;}
+    
+    /** Set the count of available prescheduled Groups.*/
+    public void setSchedulableGroupCount(int schedulableGroupCount) 
+    { this.schedulableGroupCount = schedulableGroupCount ;}
+    
+    /** Returns the count of available prescheduled Groups.*/
+    public int getSchedulableGroupCount() {  return schedulableGroupCount;}
+
+}
+
+/** $Log: Prescheduler.java,v $
+/** Revision 1.1  2006/05/17 06:32:59  snf
+/** Initial revision
+/**
+/** Revision 1.1  2001/04/27 17:14:32  snf
+/** Initial revision
+/** */

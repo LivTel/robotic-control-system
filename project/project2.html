@@ -1,0 +1,711 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   
+      <title>Project Information - RCS</title>
+   </head>
+   <body bgcolor="white">
+      <h1><u>Robotic Control System</u></h1>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( CALIB ) - Calibration Operations</span><p></p>
+      <description>
+         This operating mode is used to perform various calibration operations at different times
+         of the day and night. These include:-
+         
+         <ul>
+            	
+            <li> Twilight (sky) flats.</li>
+            	
+            <li> Focus procedure.</li>
+            	
+            <li> Standards for various instruments.</li>
+            	
+            <li> Autoguider focus.</li>
+            	
+            <li> Pointing calibration.</li>
+            	
+            <li> Daytime calibration for instruments.</li>
+            
+         </ul>
+         The times for these operations will vary from, night to night - e.g. dependant on sunset time etc and may require to be run
+         at fixed or variable intervals in the night. They may also depend on previous invokations of themselves and other calibration
+         operations.
+         
+         
+         <p></p>There are 2 fundamentally different approaches to the scheduling of these ops.
+         	
+         	
+         <p></p>LT Model - This involves scheduling the ops at times relative to sunset, twilight etc - The daily variation is then taken
+         care of automatically.
+         	  
+         	  
+         <p></p>FT Model - The times must be fitted into gaps between fixed RTI sessions which are predefined upto a month in advance - the
+         daily variation would then have to be explicitly scheduled taking into account these RTI windows.
+         	    
+         	    
+         <p></p>The aim of this workflow is to identify ways in which both models can be incorporated into the CAL MCA configuration.
+         	      
+         	      
+         <p></p>This will require both the CAL MCAs? (DCAL and NCAL) or a combined class and the individual CalibrationTasks? and subclasses.
+         to be modified and configured appropriately.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( SCIENCE ) - Science Operations</span><p></p>
+      <description>
+         Science or offline operations are performed by default in any available time. This is the default
+         operating mode of the telescope during the night.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_013</u> -    SCIENCE/Observation sequencing</span><p></p>
+      <description>
+         	This workflow deals with the sequencing of operations during an observation in science mode.
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue">
+               <hr>
+               <li><u>ENT</u>, 2005-03-23T11:40 -  
+                  <p></p>
+                  <note class="ENT" date="2005-03-23T11:40">
+                     	At the Dev Mtg 22-03-2005 it was decided to institute the use of the INST ACQUIRE command.
+                     	
+                     <p></p>This envisages a procedure as follows:-
+                     	  
+                     <ol>
+                        	    
+                        <li>Slew onto target - TCS GOTO command</li>
+                        	    
+                        <li>Configure instrument - ICS CONFIG command</li>
+                        	    
+                        <li>Request instrument adjusts position - ICS ACQUIRE command</li>
+                        	    
+                        <li>Expose instrument - ICS EXPOSE command e.g. MULTRUN</li>	 
+                        	  
+                     </ol> 
+                     	  
+                     <p></p>Note: Slew and Config can be issued in parallel, then Acquire then Expose.
+                     
+                  </note>
+               </li>
+               <hr>
+               <li><u>ENT</u>, 2005=02-24T08:34 -  
+                  <p></p>
+                  <note class="ENT" date="2005=02-24T08:34">
+                     	There is a problem with the LT rotator due to the way it is kept at ROT MNT 0 + FLOAT and never
+                     	moves far from this position - it appears to 'stick' physically. A program of excercise is proposed
+                     	
+                     <ul>
+                        	  
+                        <li>At the start of each slew to observation.</li>
+                        	  
+                        <li>At the start of the night.</li>
+                        	
+                     </ul>
+                     
+                  </note>
+               </li></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1">
+            <tr>
+               <td valign="top"><b>ObservationSequenceTask</b><p></p>ngat.rcs.science
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005=02-24T08:34</td>
+                        <td>
+                           <detail>
+                              	    A set of new variables has been added to handle the start-of-observation excercise of the rotator.
+                              	    A flag <code>doExcerciseRotator</code> is set from config parameter <i>excercise.rotator</i> which
+                              	    determines if the rotator should be excercised each slew. The variables <code>rotatorExcerciseAngleLo</code>
+                              	    and <code>rotatorExcerciseAngleHi</code> are set respectively from config parameters
+                              	    <i>rotator.excercise.angle.lo</i> and <i>rotator.excercise.angle.hi</i>. If not specified the defaults
+                              	    are set from the constants DEFAULT_ROTATOR_EXCERCISE_ANGLE_LO and DEFAULT_ROTATOR_EXCERCISE_ANGLE_HI.
+                              	    
+                              <p></p>There are some changes to the task sequencing code to deal with this option - this may need more
+                              	      looking at as there are quite a few variations depending on whether either or both the <code>doRotate</code> 
+                              	      and <code>doSlew</code> options are selected - watch this.
+                              	  
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+         </table>
+      </div>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( POS ) - Planetarium Operations</span><p></p>
+      <description>
+         Planetarium operations are performed during pre-arranged slots/windows setup in the window schedule file.
+         This file is generated by the FTOC and uploaded during the day several times a month. During POS mode
+         the telescope is controlled via a web interface (RTI) communicating with the PCR using the PCP protocol 
+         relayed on to the RCS using JSOs.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( TOCS ) - Target of Opportunity Operations</span><p></p>
+      <description>
+         The TOCS is responsible for control of the telescope on inception of alerts of various types. The controller
+         is in fact an intelligent agent located on a nearby proxy - (soas to provide fast return of image data for
+         processing). This operating mode typically has priority over all others.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_002</u> -    TOCS/General Protocol</span><p></p>
+      <description>
+         	Handling general TOCS protocol issues      
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1">
+            <tr>
+               <td valign="top"><b>TOCServerImpl</b><p></p>ngat.rcs.tocs
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Changed timeout block to allow PSI to wait on task completion</detail>
+                        </td>
+                     </tr>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Changedthis and that</detail>
+                        </td>
+                     </tr>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>S little change</detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+            <tr>
+               <td valign="top"><b>BBBServerImpl</b><p></p>
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Did what hadsd to be done</detail>
+                        </td>
+                     </tr>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Fixed the bejabbers</detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+            <tr>
+               <td valign="top"><b>AAServerImpl</b><p></p>
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Changed timeout block to allow PSI to wait on task completion</detail>
+                        </td>
+                     </tr>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Skuppered the behghonias</detail>
+                        </td>
+                     </tr>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>That which must be done</detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+            <tr>
+               <td valign="top"><b>GGServerImpl</b><p></p>
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-17T11:55</td>
+                        <td>
+                           <detail>Changed the other and the tother</detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+         </table>
+      </div>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_003</u> -    TOCS/Instrumentation</span><p></p>
+      <description>           
+         	This workflow is intended to cover any instrument related issues including 
+         	
+         <ul>
+            	  
+            <li>Enhancements to the INSTR command for new or existing instruments.</li>
+            	  
+            <li>Testing of all instrument interactions</li>
+            	  
+            <li>Task implementation relating to instruments</li>
+            	
+         </ul>
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1">
+            <tr>
+               <td valign="top"><b>TOC_GenericCommandImpl</b><p></p>ngat.rcs.tocs
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-17T15:51</td>
+                        <td>
+                           <detail>Added a new instrument command parameter for the IRCAM</detail>
+                        </td>
+                     </tr>
+                     <tr>
+                        <td valign="top">2005-03-21T15:00</td>
+                        <td>
+                           <detail>Added optional calibrate before and after parameters to (all) instrument commands.
+                              	    
+                              <p></p>If these are ommitted the <i>default</i> settings for the instrument are used.
+                              	  
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+         </table>
+      </div>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_009</u> -    TOCS/Accounting</span><p></p>
+      <description>           
+         	This workflow is intended to cover issues relating to TO accounting. This will include:-
+         	
+         <ul>
+            	  
+            <li>Update of Phase2DB with proposal/tag used time for the assigned TO proposal</li>
+            	  
+            <li>TO Service accounting</li>
+            	
+         </ul>
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1"></table>
+      </div>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( COMMS ) - Communications</span><p></p>
+      <description>
+         The RCS has to communicate with a number of external subsystems to instigate control of
+         the telescope and its associated instruments and to collate environmental data. 
+         
+      </description>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_001</u> -    COMMS/Command Translator</span><p></p>
+      <description>
+         	The CommandTranslator is a module which translates commands received from the various
+         	executive tasks and status collators as JMS objects (JSOs) into the native format for
+         	the TCS and other external subsystems. Additionally native responses are translated
+         	back to JSOs to supply the appropriate type of response to the originating task/collator.             
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1">
+            <tr>
+               <td valign="top"><b>LT_RGO_TCS_CommandTranslator</b><p></p>ngat.rcs.control
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-17T08:00</td>
+                        <td>
+                           <detail>Modified the translator for AZIMUTH command to convert from
+                              	    encapsulated units (radians) to TCS units (degrees)
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+         </table>
+      </div>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( EMM ) - Event Messaging</span><p></p>
+      <description>
+         Events are propagated around the system between the SCM, TMM and SM. These include:-
+         
+         
+         <ul>
+            	
+            <li> action events from the SM to initiate activity from the TMM.</li>
+            	
+            <li> environmental alerts from the SCM to SM to prompt reactive behaviour.</li>
+            	
+            <li> task events from the TMM to the SM to notify completion status.</li>
+            	
+            <li> other control events can be generated by external users and other modules as required.</li>
+            
+         </ul>
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( ISS ) - Instrument Support</span><p></p>
+      <description> 
+         The RCS must store details of the various Instrument Control Systems (ICS) and their
+         ranges of available and current configurations. Ths ICS are able to send commands to
+         the RCS for information and for forwarding (possibly modified) to the TCS in order to
+         allow for instrument-specific positioning adjustments. This Workflow is intended to
+         handle these issues.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_010</u> -    ISS/Instrument control actions</span><p></p>
+      <description>
+         	This workflow deals with issues relating to the selection and configuration of
+         	instruments in Science,Planetarium and TO operations.
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1"></table>
+      </div>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_012</u> -    ISS/Instrument adjustment of telescope</span><p></p>
+      <description>
+         	This workflow is to deal with issues relating to the instruments' adjustment of
+         	the telescope via INST_ISS commands via the RCS to the TCS.
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue">
+               <hr>
+               <li><u>ENT</u>, 2005-03-23T13:33 -  
+                  <p></p>
+                  <note class="ENT" date="2005-03-23T13:33">
+                     	At the Dev Mtg 22-03-2005 it was decided to add a response delay to the ISS_OFFSET_RADEC
+                     	command soas to ensure the telescope had stopped moving before the completion reply is
+                     	sent back to the calling instrument.
+                  </note>
+               </li></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1">
+            <tr>
+               <td valign="top"><b>ISS_CommandImpl</b><p></p>ngat.rcs.iss
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-23T13:30</td>
+                        <td>
+                           <detail>A new parameter <code>responseDelay</code> is calculated when the class is instantiated using
+                              	    the overridable method <i>calculateResponseDelay()</i>. This by default returns 0 (zero). The 
+                              	    <i>handleResponse()</i> method has been doctored to include a sleep for this period after receiving the reply before
+                              	  sending on to the caller (ICS). There is some danger here in that the handleReply() method is called by
+                              	  the CCT created by the CommandImpl whereas the <i>handleRequest()</i> method was called by the SCT and is in a 
+                              	  timeout waitfor which is not currently updatable - i.e. it does not keep re-entering if the response
+                              	  has not yet been detected
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+            <tr>
+               <td valign="top"><b>ISS_OFFSET_RA_DECCommandImpl</b><p></p>ngat.rcs.iss
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-23T13:30</td>
+                        <td>
+                           <detail>The method <i>calculateResponseDelay()</i> is overridden to return 10 secs.
+                              	  
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+         </table>
+      </div>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( TMM ) - Task Management</span><p></p>
+      <description>
+         The TMM is responsible for instaigating actions on request from the SM. It consists of a hierarchy
+         of ManagerTasks reported to by lower level Executive tasks which carry out telescope and instrument
+         control actions. 
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( SCM ) - Status Collation</span><p></p>
+      <description>
+         The SCM is responsible for collecting environmental status from external systems and for
+         filtering and applying rules to allow reactive input to the overall control model.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_005</u> -    SCM/Sensors</span><p></p>
+      <description>
+         	Sensors are used to store and present data from various collation mechanisms using a standard
+         	inerface..
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1">
+            <tr>
+               <td valign="top"><b>CCDSeeing</b><p></p>ngat.rcs.scm.collation
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-23T12:32</td>
+                        <td>
+                           <detail>Added a new temporary field <code>lastSeeing</code> to store the last value of the <i>atmospheric.seeing</i>
+                              	    parameter which was used to update this sensor. This is to be used by input devices to allow
+                              	    a form of prefiltering of the input data soas to disallow 'unbelievable' data.
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+            <tr>
+               <td valign="top"><b>ExposureTask</b><p></p>ngat.rcs.tmm.executive
+               </td>
+               <td>
+                  <table>
+                     <tr>
+                        <td valign="top">2005-03-23T12:32</td>
+                        <td>
+                           <detail>Added new parameter <code>max_seeing</code> to record the maximum seeing we will accept
+                              	    as being valid as returned from the DPRT in the DP_ACK message. This is configured from the
+                              	    task.config as parameter <i>max.usable.seeing</i> under this task's id. If not set the default value supplied as
+                              	    the constant DEFAULT_MAX_SEEING is used. When a new seeing value is obtained from the DPRT this is compared
+                              	    to the <code>max_seeing</code> and if it is more, the value obtained from <i>CCDSeeing.getLastSeeing()</i> 
+                              	    is used and fed back into the CCDSeing sensor. - this is a temporary fix and really needs to be handled 
+                              	    by modification of the class used as the seeing predictor.
+                              	  
+                           </detail>
+                        </td>
+                     </tr>
+                  </table>
+               </td>
+            </tr>
+         </table>
+      </div>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_007</u> -    SCM/Filters</span><p></p>
+      <description>
+         	Filters are used to smooth the output gathered from sensors. There are a number of different
+         	classes of filter.
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue">
+               <hr>
+               <li><u>TBD</u>, 2005-03-21T16:00 -  
+                  <p></p>
+                  <note class="TBD" date="2005-03-21T16:00">Need to sort out the rain filter for LT which shows reverse state 
+                     	from what it actually is
+                     
+                  </note>
+               </li>
+               <hr>
+               <li><u>TBD</u>, 2005-03-22T07:52 -  
+                  <p></p>
+                  <note class="TBD" date="2005-03-22T07:52"> 
+                     	There is a general problem with modal and steady filters we cannot set these up using a time period 
+                     	
+                     <p></p>i.e. we want to be able to say something like 
+                     	  - return the steady (good) value over 20 minutes OR display a default (bad) value   
+                     
+                  </note>
+               </li></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1"></table>
+      </div>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_008</u> -    SCM/Rules</span><p></p>
+      <description>
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1"></table>
+      </div>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( STATEMODEL ) - State Decision Model</span><p></p>
+      <description>
+         The State Decision Model (SM) provides a link between the reactive inputs and the task actions
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( CONTROL ) - Control</span><p></p>
+      <description>
+         This project is concerned with ineractions between the RCS and external GUI clients - both as controllers
+         and as receivers of telemetry.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( config ) - Configuration</span><p></p>
+      <description>
+         The RCS has a large number of configuration files - this project aims to keep track of modifications
+         and upgrades to these.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><span style="display:block;font-size:22pt;font-color:blue;background:#ddee22">
+         Subproject ( LOGGING ) - Logging</span><p></p>
+      <description>
+         This project aims to keep track of any changes made to the RCS logging facilities.
+         
+      </description>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_004</u> -    LOGGING/MCA Specific logging</span><p></p>
+      <description>      
+         	This workflow is aimed at logging for the various control agents.
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1"></table>
+      </div>
+      <p></p>
+      <hr color="blue"><br><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_006</u> -    LOGGING/Task logging</span><p></p>
+      <description>
+         	This workflow is aimed at the task (TMM) module logging.
+         
+      </description>
+      <p></p>
+      <div style="display:block;position:relative;left:20;background:#ff77ee">
+         Notes associated with this workflow.
+         
+         <ul><font color="blue"></font></ul>
+      </div>
+      <p></p>
+      <div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+         Changes grouped by class
+         
+         <table bgcolor="#ccddee" frame="hsides" border="1"></table>
+      </div>
+   </body>
+</html>

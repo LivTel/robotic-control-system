@@ -1,0 +1,38 @@
+d
+# -------------------------
+# Intrument Network Config.
+# -------------------------
+
+#ratcam.host = localhost
+#ratcam.port = 6783
+
+ringo3.host = localhost
+ringo3.port = 1112
+
+rise.host =  localhost
+rise.port = 6777
+
+frodo.host =  localhost
+frodo.port = 7083
+
+sprat.host = localhost
+sprat.port = 2324
+
+io\:i.host = localhost
+io\:i.port = 4556
+
+#frodo_red.host = localhost
+#frodo_red.port = 7083
+
+#frodo_blue.host =  localhost
+#frodo_blue.port = 7083
+
+#io\:thor.host	=  localhost
+#io\:thor.port 	= 8472
+
+io\:o.host = localhost
+io\:o.port = 7979
+
+#io\:i.host = localhost
+#io\:i.port = 8475
+

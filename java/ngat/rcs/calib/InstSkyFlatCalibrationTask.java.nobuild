@@ -1,0 +1,430 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.net.*;
+import ngat.fits.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+import ngat.astrometry.*;
+import ngat.util.*;
+import ngat.util.logging.*;
+import ngat.message.RCS_TCS.*;
+
+import java.io.*;
+import java.util.*;
+
+/** This Task sets up the Telescope and selected Instrument for SkyFlatsCalibration and 
+ * instructs the Instrument to carry out its Twilight calibration.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: InstSkyFlatCalibrationTask.java.nobuild,v 1.1 2006/05/17 06:31:23 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/InstSkyFlatCalibrationTask.java.nobuild,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class InstSkyFlatCalibrationTask extends ParallelTaskImpl {
+
+    /** ERROR_BASE for this Task type.*/
+    public static final int ERROR_BASE = 3900;
+
+    public static final int CONFIG_ERROR         = 603901;
+    
+    //RCS_Controller.ERROR_BASE + ERROR_BASE + CONFIG_ERROR;
+    
+    public static final int TELESCOPE_ERROR      = 603903;
+
+    public static final int ILLEGAL_SOURCE_ERROR = 603904;
+
+    /** Name of the instrument.*/
+    protected String instId;
+
+    /** Time allowed for this Instrument to perform Flats (millis).*/
+    protected long timeAvailable;
+    
+    protected TelescopeConfig teleConfig;
+
+    /** Calibration blank field.*/
+    protected ExtraSolarSource blankCalibField;
+
+    /** Field magnitude.*/
+    protected double blankFieldMagnitude;
+
+    /** Slew to blank field.*/
+    protected SlewTask slewTask;
+    
+    /** Tracking on ALT.*/
+    protected Track_Task trackOnAltTask;
+
+    /** Tracking on AZ.*/
+    protected Track_Task trackOnAzTask;
+    
+    /** Tracking on ROT.*/
+    protected Track_Task trackOnRotTask;
+    
+    /** Tracking off ALT.*/
+    protected Track_Task trackOffAltTask;
+
+    /** Tracking off AZ.*/
+    protected Track_Task trackOffAzTask;
+
+     /** Tracking off ROT.*/
+    protected Track_Task trackOffRotTask;
+
+    /** Select Instrument.*/
+    InstrumentSelectTask instSelectTask;
+
+    /** Twilght calibration.*/
+    protected TwilightCalibrationTask twilightTask;
+
+    /** Create an InstSkyFlatCalibrationTask using the supplied settings. 
+     * @param name The unique name/id for this TaskImpl.   
+     * @param manager The Task's manager.
+     */
+    public InstSkyFlatCalibrationTask(String      name,
+				      TaskManager manager,	
+				      String      instId,
+				      long        timeAvailable) {
+	super(name, manager);
+	this.instId        = instId;
+	this.timeAvailable = timeAvailable;
+    }
+    
+
+    public void onSubTaskDone(Task task) {	
+	super.onSubTaskDone(task);
+    }
+    
+    public void onSubTaskFailed(Task task) {	
+	super.onSubTaskFailed(task);		
+	    
+	if ( task instanceof TwilightCalibrationTask ) {	
+	    int runs = ((JMSMA_TaskImpl)task).getRunCount();
+	    errorLog.log(1, CLASS, name, "handleTwilightCalibTaskFailed", 
+			 "Task: "+task.getName()+" failed..on run "+runs);
+	    if (runs < 3) {	  	   
+		resetFailedTask(task); 
+	    } else if
+		(runs >= 3) { 
+		failed(CONFIG_ERROR, 
+		       "SkyFlats - Twilight failed due to: "+task.getErrorIndicator().getErrorString(),
+		       task.getErrorIndicator().getException());	
+	    }    
+	} else if 
+	    (task instanceof SlewTask) {
+	    int runs = ((JMSMA_TaskImpl)task).getRunCount();
+	    errorLog.log(1, CLASS, name, "handleSlewTaskFailed", 
+			 "Task: "+task.getName()+" failed..on run "+runs);
+	    if (runs < 3) {	  	   
+		resetFailedTask(task); 
+	    } else if
+		(runs >= 3) { 
+		failed(TELESCOPE_ERROR, 
+		       "SkyFlats - Slew failed due to: "+task.getErrorIndicator().getErrorString(),
+		       task.getErrorIndicator().getException());
+	    }
+	} else if 
+	    (task == trackOnAzTask ||
+	     task == trackOnAltTask ||
+	     task == trackOnRotTask) {
+	    int runs = ((JMSMA_TaskImpl)task).getRunCount();
+	    errorLog.log(1, CLASS, name, "handleTrackTaskFailed", 
+			 "Task: "+task.getName()+" failed..on run "+runs);
+	    if (runs < 3) {	  	   
+		resetFailedTask(task); 
+	    } else if
+		(runs >= 3) { 
+		failed(TELESCOPE_ERROR, 
+		       "SkyFlats - Track ON failed due to: "+task.getErrorIndicator().getErrorString(),
+		       task.getErrorIndicator().getException());
+	    }	
+	} else {
+	    failed(CONFIG_ERROR, 
+		   "SkyFlats - Twilight failed due to: "+task.getErrorIndicator().getErrorString(),
+		   task.getErrorIndicator().getException());	   
+	}
+    }
+
+    /** Overwritten to choose the best calibration source, just before the task runs.
+     */
+    public void preInit() {
+	super.preInit();
+	// Find a suitable field.
+	Standards standards = Standards.getStandards(instId);
+	if (standards != null) {	   
+	    Standards.FieldSet fields = standards.getBlankFields(); 	  
+	    if (fields != null) {		
+		fields.pickHighestField();
+		blankCalibField     = (ExtraSolarSource)fields.getCurrentHighestField().getField();
+		blankFieldMagnitude = fields.getCurrentHighestField().getMagnitude();
+	    }
+	}	
+
+	// Setup a Generic TelescopeConfig for SkyFlats.	
+	teleConfig = new TelescopeConfig("Twilight-TelConfig");
+	teleConfig.setAutoGuiderUsageMode(TelescopeConfig.AGMODE_NEVER); 
+	
+	teleConfig.setFocusOffset(0.0f);
+	teleConfig.setGuideProbePosition(0.0); // EDGE ?
+	teleConfig.setRotatorAngleMode(TelescopeConfig.ROTATOR_MODE_SKY);
+	teleConfig.setSkyAngle(0.0);
+    
+    }
+    
+    /** Overridden to carry out specific work after the TaskList is created.
+    */
+    public void onInit() {
+	super.onInit();
+		
+	if (blankCalibField == null) return;      // Should have failed anyway.
+	
+	taskLog.log(ENTER, 3, CLASS, name, "onInit", "Setting FITS headers.");
+	opsLog.log(1, "Starting SkyFlat-Calibration for "+instId+   
+		   "\n Calib Blank Field: "+blankCalibField.getName()+
+		   "\n  Field Magnitude:  "+blankFieldMagnitude+
+		   "\n  Altitiude:        "+Position.toDegrees(blankCalibField.getPosition().getAltitude(), 3)+
+		   "\n  Azimuth:          "+Position.toDegrees(blankCalibField.getPosition().getAzimuth(), 3));
+	
+	FITS_HeaderInfo.current_GROUPID.setValue ("SKY_FLAT-GROUP");	 
+	FITS_HeaderInfo.current_OBSID.setValue   ("SKY_FLAT-OBS");   
+	FITS_HeaderInfo.current_COMPRESS.setValue("NONE");	
+	
+	FITS_HeaderInfo.current_RADECSYS.setValue("FK5");
+	
+	FITS_HeaderInfo.current_EQUINOX.setValue (""+blankCalibField.getEquinoxLetter()+blankCalibField.getEquinox());
+	FITS_HeaderInfo.current_CAT_RA.setValue  (FITS_HeaderInfo.toHMSString(blankCalibField.getRA()));
+	FITS_HeaderInfo.current_CAT_DEC.setValue (FITS_HeaderInfo.toDMSString(blankCalibField.getDec()));
+	FITS_HeaderInfo.current_CAT_EPOC.setValue(new Double(blankCalibField.getEpoch()));
+	FITS_HeaderInfo.current_CAT_NAME.setValue(blankCalibField.getName());
+	FITS_HeaderInfo.current_OBJECT.setValue  (blankCalibField.getName());
+	
+	FITS_HeaderInfo.current_PM_RA.setValue   (new Double(blankCalibField.getPmRA()));
+	FITS_HeaderInfo.current_PM_DEC.setValue  (new Double(blankCalibField.getPmDec()));
+	FITS_HeaderInfo.current_PARALLAX.setValue(new Double(blankCalibField.getParallax()));
+	//FITS_HeaderInfo.current_RADVEL   = blankCalibField.getRadialVelocity();
+	FITS_HeaderInfo.current_RATRACK.setValue (new Double(0.0));
+	FITS_HeaderInfo.current_DECTRACK.setValue(new Double(0.0));	
+
+	// let ISS know about this.
+		ISS_Server.currentTelescopeConfig = teleConfig;
+	taskLog.log(1, CLASS, name, "onInit",
+		    "Configured ISS Current Telescope Config: "+teleConfig); 
+
+    }
+
+  
+    public void onAborting() {
+	synchronized (taskList) {
+	    super.onAborting();
+	    // ##### WORK OUT WHICH INSTRUMENT IS CURRENT HERE #############
+	    taskList.addTask(new Abort_Task(name+"-(InstTwilightAbort)", this, instId));
+	 
+	    taskList.addTask(new Track_Task(name+"-(TrackOffAz)",
+					    this,
+					    TRACK.AZIMUTH,
+					    TRACK.OFF));
+	    taskList.addTask(new Track_Task(name+"-(TrackOffAlt)",
+					    this,
+					    TRACK.ALTITUDE,
+					    TRACK.OFF));
+	    taskList.addTask(new Track_Task(name+"-(TrackOffRot)",
+					    this,
+					    TRACK.ROTATOR,
+					    TRACK.OFF));
+	}	
+    }   
+    
+    public void onDisposal()   {
+	super.onDisposal();
+    }
+        
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Sky-Flats Calibration for "+instId);
+    }
+
+    /** Overriden to write to the Ops log after failure, prior to disposal.*/
+    public void onFailure() {
+	super.onFailure();
+	opsLog.log(1, "Failed Sky-Flats Calibration for "+instId+
+		   "\n\tCode:      "+errorIndicator.getErrorCode()+
+		   "\n\tReason:    "+errorIndicator.getErrorString()+
+		   "\n\tException: "+errorIndicator.getException());
+    }
+
+
+    /** Creates the TaskList for this TaskManager. 
+     */
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+		
+	//  Fail if no field is set.
+	if (blankCalibField == null) {
+	    //Major error !	   
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed setting source for Sky-Flats calibration: No suitable source.");
+	    failed = true;
+	    errorIndicator.setErrorCode(ILLEGAL_SOURCE_ERROR);
+	    errorIndicator.setErrorString("Failed setting source for Sky-Flats calibration: No suitable source.");
+	    return null;	    
+	}
+
+
+	// We may also need.. AGMOVE_OUT, ROTATOR_SKY_0.0, ??
+	//
+	//
+
+	// 1. Tracking on.
+	trackOnAltTask = 
+	    new Track_Task(name+"/TRK_ON_ALT",
+			   this,
+			   TRACK.ALTITUDE,
+			   TRACK.ON);
+	
+	taskList.addTask(trackOnAltTask);
+
+	trackOnAzTask = 
+	    new Track_Task(name+"/TRK_ON_AZ",
+			   this,
+			   TRACK.AZIMUTH,
+			   TRACK.ON);
+	
+	taskList.addTask(trackOnAzTask);
+	
+	trackOnRotTask = 
+	    new Track_Task(name+"/TRK_ON_ROT",
+			   this,
+			   TRACK.ROTATOR,
+			   TRACK.ON);
+	
+	taskList.addTask(trackOnRotTask);
+
+	// 2. Select instrument. 
+	//    SkyFlatCalib has already checked this.
+	String alias = Instruments.findAliasFor(instId);	
+	instSelectTask = new InstrumentSelectTask(name+"/INSTSEL",
+						  this,
+						  instId,
+						  alias);
+	taskList.addTask(instSelectTask);
+
+	// 3. Slew to the Calibration Blank Field.
+	slewTask = 
+	    new SlewTask(name+"/SLEW", 
+			 this,
+			 blankCalibField);
+	taskList.addTask(slewTask);
+	
+	// 4. Inst Twilight Calibrate.
+	twilightTask = new TwilightCalibrationTask(name+"/FLATS",
+						   this,
+						   instId,
+						   timeAvailable);
+	taskList.addTask(twilightTask);
+	
+	// 5. Tracking off.
+	trackOffAltTask = 
+	    new Track_Task(name+"/TRK_OFF_ALT",
+			   this,
+			   TRACK.ALTITUDE,
+			   TRACK.OFF);
+	
+	taskList.addTask(trackOffAltTask);
+
+	trackOffAzTask = 
+	    new Track_Task(name+"/TRK_OFF_AZ",
+			   this,
+			   TRACK.AZIMUTH,
+			   TRACK.OFF);
+	
+	taskList.addTask(trackOffAzTask);
+
+	trackOffRotTask = 
+	    new Track_Task(name+"/TRK_OFF_ROT",
+			   this,
+			   TRACK.ROTATOR,
+			   TRACK.OFF);
+	
+	taskList.addTask(trackOffRotTask);
+
+	try {
+	    taskList.sequence(trackOnAltTask, instSelectTask);
+	    taskList.sequence(trackOnAzTask,  instSelectTask);
+	    taskList.sequence(trackOnRotTask, instSelectTask);
+	    taskList.sequence(instSelectTask, slewTask);
+	    taskList.sequence(slewTask,       twilightTask);
+	    taskList.sequence(twilightTask,   trackOffAltTask);
+	    taskList.sequence(twilightTask,   trackOffAzTask);
+	    taskList.sequence(twilightTask,   trackOffRotTask);
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for SkyFlat Calibration:"+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Twilight Calibration.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}	
+	return taskList;	
+    }
+
+    public void sigMessage(Task source, int category, Object message) {	
+	switch (category) {
+	case Exposure_Task.EXPOSURE_FILE:
+	    opsLog.log(1, " Exposure Completed. File: "+message);
+	    break;
+	default:
+	    super.sigMessage(source, category, message);
+	}
+    }
+
+}
+
+/** $Log: InstSkyFlatCalibrationTask.java.nobuild,v $
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/** */

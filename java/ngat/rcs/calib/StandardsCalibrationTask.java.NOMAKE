@@ -1,0 +1,530 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.net.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+import ngat.astrometry.*;
+import ngat.util.*;
+import ngat.util.logging.*;
+import ngat.message.RCS_TCS.*;
+
+import java.io.*;
+import java.util.*;
+import java.text.*;
+
+/** This Task creates a series of ObservationSequenceTasks to carry out the
+ * Instrument specific, configurable standard observation sequences.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: StandardsCalibrationTask.java,v 1.1 2006/12/12 08:25:56 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/StandardsCalibrationTask.java,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class StandardsCalibrationTask extends CalibrationTask {
+
+    public static final int NO_STANDARDS_DEFINED    = 655555;
+
+    public static final int NO_STANDARD_OBS_DEFINED = 655556;
+    
+
+    /** Default algorithm choice.*/
+    public static final String DEFAULT_ALGORITHM = "FOLLOWING";
+
+    /** DEfault signal-noise ratio for standard-exposure.*/
+    public static final double DEFAULT_SIG_NOISE = 100;
+
+    /** Current leading source.*/
+    ExtraSolarSource leadingSrc;
+
+    /** Current trailing source.*/
+    ExtraSolarSource trailingSrc;
+
+    /** Current highest source.*/
+    ExtraSolarSource highestSrc;
+
+    /** Current leading source magnitude.*/
+    protected double leadingSrcMag;
+
+    /** Current trailing source magnitude.*/
+    protected double trailingSrcMag;
+
+    /** Current highest source magnitude.*/
+    protected double highestSrcMag;
+
+    /** Position of leading target.*/
+    Position leadTarget;
+    
+    /** Position of trailing target.*/
+    Position trailTarget;
+    
+    /** Position of highest target.*/
+    Position highTarget;
+
+    /** Required Sig-Noise ratio.*/
+    protected double signoise;
+
+    /** Cutoff exposure length above which AG is made optional.*/
+    protected double agCutoffExposure;
+
+    /** The instrument's Id.*/
+    protected String instId;
+
+    /** Standard Obs for this Instrument.*/
+    protected InstrumentConfig[] standardObs;
+
+    /** Counts number of subtasks (individual standard observations) to perform.*/
+    protected int countObsTasks;
+
+    /** Counts the number of subtasks (individual standard observations) which have failed.*/
+    protected int countObsFailed;
+
+    /** The Instrument to measure Standards for.*/
+    protected Instrument instrument;
+
+    /** The algorithm to use.*/
+    protected String algorithm;
+    
+    /** The Instrument's Standards definition.*/
+    protected Standards standards;
+
+    /** The Standards FieldSet for Photom.*/
+    Standards.FieldSet standardFields;
+
+    /** Elevation limit below which standard source cannot be followed.*/
+    double domeLimit;
+    
+    /** Amount of time (millis) for Standards calibration.*/
+    long   duration;
+
+    /** Create a Standards_Task using the supplied settings. 
+     * Increments the StandardCount for today - used in FITS headers as part of the OBS_ID..
+     * @param name The unique name/id for this TaskImpl - 
+     * should be based on the COMMAND_ID.
+     * @param manager The Task's manager.
+     */
+    public StandardsCalibrationTask(String      name,
+				    TaskManager manager,
+				    File        configFile,
+				    File        historyFile,
+				    Long        maxDuration,
+				    Integer     invokation) {
+	super(name, manager, configFile, historyFile, maxDuration, invokation);    	
+    }
+    
+    protected void configure() throws IOException , IllegalArgumentException {
+	ConfigurationProperties config = new ConfigurationProperties();	
+	config.load(new FileInputStream(configFile));
+	
+	domeLimit = Math.toRadians(config.getDoubleValue("telescope.dome.low.limit", 20.0));
+	// Read in seconds - convert to millis.
+	duration  = 1000L*config.getLongValue("standards.duration", 15*60);
+
+	// Use this to limit the duration,
+	setTimeConstrained(true);
+	setTimeLimit(duration);
+
+	agCutoffExposure = config.getDoubleValue("cutoff.exposure", 20*60*1000L);
+
+	// Get the instrument identifier reference.	
+	instId  = config.getProperty("instrument");
+	
+	if (instId == null)
+	    throw new IllegalArgumentException("Instrument not defined");
+	
+	instrument = Instruments.findInstrument(instId);
+
+	if (instrument == null)
+	     throw new IllegalArgumentException("Unknow instrument: "+instId);
+
+	algorithm = config.getProperty("algorithm", DEFAULT_ALGORITHM);
+
+	signoise = config.getDoubleValue("signal.noise", DEFAULT_SIG_NOISE);
+
+	// Also load a set of target.exposure .filter params !!!!
+
+    }
+    
+    /** Overridden to carry out specific work before TaskList is created.
+     */
+    public void preInit() {
+	
+	standards = Standards.getStandards(instId);
+
+	// Make sure Standard Fields are defined for this Instrument.
+	if (standards == null) {
+	    failed = true;
+	    errorIndicator = 
+		new BasicErrorIndicator(NO_STANDARDS_DEFINED, 
+					"No standards are defined for: "+instId,		    	
+					null);
+	    return;
+	}
+	
+	// Determine the current leading and trailing (photom) standard stars to use.
+	standardFields = standards.getStandardFields();
+	// Make sure Photom fields are defined for this Instrument.
+	if (standardFields == null) { 
+	    failed = true;
+	    errorIndicator = 
+		new BasicErrorIndicator(NO_STANDARDS_DEFINED, 
+					"No Photom standard fields are defined for: "+instId,		    	
+					null);
+	    return;
+	}
+
+	// Bump the counter up to indicate how many times this has been invoked.
+	// (Does the invokation variable do this anyway ? NO it is only set for a new call
+	//  NOT for a recall of this class during the same window..).
+	standardFields.incrementStandardCount();
+
+	// Find the LEAD and TRAIL fields OR HIGH fields depending on configured algorithm.
+	if (algorithm.equals("FOLLOWING")) {
+	    Standards.Standard leadingStandard = standardFields.getCurrentLeadingField();
+	    if (leadingStandard == null) {
+		failed = true;
+		errorIndicator = 
+		    new BasicErrorIndicator(NO_STANDARDS_DEFINED, 
+					    "No Leading Photom standard fields are defined for: "+instId,		    	
+					    null);
+		return;
+	    }
+	    leadingSrc = leadingStandard.getField();
+	    if (leadingSrc == null){
+		failed = true;
+		errorIndicator = 
+		    new BasicErrorIndicator(NO_STANDARDS_DEFINED, 
+					    "No Leading Photom standard source is defined for: "+instId,		    	
+					    null);
+		return;
+	    }
+	    Standards.Standard trailingStandard = standardFields.getCurrentTrailingField();
+	    if (trailingStandard == null) {
+		failed = true;
+		errorIndicator = 
+		    new BasicErrorIndicator(NO_STANDARDS_DEFINED, 
+					    "No Trailing Photom standard fields are defined for: "+instId,		    	
+					    null);
+		return;
+	    }
+	    trailingSrc = trailingStandard.getField();
+	    if (trailingSrc == null){
+		failed = true;
+		errorIndicator = 
+		    new BasicErrorIndicator(NO_STANDARDS_DEFINED, 
+					    "No Trailing Photom standard source is defined for: "+instId,		    	
+					    null);
+		return;
+	    }
+	    // If the lead source has set or will set before we complete standards change it.	   
+	    leadTarget = leadingSrc.getPosition();
+	    if ( (leadTarget.isSet(domeLimit)) || (leadTarget.getUpTimeMillis() < duration) ) {
+		// Swap over - trailer becomes new leader.
+		standardFields.pickLeadingField(duration, domeLimit);
+		// Get a new Trailing source and set it correctly.
+		standardFields.pickTrailingField(duration, domeLimit);
+	    }
+	    leadingSrc     = standardFields.getCurrentLeadingField().getField();
+	    leadingSrcMag  = standardFields.getCurrentLeadingField().getMagnitude();
+	    trailingSrc    = standardFields.getCurrentTrailingField().getField();
+	    trailingSrcMag = standardFields.getCurrentTrailingField().getMagnitude();
+	    leadTarget  = leadingSrc.getPosition();
+	    trailTarget = trailingSrc.getPosition();
+	    System.err.println("Will be using:"+
+			       "\nLead:  "+leadingSrc.toString()+
+			       "\nPosn:  "+Position.toDegrees(leadTarget.getAltitude(),3)+" @ "+
+			       Position.toDegrees(leadTarget.getAzimuth(),3)+		      
+			       "\nTrail: "+trailingSrc.toString()+
+			       "\nPosn:  "+ Position.toDegrees(trailTarget.getAltitude(),3)+" @ "+
+			       Position.toDegrees(trailTarget.getAzimuth(),3));
+	} else if
+	    (algorithm.equals("HIGHEST")) {
+	    standardFields.pickHighestField();
+	    highestSrc  = standardFields.getCurrentHighestField().getField();
+	}	
+
+	standardObs = instrument.getStandards();
+	System.err.println("Check standard obs:"+
+			   "\n\tInstr:     "+instrument.getName()+
+			   "\n\tSequences: "+
+			   (standardObs != null ? "("+standardObs.length+")" : "NONE"));
+	
+	if ((standardObs == null) || (standardObs.length == 0)) {
+	    failed = true;
+	    errorIndicator = 
+		new BasicErrorIndicator(NO_STANDARD_OBS_DEFINED, 
+					"No standard observations are defined for: "+instId,		    	
+					null);
+	    return;
+	}
+	    
+    }
+    
+    /** Overridden to carry out specific work after the TaskList is created.
+     */
+    public void onInit() {
+	super.onInit();	
+	taskLog.log(ENTER, 3, CLASS, name, "onInit", "Setting FITS headers.");
+	FITS_HeaderInfo.current_TAGID.setValue    ("LT-ADMIN"); 
+	FITS_HeaderInfo.current_USERID.setValue   ("LT-RCS");
+	FITS_HeaderInfo.current_PROPID.setValue   ("LT-CALIBRATION"); 	
+	FITS_HeaderInfo.current_GROUPID.setValue  ("LT-STANDARD-GROUP-"+
+						   invokation+"/"+
+						   standardFields.getStandardCount()+"-"+
+						   instId); 		
+	FITS_HeaderInfo.current_COMPRESS.setValue ("NONE");	
+	opsLog.log(1, "Starting Standards Calibration Sequence"+
+		   "\n\tWindow:     "+invokation+
+		   "\n\tCall Seq:   "+standardFields.getStandardCount()+
+		   "\n\tInstrument: "+instId+
+		   "\n\tPhotom Obs: "+(standardObs != null ? "("+standardObs.length+")" : "NONE"));
+    }
+    
+
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Standards Calibration."+
+		   (countObsFailed == 0 ? 
+		    "\n\tALL "+countObsTasks+" Observations succeeded." :
+		    (countObsFailed == countObsTasks ?
+		     "\n\tNone of the "+countObsTasks+" Observations succeeded." :
+		     "\n\t"+(countObsTasks - countObsFailed)+
+		     " out of "+countObsTasks+" Observations succeeded.")));
+    }
+
+    /** Overriden to write to the Ops log after failure, prior to disposal.*/
+    public void onFailure() {
+	super.onFailure();
+	opsLog.log(1, "Failed Standards Calibration"+
+		   "\n\tCode:      "+errorIndicator.getErrorCode()+
+		   "\n\tReason:    "+errorIndicator.getErrorString()+
+		   "\n\tException: "+errorIndicator.getException());
+    }
+
+
+    /** If any ObservationSequence fails we just skip it.*/
+    public void onSubTaskFailed(Task task) {	
+	super.onSubTaskFailed(task);
+	taskList.skip(task);
+	countObsFailed++;	
+    }
+
+    /** Creates the TaskList for this TaskManager. A series of ObsSequenceTasks
+     * are created using the current leading and trailing standard stars.
+     * At the start of night a pair of standards designated leading and trailing
+     * are chosen such that the lead source is at high elevation (low airmass)
+     * and the trailing source is at low elevation and East (rising). Over the
+     * night these 2 stars are used. As the lead transits and starts setting and
+     * the trailer rises towards transit. If at some point the lead star sets
+     * or is likely to set before the current standard observations are completed
+     * then the trailing star becomes the new lead and another star near the
+     * eastern horizon is chosen as the new trailer.*/
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+	
+	Observation      observation      = null;
+	
+	ObsDate obsDate = RCS_Controller.controller.getObsDate();
+
+	Task currentObservationSequence  = null;
+	Task previousObservationSequence = null;
+
+	
+	// Setup a Generic TelescopeConfig for Standards.	
+	TelescopeConfig teleConfig = new TelescopeConfig("Standards-TelConfig");
+	teleConfig.setAutoGuiderUsageMode(TelescopeConfig.AGMODE_NEVER); 
+	teleConfig.setFocusOffset(0.0f);
+	teleConfig.setGuideProbePosition(0.0); // EDGE ?
+	teleConfig.setRotatorAngleMode(TelescopeConfig.ROTATOR_MODE_SKY);
+	teleConfig.setSkyAngle(0.0);
+
+	try {
+	    // LEAD source.
+	    System.err.println("Create TL: LeadSrc: "+leadingSrc);
+	    if (leadingSrc != null) {
+		// Iterate over standard observations set for this instrument.		
+		for (int count = 0; count < standardObs.length; count++) {	    
+		    observation = new Observation("STANDARD-"+invokation+
+						  "/"+standardFields.getStandardCount()+
+						  "-D"+obsDate.getDateStamp()+
+						  "-"+instId+
+						  "-("+count+")-LEAD");
+		    // Naming: E.g. STANDARD-3-D243-RATCAM-(4)-LEAD
+		    
+		    observation.setInstrumentConfig(standardObs[count]);
+		    observation.setTelescopeConfig(teleConfig);
+		    observation.setPipelineConfig(null);
+		    
+		    // Notes:
+		    // 1. The exposure-time and configs are stored in Instrument as its Standards Set.
+		    // 2. We do NOT do mosaics, offsets, pipelining of standards.
+		    // 3. The Source is ALWAYS an ExtraSolarSource. 
+		    // 4. It may have non-zero proper-motion, parallax and radial-velocity.
+		    Mosaic mosaic = new Mosaic();
+		    mosaic.setPattern(Mosaic.SINGLE);
+		    observation.setMosaic(mosaic); // SINGLE.
+		    observation.setSource(leadingSrc);
+
+		    // This is a fudge to get exposure time for the new config without setting it yet.		 
+		    InstrumentConfig old  = instrument.getConfig("old");
+		    instrument.configure(standardObs[count]);
+		   
+		    // Work out the exposure time with the new config.
+		    ExposureCalculator exposureCalculator = instrument.getExposureCalculator();
+		    double expose = exposureCalculator.
+			calculateExposureTime(leadingSrcMag, signoise, 20.0, 0.7);
+		
+		    //### LT get an exposure from the config file somehow ...
+
+		    observation.setExposeTime((float)expose);
+		    // Now reset the config.
+		    instrument.configure(old);
+
+		    if (expose > agCutoffExposure) 
+			teleConfig.setAutoGuiderUsageMode(TelescopeConfig.AGMODE_OPTIONAL); 
+
+		    observation.setNumRuns(1);
+
+		    currentObservationSequence = 
+			new Observation_Sequence_Task(name+"/LEAD("+count+")",
+						      this,
+						      observation,
+						      true);
+		    taskList.addTask(currentObservationSequence);
+		    
+		    if (previousObservationSequence != null) {
+			taskList.sequence(previousObservationSequence, currentObservationSequence);		   
+		    }
+		    previousObservationSequence =  currentObservationSequence;
+		    countObsTasks++;
+		}
+	    }
+	    // TRAIL Source. 
+	    System.err.println("Create TL: TrailSrc: "+trailingSrc);
+	    if (trailingSrc != null) {
+		// Iterate over standard observations set for this instrument.		
+		for (int count = 0; count < standardObs.length; count++) {	    
+		    observation = new Observation("STANDARD-"+invokation+
+						  "/"+standardFields.getStandardCount()+
+						  "-D"+obsDate.getDateStamp()+
+						  "-"+instId+
+						  "-("+count+")-TRAIL");
+		    
+		    // Naming: E.g. STANDARD-3/8-D110-RATCAM-(4)-TRAIL
+		    observation.setInstrumentConfig(standardObs[count]);
+		    observation.setTelescopeConfig(teleConfig);
+		    observation.setPipelineConfig(null);
+		    
+		    // Notes:
+		    // 1. The exposure-time and configs are stored in Instrument as its Standards Set.
+		    // 2. We do NOT do mosaics, offsets, pipelining of standards.
+		    // 3. The Source is ALWAYS an ExtraSolarSource. 
+		    // 4. It may have non-zero proper-motion, parallax and radial-velocity.
+		    Mosaic mosaic = new Mosaic();
+		    mosaic.setPattern(Mosaic.SINGLE);
+		    observation.setMosaic(mosaic); // SINGLE.
+		    observation.setSource(trailingSrc);
+		
+		    // This is a fudge to get exposure time for the new config without setting it yet.		 
+		    InstrumentConfig old  = instrument.getConfig("old");
+		    instrument.configure(standardObs[count]);
+		    
+		    // Work out the exposure time with the new config.
+		    ExposureCalculator exposureCalculator = instrument.getExposureCalculator();
+		    double expose = exposureCalculator.
+			calculateExposureTime(trailingSrcMag, signoise, 20.0, 0.7);
+		    observation.setExposeTime((float)expose);
+		    // Now reset the config.
+		    instrument.configure(old);
+		    
+		    if (expose > agCutoffExposure) 
+			teleConfig.setAutoGuiderUsageMode(TelescopeConfig.AGMODE_OPTIONAL); 
+
+		    observation.setNumRuns(1);
+		    
+		    currentObservationSequence = 
+			new Observation_Sequence_Task(name+"/TRAIL("+count+")",
+						      this,
+						      observation,
+						      true);
+		    taskList.addTask(currentObservationSequence);
+		    
+		    if (previousObservationSequence != null) {
+			taskList.sequence(previousObservationSequence, currentObservationSequence);		   
+		    }
+		    previousObservationSequence =  currentObservationSequence; 
+		    countObsTasks++;
+		}
+	    }
+
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for Instrument_Standards: "+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for Instrument_Standards.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}
+	
+	return taskList;
+    }
+
+}
+
+/** $Log: StandardsCalibrationTask.java,v $
+/** Revision 1.1  2006/12/12 08:25:56  snf
+/** Initial revision
+/**
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/**
+/** Revision 1.1  2002/09/16 09:38:28  snf
+/** Initial revision
+/** */

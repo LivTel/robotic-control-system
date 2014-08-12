@@ -1,0 +1,709 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+   \document{class="article"}
+
+     
+
+    \section{Calibration Operations}
+
+    <description>
+      This operating mode is used to perform various calibration operations at different times
+      of the day and night. These include:-
+      <ul>
+	<li> Twilight (sky) flats.</li>
+	<li> Focus procedure.</li>
+	<li> Standards for various instruments.</li>
+	<li> Autoguider focus.</li>
+	<li> Pointing calibration.</li>
+	<li> Daytime calibration for instruments.</li>
+      </ul>
+      The times for these operations will vary from, night to night - e.g. dependant on sunset time etc 
+      and may require to be run at fixed or variable intervals in the night. 
+      They may also depend on previous invokations of themselves and other calibration operations.
+      
+      <p/>There are 2 fundamentally different approaches to the scheduling of these ops.
+	
+	<p/>LT Model - This involves scheduling the ops at times relative to sunset, twilight etc - 
+	  The daily variation is then taken care of automatically.
+	  
+	  <p/>FT Model - The times must be fitted into gaps between fixed RTI sessions which are predefined 
+	    upto a month in advance - the daily variation would then have to be explicitly scheduled taking 
+	    into account these RTI windows.
+	    
+	    <p/>The aim of this workflow is to identify ways in which both models can be incorporated into 
+	      the CAL MCA configuration.
+	      
+	      <p/>This will require both the CAL MCAs? (DCAL and NCAL) or a combined class and the 
+		individual CalibrationTasks? and subclasses to be modified and configured appropriately.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>xx</u> -    CALIB/General configuration and implementation</span><p/><description>
+	Covers the imlementation of the CAL MCA, its configuration and that of the various MTAs which
+	implement the different CALIB operations.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div>
+
+    \section{Science Operations}
+
+    <description>
+      Science or offline operations are performed by default in any available time. This is the default
+      operating mode of the telescope during the night.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    SCIENCE/Autoguider integration</span><p/><description>
+	Integration of the autoguider to science programs.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    SCIENCE/Group types handling</span><p/><description>
+	Covering different group types and special handling.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    SCIENCE/Error Handling</span><p/><description>
+		Intelligent handling of error conditions.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"><li><u>ENT</u>, 2005=02-24T08:34 -  <note class="ENT" date="2005=02-24T08:34">
+		There is a problem with the LT rotator due to the way it is kept at ROT MNT 0 + FLOAT and never
+		moves far from this position - it appears to 'stick' physically. A program of excercise is proposed
+		<ul>
+	  		<li>At the start of each slew to observation.</li>
+	  		<li>At the start of the night.</li>
+		</ul>
+      </note></li></font></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">ObservationSequenceTask</td><td fgcolor="blue">2005=02-24T08:34</td><td fgcolor="blue">
+	    	A set of new variables has been added to handle the start-of-observation excercise of the rotator.
+	    	A flag doExcerciseRotator is set from config parameter excercise.rotator which
+	    	determines if the rotator should be excercised each slew. The variables rotatorExcerciseAngleLo
+	    	and rotatorExcerciseAngleHi are set respectively from config parameters
+	    	rotator.excercise.angle.lo and rotator.excercise.angle.hi. If not specified the defaults
+	    	are set from the constants DEFAULT_ROTATOR_EXCERCISE_ANGLE_LO and DEFAULT_ROTATOR_EXCERCISE_ANGLE_HI.
+	    	There are some changes to the task sequencing code to deal with this option - this may need more
+	      	looking at as there are quite a few variations depending on whether either or both the doRotate 
+	      	and doSlew options are selected - watch this.
+	  	</td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>ObservationSequenceTask</b><p/>ngat.rcs.science</td><td><table><tr><td valign="top">2005=02-24T08:34</td><td>
+	    	A set of new variables has been added to handle the start-of-observation excercise of the rotator.
+	    	A flag doExcerciseRotator is set from config parameter excercise.rotator which
+	    	determines if the rotator should be excercised each slew. The variables rotatorExcerciseAngleLo
+	    	and rotatorExcerciseAngleHi are set respectively from config parameters
+	    	rotator.excercise.angle.lo and rotator.excercise.angle.hi. If not specified the defaults
+	    	are set from the constants DEFAULT_ROTATOR_EXCERCISE_ANGLE_LO and DEFAULT_ROTATOR_EXCERCISE_ANGLE_HI.
+	    	There are some changes to the task sequencing code to deal with this option - this may need more
+	      	looking at as there are quite a few variations depending on whether either or both the doRotate 
+	      	and doSlew options are selected - watch this.
+	  	</td></tr></table></td></tr></table></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_013</u> -    SCIENCE/Observation sequencing </span><p/><description>
+	This workflow deals with the sequencing of operations during an observation in science mode.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"><li><u>ENT</u>, 2005-03-23T11:40 -  <note class="ENT" date="2005-03-23T11:40">
+		At the Dev Mtg 22-03-2005 it was decided to institute the use of the INST ACQUIRE command.
+		<p/>This envisages a procedure as follows:-
+	  	<ol>
+	    	<li>Slew onto target - TCS GOTO command</li>
+	    	<li>Configure instrument - ICS CONFIG command</li>
+	    	<li>Request instrument adjusts position - ICS ACQUIRE command</li>
+	    	<li>Expose instrument - ICS EXPOSE command e.g. MULTRUN</li>	 
+	  	</ol> 
+	  	<p/>Note: Slew and Config can be issued in parallel, then Acquire then Expose.
+      </note></li></font></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">GroupSequenceTask</td><td fgcolor="blue">2005=04-04T15:00</td><td fgcolor="blue">
+	    The constructor has been modified to accept a new parameter maxGroupLength
+	    detailing the maximum length of valid group (nominal exec time). This is passed by SCA
+	    from its own configurable maxGroupLength. The value is passed into the ScheduleTask as its
+	    latestTime value.
+	  </td></tr><tr><td fgcolor="blue">ScienceControlAgent</td><td fgcolor="blue">2005=04-04T15:00</td><td fgcolor="blue">
+	    New variable maxGroupLength detailing the maximum length of valid group (nominal exec time).
+	    This is obtained from config parameter max.group.length and set to the default value of:-
+	    DEFAULT_MAX_GROUP_LENGTH if not configured. It is passed as an extra parameter to the GroupSequenceTask.
+	  </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>GroupSequenceTask</b><p/>ngat.rcs.science</td><td><table><tr><td valign="top">2005=04-04T15:00</td><td>
+	    The constructor has been modified to accept a new parameter maxGroupLength
+	    detailing the maximum length of valid group (nominal exec time). This is passed by SCA
+	    from its own configurable maxGroupLength. The value is passed into the ScheduleTask as its
+	    latestTime value.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>ScienceControlAgent</b><p/>ngat.rcs.science</td><td><table><tr><td valign="top">2005=04-04T15:00</td><td>
+	    New variable maxGroupLength detailing the maximum length of valid group (nominal exec time).
+	    This is obtained from config parameter max.group.length and set to the default value of:-
+	    DEFAULT_MAX_GROUP_LENGTH if not configured. It is passed as an extra parameter to the GroupSequenceTask.
+	  </td></tr></table></td></tr></table></div>
+
+    \section{Planetarium Operations}
+
+    <description>
+      Planetarium operations are performed during pre-arranged slots/windows setup in the window schedule file.
+      This file is generated by the FTOC and uploaded during the day several times a month. During POS mode
+      the telescope is controlled via a web interface (RTI) communicating with the PCR using the PCP protocol 
+      relayed on to the RCS using JSOs.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    POS/G2 Command migration</span><p/><description>
+	Migration to G2 future command set, implementation and ongoing test program.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    POS/Mosaicing</span><p/><description>
+	Implementation and testing of the mosaicing procedure
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    POS/Abort responses</span><p/><description>
+	Handling the responses to various abort reasons and propagating back to RTI.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div>
+
+    \section{Target of Opportunity Operations}
+
+    <description>
+      The TOCS is responsible for control of the telescope on inception of alerts of various types. The controller
+      is in fact an intelligent agent located on a nearby proxy - (soas to provide fast return of image data for
+      processing). This operating mode typically has priority over all others.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_002</u> -    TOCS/General Protocol</span><p/><description>
+	Handling general TOCS protocol issues      
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">TOCServerImpl</td><td fgcolor="blue">2005-03-17T11:55</td><td fgcolor="blue">Changed timeout block to allow PSI to wait on task completion</td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>TOCServerImpl</b><p/>ngat.rcs.tocs</td><td><table><tr><td valign="top">2005-03-17T11:55</td><td>Changed timeout block to allow PSI to wait on task completion</td></tr></table></td></tr></table></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_003</u> -    TOCS/Instrumentation</span><p/><description>           
+	This workflow is intended to cover any instrument related issues including 
+	<ul>
+	  <li>Enhancements to the INSTR command for new or existing instruments.</li>
+	  <li>Testing of all instrument interactions</li>
+	  <li>Task implementation relating to instruments</li>
+	</ul>
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">TOC_GenericCommandImpl</td><td fgcolor="blue">2005-03-17T15:51</td><td fgcolor="blue">Added a new instrument command parameter for the IRCAM</td></tr><tr><td fgcolor="blue">TOC_GenericCommandImpl</td><td fgcolor="blue">2005-03-21T15:00</td><td fgcolor="blue">Added optional calibrate before and after parameters to (all) instrument commands.
+	    If these are ommitted the default settings for the instrument are used.
+	  </td></tr><tr><td fgcolor="blue">TOC_GenericCommandImpl</td><td fgcolor="blue">2006-09-06T12:04</td><td fgcolor="blue">Added options to INSTR command handling. New Instrument names
+             
+               RATCAM 
+               As before but now specific for dev.lt.RATCamConfig
+               HAWKCAM
+               Generates a dev.lt.HawkCamConfig
+               DILLCAM
+                Intended to generate a dev.lt.DillCamConfig but does RATCam for now
+             
+          </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>TOC_GenericCommandImpl</b><p/>ngat.rcs.tocs</td><td><table><tr><td valign="top">2005-03-17T15:51</td><td>Added a new instrument command parameter for the IRCAM</td></tr><tr><td valign="top">2005-03-21T15:00</td><td>Added optional calibrate before and after parameters to (all) instrument commands.
+	    If these are ommitted the default settings for the instrument are used.
+	  </td></tr><tr><td valign="top">2006-09-06T12:04</td><td>Added options to INSTR command handling. New Instrument names
+             
+               RATCAM 
+               As before but now specific for dev.lt.RATCamConfig
+               HAWKCAM
+               Generates a dev.lt.HawkCamConfig
+               DILLCAM
+                Intended to generate a dev.lt.DillCamConfig but does RATCam for now
+             
+          </td></tr></table></td></tr></table></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_009</u> -    TOCS/Accounting</span><p/><description>           
+	This workflow is intended to cover issues relating to TO accounting. This will include:-
+	<ul>
+	  <li>Update of Phase2DB with proposal/tag used time for the assigned TO proposal</li>
+	  <li>TO Service accounting</li>
+	</ul>
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div>
+
+    \section{Communications}
+
+    <description>
+      The RCS has to communicate with a number of external subsystems to instigate control of
+      the telescope and its associated instruments and to collate environmental data. 
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_001</u> -    COMMS/Command Translator</span><p/><description>
+	The CommandTranslator is a module which translates commands received from the various
+	executive tasks and status collators as JMS objects (JSOs) into the native format for
+	the TCS and other external subsystems. Additionally native responses are translated
+	back to JSOs to supply the appropriate type of response to the originating task/collator.             
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">LT_RGO_TCS_CommandTranslator</td><td fgcolor="blue">2005-03-17T08:00</td><td fgcolor="blue">Modified the translator for AZIMUTH command to convert from
+	    encapsulated units (radians) to TCS units (degrees)</td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>LT_RGO_TCS_CommandTranslator</b><p/>ngat.rcs.control</td><td><table><tr><td valign="top">2005-03-17T08:00</td><td>Modified the translator for AZIMUTH command to convert from
+	    encapsulated units (radians) to TCS units (degrees)</td></tr></table></td></tr></table></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_014</u> -    COMMS/CIL Handling</span><p/><description>
+	The CIL layer is responsible for handling the sending and receiving of UDP messages via the
+	CIL interface. Commands (JSO) are received from clients (TMM Tasks and SCM Collators) via a
+	SlotConnection. Handlers are created and registered for these agianst a generated sequence number.
+	The Reader thread receives replies and places into a queue. The despatcher checks the queue,
+	looks up the registered handler and sends the translated reply to the original client.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"><li><u>ENT</u>, 2005-04-01T08:30 -  <note class="ENT" date="2005-04-01T08:30">
+	The CIL handling has blown up several times now with the old - 'flat-line" effect i.e. the status
+	informaiton is not updated. This is due to the Despatcher not proceeeding with the sending of the
+	reply - generally an ERROR class reply. It now looks like this occurs with the following sequence:-
+
+	<ul>
+	  <li> Despatcher     -&gt; handler.proxyError(data)</li>
+	  <li> Handler        -&gt; serverImpl.sendDone(data)</li>
+	  <li> JMSServerImpl  -&gt; connection.send(done)</li>
+	  <li> SlotConnection -&gt; send(done)</li>
+	</ul>
+
+	It looks like the call to SlotConnection.send() is blocked due to either:-
+	<ul>
+	  <li> Buffer is full (it is a single item buffer) - i.e. client has not emptied it.</li>
+	  <li> Client failed to call notify on emptying.</li>
+	</ul>
+
+      </note></li></font></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">RCSSubsystemConnectionFactory</td><td fgcolor="blue">2005-04-01T12:00</td><td fgcolor="blue">
+	    Changed the default size for a SlotConnection to be 5 rather than 1.
+	    This is hoped to avoid a full buffer even if there is something in it.
+	  </td></tr><tr><td fgcolor="blue">JMSMAprotocolServerImpl</td><td fgcolor="blue">2005-04-01T12:00</td><td fgcolor="blue">
+	    Modified the call to sendDone() to call iconnection.send(data, timeout)
+	    using the value of handler.getHandlingTime().
+	  </td></tr><tr><td fgcolor="blue">IConnection</td><td fgcolor="blue">2005-04-01T12:00</td><td fgcolor="blue">
+	    Added a new abstract method send(data, timeout) to allow the send operation
+	    to timeout. Currently only a receive can timeout.
+	  </td></tr><tr><td fgcolor="blue">SlotConnection</td><td fgcolor="blue">2005-04-01T12:00</td><td fgcolor="blue">
+	    Implemented the  new method send(data, timeout) to allow the send operation
+	    to timeout.
+	  </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>RCSSubsystemConnectionFactory</b><p/>ngat.rcs.comms</td><td><table><tr><td valign="top">2005-04-01T12:00</td><td>
+	    Changed the default size for a SlotConnection to be 5 rather than 1.
+	    This is hoped to avoid a full buffer even if there is something in it.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>JMSMAprotocolServerImpl</b><p/>ngat.net</td><td><table><tr><td valign="top">2005-04-01T12:00</td><td>
+	    Modified the call to sendDone() to call iconnection.send(data, timeout)
+	    using the value of handler.getHandlingTime().
+	  </td></tr></table></td></tr><tr><td valign="top"><b>IConnection</b><p/>ngat.net</td><td><table><tr><td valign="top">2005-04-01T12:00</td><td>
+	    Added a new abstract method send(data, timeout) to allow the send operation
+	    to timeout. Currently only a receive can timeout.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>SlotConnection</b><p/>ngat.net</td><td><table><tr><td valign="top">2005-04-01T12:00</td><td>
+	    Implemented the  new method send(data, timeout) to allow the send operation
+	    to timeout.
+	  </td></tr></table></td></tr></table></div>
+
+    \section{Event Messaging}
+
+    <description>
+      Events are propagated around the system between the SCM, TMM and SM. These include:-
+      
+      <ul>
+	<li> action events from the SM to initiate activity from the TMM.</li>
+	<li> environmental alerts from the SCM to SM to prompt reactive behaviour.</li>
+	<li> task events from the TMM to the SM to notify completion status.</li>
+	<li> other control events can be generated by external users and other modules as required.</li>
+      </ul>
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    EMM/General implementation</span><p/><description>
+	Implementation and testing of EMM.
+	</description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div>
+
+    \section{Instrument Support}
+
+    <description> 
+      The RCS must store details of the various Instrument Control Systems (ICS) and their
+      ranges of available and current configurations. Ths ICS are able to send commands to
+      the RCS for information and for forwarding (possibly modified) to the TCS in order to
+      allow for instrument-specific positioning adjustments. This Workflow is intended to
+      handle these issues.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_010</u> -    ISS/Instrument control actions</span><p/><description>
+	This workflow deals with issues relating to the selection and configuration of
+	instruments in Science,Planetarium and TO operations.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_012</u> -    ISS/Instrument adjustment of telescope</span><p/><description>
+	This workflow is to deal with issues relating to the instruments' adjustment of
+	the telescope via INST_ISS commands via the RCS to the TCS.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"><li><u>ENT</u>, 2005-03-23T13:33 -  <note class="ENT" date="2005-03-23T13:33">
+	At the Dev Mtg 22-03-2005 it was decided to add a response delay to the ISS_OFFSET_RADEC
+	command soas to ensure the telescope had stopped moving before the completion reply is
+	sent back to the calling instrument.
+      </note></li></font></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">ISS_CommandImpl</td><td fgcolor="blue">2005-03-23T13:30</td><td fgcolor="blue">A new parameter responseDelay is calculated when the class is instantiated using
+	    the overridable method calculateResponseDelay(). This by default returns 0 (zero). The 
+	    handleResponse() method has been doctored to include a sleep for this period after receiving the reply before
+	  sending on to the caller (ICS). There is some danger here in that the handleReply() method is called by
+	  the CCT created by the CommandImpl whereas the handleRequest() method was called by the SCT and is in a 
+	  timeout waitfor which is not currently updatable - i.e. it does not keep re-entering if the response
+	  has not yet been detected</td></tr><tr><td fgcolor="blue">ISS_OFFSET_RA_DECCommandImpl</td><td fgcolor="blue">2005-03-23T13:30</td><td fgcolor="blue">The method calculateResponseDelay() is overridden to return 10 secs.
+	  </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>ISS_CommandImpl</b><p/>ngat.rcs.iss</td><td><table><tr><td valign="top">2005-03-23T13:30</td><td>A new parameter responseDelay is calculated when the class is instantiated using
+	    the overridable method calculateResponseDelay(). This by default returns 0 (zero). The 
+	    handleResponse() method has been doctored to include a sleep for this period after receiving the reply before
+	  sending on to the caller (ICS). There is some danger here in that the handleReply() method is called by
+	  the CCT created by the CommandImpl whereas the handleRequest() method was called by the SCT and is in a 
+	  timeout waitfor which is not currently updatable - i.e. it does not keep re-entering if the response
+	  has not yet been detected</td></tr></table></td></tr><tr><td valign="top"><b>ISS_OFFSET_RA_DECCommandImpl</b><p/>ngat.rcs.iss</td><td><table><tr><td valign="top">2005-03-23T13:30</td><td>The method calculateResponseDelay() is overridden to return 10 secs.
+	  </td></tr></table></td></tr></table></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    ISS/FITS headers</span><p/><description>
+	Generation of FITS headers from TCS queries and from internal state.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">FITS_HeaderInfo</td><td fgcolor="blue">2005-09-28T15:32</td><td fgcolor="blue">
+	    A large number of new headers have been added to cover most of the data available
+	    via TCS SHOW commands. These are now grouped together into blocks related to the
+	    ngat.message.RCS_TCS.TCS_Status segment in which they reside. The card numbers
+	    are also grouped into decades. Some new MOON parameters are now available.
+	    The limits segment has not been included. The units parameters
+	    have mostly not yet been filled in.
+	  </td></tr><tr><td fgcolor="blue">ISS_GET_FITSCommandImpl</td><td fgcolor="blue">2005-09-28T15:32</td><td fgcolor="blue">
+	    The new FITS header cards are now inlcuded into the properties sent back to the
+	    ISS in the reply message.
+	  </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>FITS_HeaderInfo</b><p/>ngat.rcs.iss</td><td><table><tr><td valign="top">2005-09-28T15:32</td><td>
+	    A large number of new headers have been added to cover most of the data available
+	    via TCS SHOW commands. These are now grouped together into blocks related to the
+	    ngat.message.RCS_TCS.TCS_Status segment in which they reside. The card numbers
+	    are also grouped into decades. Some new MOON parameters are now available.
+	    The limits segment has not been included. The units parameters
+	    have mostly not yet been filled in.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>ISS_GET_FITSCommandImpl</b><p/>ngat.rcs.iss</td><td><table><tr><td valign="top">2005-09-28T15:32</td><td>
+	    The new FITS header cards are now inlcuded into the properties sent back to the
+	    ISS in the reply message.
+	  </td></tr></table></td></tr></table></div>
+
+    \section{Task Management}
+
+    <description>
+      The TMM is responsible for instigating actions on request from the SM. It consists of a hierarchy
+      of ManagerTasks reported to by lower level Executive tasks which carry out telescope and instrument
+      control actions. 
+      The following components are used:-
+      <dl>
+	<dt>TMMSequencer</dt>
+	<dd>handles requests from CA on MCA yield</dd>
+	<dt>TMMRecoveryRegistry</dt>
+	<dd>Centralized point for collecting task recovery information</dd>
+	<dt>TMMCOnfigRegistry</dt>
+	<dd>Centralized point for collecting task configuration</dd>
+      </dl>
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    TMM/Sequencer</span><p/><description>
+	The Sequencer handles requests from the CA when the controlling MCA yields after completing a job.
+	Here we cover the general protocol and interaction with the SM and CA.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    TMM/Recovery Registry</span><p/><description>
+	The recovery registry contains details in a simplified format to control the response of MTAs to
+	failure of their subservient MTAs and ETAs. The response can be customized to suit varying daily
+	handling of errors.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    TMM/Config Registry</span><p/><description>
+	The config registry contains details of configuration parameters used by any MTA or ETA which needs
+	to be set up from day to day to suit operational requirements.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    TMM/General Mode Control</span><p/><description>
+      Covers general issues relating to mode control agents.
+</description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div>
+
+    \section{Status Collation}
+
+    <description>
+      The SCM is responsible for collecting environmental status from external systems and for
+      filtering and applying rules to allow reactive input to the overall control model.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_005</u> -    SCM/Sensors</span><p/><description>
+	Sensors are used to store and present data from various collation mechanisms using a standard
+	inerface..
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">CCDSeeing</td><td fgcolor="blue">2005-03-23T12:32</td><td fgcolor="blue">Added a new temporary field lastSeeing to store the last value of the atmospheric.seeing
+	    parameter which was used to update this sensor. This is to be used by input devices to allow
+	    a form of prefiltering of the input data soas to disallow 'unbelievable' data.</td></tr><tr><td fgcolor="blue">ExposureTask</td><td fgcolor="blue">2005-03-23T12:32</td><td fgcolor="blue">Added new parameter max_seeing to record the maximum seeing we will accept
+	    as being valid as returned from the DPRT in the DP_ACK message. This is configured from the
+	    task.config as parameter max.usable.seeing under this task's id. If not set the default value supplied as
+	    the constant DEFAULT_MAX_SEEING is used. When a new seeing value is obtained from the DPRT this is compared
+	    to the max_seeing and if it is more, the value obtained from CCDSeeing.getLastSeeing() 
+	    is used and fed back into the CCDSeing sensor. - this is a temporary fix and really needs to be handled 
+	    by modification of the class used as the seeing predictor.
+	  </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>CCDSeeing</b><p/>ngat.rcs.scm.collation</td><td><table><tr><td valign="top">2005-03-23T12:32</td><td>Added a new temporary field lastSeeing to store the last value of the atmospheric.seeing
+	    parameter which was used to update this sensor. This is to be used by input devices to allow
+	    a form of prefiltering of the input data soas to disallow 'unbelievable' data.</td></tr></table></td></tr><tr><td valign="top"><b>ExposureTask</b><p/>ngat.rcs.tmm.executive</td><td><table><tr><td valign="top">2005-03-23T12:32</td><td>Added new parameter max_seeing to record the maximum seeing we will accept
+	    as being valid as returned from the DPRT in the DP_ACK message. This is configured from the
+	    task.config as parameter max.usable.seeing under this task's id. If not set the default value supplied as
+	    the constant DEFAULT_MAX_SEEING is used. When a new seeing value is obtained from the DPRT this is compared
+	    to the max_seeing and if it is more, the value obtained from CCDSeeing.getLastSeeing() 
+	    is used and fed back into the CCDSeing sensor. - this is a temporary fix and really needs to be handled 
+	    by modification of the class used as the seeing predictor.
+	  </td></tr></table></td></tr></table></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_007</u> -    SCM/Filters</span><p/><description>
+	Filters are used to smooth the output gathered from sensors. There are a number of different
+	classes of filter.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"><li><u>TBD</u>, 2005-03-21T16:00 -  <note class="TBD" date="2005-03-21T16:00">Need to sort out the rain filter for LT which shows reverse state 
+	from what it actually is
+      </note></li><li><u>TBD</u>, 2005-03-22T07:52 -  <note class="TBD" date="2005-03-22T07:52"> 
+	There is a general problem with modal and steady filters we cannot set these up using a time period 
+	<p/>i.e. we want to be able to say something like 
+	  - return the steady (good) value over 20 minutes OR display a default (bad) value   
+      </note></li></font></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_008</u> -    SCM/Rules</span><p/><description>
+	The rulebase contains details of how the output from filtered sensor readings is to be used to trigger
+	events to be propageted to the SM and TMM.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_011</u> -    SCM/Monitoring</span><p/><description>
+	General monitoring issues.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"><li><u>ENT</u>, 2005-03-29T10:45 -  <note class="ENT" date="2005-03-29T10:45">
+	There is a general problem with the LT in that due to the non-wrapped pipes for the ratcam, the rotator
+	is run in (ROT MOUNT 0 + ROT FLOAT) mode. This has resulted in a 'sticking' of the rotator during exposures.
+	The TrackingMonitor class is an experimental stand-alone class designed to receive status updates and
+	make decisions based on this data about the state of the rotator. This monitor requires to be enabled only
+	when an exposure is underway - i.e. we do not want to be firing off aborts during slews etc.
+      </note></li><li><u>OBS</u>, 2005-03-30T09:02 -  <note class="OBS" date="2005-03-30T09:02">
+	Tested rotator exercise mode last night on LT. The rotator was unable to move to the requested angle
+	of 20 degrees and caused timeouts on both the SLEW and ROT MOU commands - these were retried and failed
+	again - rot-ex was disabled. The rotator tracking detection however appears to work OK - the rotator switched
+	to moving state during observations and this was picked up and X_ROT_TRACK_LOST event fired at the correct time
+	- note that it continues to be fired every update - not required but normally we would have aborted the current
+	Observation task by then - there may be a problem however if this gets fired off before the abort has actually 
+	started -needs an inhibit on the event after firing - i.e. we only ever need one tracking lost event to fire 
+	during an observation.
+      </note></li><li><u>ENT</u>, 2005-09-28T16:55 -  <note class="ENT" date="2005-09-28T16:55">
+	The autoguider is to be deployed shortly for testing. These is a need to monitor the autiguider LOCK state
+	while it is meant to be guiding a target. A new class AutoguiderMonitor related closely to the current
+	TrackingMonitor is to be created to handle lost locking of AG. This monitor requires to be enabled only
+	when an exposure is underway - i.e. we do not want to be firing off aborts during slews etc.
+      </note></li><li><u>ENT</u>, 2005-09-28T16:55 -  <note class="ENT" date="2005-09-28T16:55">
+	There may be some use in tying the 2 standalone monitors for Autoguider and Tracking into a more
+	generally configurable class which can be configured in SCM - new base class would be required
+	as well as appropriate and general enough configuration. Also a new mapping would be provided
+	via SCM or Monitors classes to access these.
+      </note></li></font></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">ExposureTask</td><td fgcolor="blue">2005-03-29T10:45</td><td fgcolor="blue"> 
+	  The TrackingMonitor is already switched on at the start of the exposure i.e. during the onInit() call
+	  to .TrackingMonitor.reset().
+	  Now calls TrackingMonitor.setEnableAlerts(false) after the exposure has completed - i.e. onDisposal
+	  of this task.
+	</td></tr><tr><td fgcolor="blue">RCSController</td><td fgcolor="blue">2005-03-29T10:45</td><td fgcolor="blue"> 
+	  New config variable max.tracking.lost.time default (10 sec) defines the time in millis for which tracking can 
+	  be lost before the TrackingMonitor signals an alert. 
+	</td></tr><tr><td fgcolor="blue">TrackingMonitor</td><td fgcolor="blue">2005-03-29T10:45</td><td fgcolor="blue"> 
+	  New variables rotTrackIsLost rotTrackLostAt rotTrackLostFor alertsEnabled to determine when and
+	  if the rotator lost tracking during an exposure and whether to signal an alert. 
+	  New method enableAlerts() is called on reset to allow the posting of X_ROT_TRACK_LOST event
+	  when the rotator is seen to be not tracking for greater than maxTrackLostTime. 
+	  Some debug message code is generate by this class to indicate tracking status etc.
+	</td></tr><tr><td fgcolor="blue">TrackingMonitor</td><td fgcolor="blue">2005-03-30T09:57</td><td fgcolor="blue"> 
+	    Modified soas to disable alerts after firing off an alert event. The alerts will then only be re-enabled
+	    by a reset when a new exposure is started.
+	  </td></tr><tr><td fgcolor="blue">AutoguiderMonitor</td><td fgcolor="blue">2005-09-28T16:55</td><td fgcolor="blue"> 
+	    New class to handle lost guiding of AG. This class is enabled by calls to reset()
+	  </td></tr><tr><td fgcolor="blue">ExposureTask</td><td fgcolor="blue">2005-09-28T16:55</td><td fgcolor="blue"> 
+	    Added call to AutoguiderMonitor.reset() during onInit().
+	    Calls AutoguiderMonitor.setEnableAlerts(false) after the exposure has completed - 
+	    i.e. onDisposal() of this task.
+	  </td></tr><tr><td fgcolor="blue">RCSController</td><td fgcolor="blue">2005-09-28T16:55</td><td fgcolor="blue"> 
+	    New config variable max.guiding.lost.time default (10 sec) defines the time in millis for which guiding can 
+	    be lost before the AutoguiderMonitor signals an alert. 
+	  </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>ExposureTask</b><p/>ngat.rcs.tmm.executive</td><td><table><tr><td valign="top">2005-03-29T10:45</td><td> 
+	  The TrackingMonitor is already switched on at the start of the exposure i.e. during the onInit() call
+	  to .TrackingMonitor.reset().
+	  Now calls TrackingMonitor.setEnableAlerts(false) after the exposure has completed - i.e. onDisposal
+	  of this task.
+	</td></tr><tr><td valign="top">2005-09-28T16:55</td><td> 
+	    Added call to AutoguiderMonitor.reset() during onInit().
+	    Calls AutoguiderMonitor.setEnableAlerts(false) after the exposure has completed - 
+	    i.e. onDisposal() of this task.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>RCSController</b><p/>ngat.rcs</td><td><table><tr><td valign="top">2005-03-29T10:45</td><td> 
+	  New config variable max.tracking.lost.time default (10 sec) defines the time in millis for which tracking can 
+	  be lost before the TrackingMonitor signals an alert. 
+	</td></tr><tr><td valign="top">2005-09-28T16:55</td><td> 
+	    New config variable max.guiding.lost.time default (10 sec) defines the time in millis for which guiding can 
+	    be lost before the AutoguiderMonitor signals an alert. 
+	  </td></tr></table></td></tr><tr><td valign="top"><b>TrackingMonitor</b><p/>ngat.rcs.scm.detection</td><td><table><tr><td valign="top">2005-03-29T10:45</td><td> 
+	  New variables rotTrackIsLost rotTrackLostAt rotTrackLostFor alertsEnabled to determine when and
+	  if the rotator lost tracking during an exposure and whether to signal an alert. 
+	  New method enableAlerts() is called on reset to allow the posting of X_ROT_TRACK_LOST event
+	  when the rotator is seen to be not tracking for greater than maxTrackLostTime. 
+	  Some debug message code is generate by this class to indicate tracking status etc.
+	</td></tr><tr><td valign="top">2005-03-30T09:57</td><td> 
+	    Modified soas to disable alerts after firing off an alert event. The alerts will then only be re-enabled
+	    by a reset when a new exposure is started.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>AutoguiderMonitor</b><p/>ngat.rcs.scm.detection</td><td><table><tr><td valign="top">2005-09-28T16:55</td><td> 
+	    New class to handle lost guiding of AG. This class is enabled by calls to reset()
+	  </td></tr></table></td></tr></table></div>
+
+    \section{State Decision Model}
+
+    <description>
+      The State Decision Model (SM) provides a link between the reactive inputs and the task actions
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_016</u> -    STATEMODEL/Changes to SM</span><p/><description>
+	This workflow covers the SM changes and upgrades
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">RCSControlAgent</td><td fgcolor="blue">2005-04-05T12:47</td><td fgcolor="blue">
+	    A new action MAKE_SAFE is added with associated actionImplementor safeAction().
+	    This causes a MakeSafeTask to be instantiated and fires off the SAFE_DONE or SAFE_FAILED
+	    events on completion.
+	  </td></tr><tr><td fgcolor="blue">MakeSafeTask</td><td fgcolor="blue">2005-04-05T12:47</td><td fgcolor="blue">
+	    New task to implement the SAFE action. This fires off TRACK OF on the 3 mech axes in succession
+	    with 5 second delays. Followed by PARK at 25 secs. If any task fails it is skipped except for PARK
+	    which has 2-3 goes.
+	  </td></tr><tr><td fgcolor="blue"/><td fgcolor="blue">2005-04-05T12:47</td><td fgcolor="blue">
+	    Added new variable SAFE_OP to record the status of the MAKE_SAFE action.	    
+	</td></tr><tr><td fgcolor="blue"/><td fgcolor="blue">2005-04-05T12:47</td><td fgcolor="blue">
+	    New transient state TRANS_SAFE entered after ABORT_NIGHT_OPS with execution of the MAKE_SAFE
+	    action. SAFE_DONE or SAFE_FAILED move the SM onto INHIB_OPS. 
+	</td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>RCSControlAgent</b><p/>ngat.rcs.tmm.manager</td><td><table><tr><td valign="top">2005-04-05T12:47</td><td>
+	    A new action MAKE_SAFE is added with associated actionImplementor safeAction().
+	    This causes a MakeSafeTask to be instantiated and fires off the SAFE_DONE or SAFE_FAILED
+	    events on completion.
+	  </td></tr></table></td></tr><tr><td valign="top"><b>MakeSafeTask</b><p/>ngat.rcs.tmm.manager</td><td><table><tr><td valign="top">2005-04-05T12:47</td><td>
+	    New task to implement the SAFE action. This fires off TRACK OF on the 3 mech axes in succession
+	    with 5 second delays. Followed by PARK at 25 secs. If any task fails it is skipped except for PARK
+	    which has 2-3 goes.
+	  </td></tr></table></td></tr></table></div>
+
+    \section{Control and monitoring}
+
+    <description>
+      This project is concerned with interactions between the RCS and external GUI clients - both as controllers
+      and as receivers of telemetry.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    CONTROL/GUI control</span><p/><description>
+	Covers the commands sent by the GUI and their implementation at the RCS.
+	</description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u/> -    CONTROL/Monitoring</span><p/><description>
+	Covers the data sent by the RCS to the GUI or other data handlers.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div>
+
+    \section{Configuration}
+
+    <description>
+      The RCS has a large number of configuration files - this project aims to keep track of modifications
+      and upgrades to these.
+    </description>
+
+    \section{Logging}
+
+    <description>
+      This project aims to keep track of any changes made to the RCS logging facilities.
+    </description><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_004</u> -    LOGGING/MCA Specific logging</span><p/><description>      
+	This workflow is aimed at logging for the various control agents.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_006</u> -    LOGGING/Task logging</span><p/><description>
+	This workflow is aimed at the task (TMM) module logging.
+      </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"/></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"/></div><p/><hr color="blue"/><br/><span style="display:block;font-size:16pt;font-color:blue;background:#ccff22"><u>WF_014</u> -    LOGGING/Remote logging</span><p/><description>
+	This workflow is associated with remote logging - i.e. from a GUI or external client.
+     </description><p/><div style="display:block;position:relative;left:20;background:#ff22cc">
+      Notes associated with this workflow.
+      <ul><font color="blue"/></ul></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+      Changelog for this workflow.
+      <table border="1" bgcolor="lightgrey"><tr><td fgcolor="blue">GRAB_LOGImpl</td><td fgcolor="blue">2005-03-30T14:08</td><td fgcolor="blue">
+	    Changed this class soas to add a new TelemetryLogHandler to the named logger. This should send
+	    back each valid log message as a string formatted in a specific way (defaults to BasicLogFormatter).
+	  </td></tr><tr><td fgcolor="blue">TelemetryLogHandler</td><td fgcolor="blue">2005-03-30T14:08</td><td fgcolor="blue">
+	      New LogHandler to push LogRecords to the Telemetry sender. Just publishes formatted log records
+	      as strings with appropriate formatting.
+	    </td></tr></table></div><p/><div style="display:block;position:relative;left:20px;width:90%;background:#cc22cc">
+     New grouped stuff by class
+     <table bgcolor="#ccddee" frame="hsides" border="1"><tr><td valign="top"><b>GRAB_LOGImpl</b><p/>ngat.rcs.control</td><td><table><tr><td valign="top">2005-03-30T14:08</td><td>
+	    Changed this class soas to add a new TelemetryLogHandler to the named logger. This should send
+	    back each valid log message as a string formatted in a specific way (defaults to BasicLogFormatter).
+	  </td></tr></table></td></tr><tr><td valign="top"><b>TelemetryLogHandler</b><p/>ngat.rcs.control</td><td><table><tr><td valign="top">2005-03-30T14:08</td><td>
+	      New LogHandler to push LogRecords to the Telemetry sender. Just publishes formatted log records
+	      as strings with appropriate formatting.
+	    </td></tr></table></td></tr></table></div>

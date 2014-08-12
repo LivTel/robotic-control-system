@@ -1,0 +1,12 @@
+#!/bin/csh
+
+foreach file (*)
+        echo 
+	echo "Checking $file "
+	echo "-----------------------"
+	echo
+
+	diff $file ../../devtest/config/$file
+
+end
+

@@ -1,0 +1,349 @@
+/**
+ * 
+ */
+package ngat.rcs.sciops;
+
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import ngat.phase2.IAutoguiderConfig;
+import ngat.phase2.IInstrumentConfigSelector;
+import ngat.phase2.ISequenceComponent;
+import ngat.phase2.XAutoguiderConfig;
+import ngat.phase2.XBranchComponent;
+import ngat.phase2.XDark;
+import ngat.phase2.XDetectorConfig;
+import ngat.phase2.XDualBeamSpectrographInstrumentConfig;
+import ngat.phase2.XExecutiveComponent;
+import ngat.phase2.XExtraSolarTarget;
+import ngat.phase2.XFilterDef;
+import ngat.phase2.XFilterSpec;
+import ngat.phase2.XGroup;
+import ngat.phase2.XImagerInstrumentConfig;
+import ngat.phase2.XInstrumentConfigSelector;
+import ngat.phase2.XInstrumentSequenceComponent;
+import ngat.phase2.XIteratorComponent;
+import ngat.phase2.XIteratorRepeatCountCondition;
+import ngat.phase2.XLampDef;
+import ngat.phase2.XLampFlat;
+import ngat.phase2.XMultipleExposure;
+import ngat.phase2.XProposal;
+import ngat.phase2.XTag;
+import ngat.phase2.XTargetSelector;
+import ngat.phase2.XUser;
+import ngat.sms.AsynchronousScheduleResponseHandler;
+import ngat.sms.AsynchronousScheduler;
+import ngat.sms.ExecutionUpdateManager;
+import ngat.sms.ExecutionUpdater;
+import ngat.sms.GroupItem;
+import ngat.sms.ScheduleDespatcher;
+import ngat.sms.ScheduleItem;
+import ngat.sms.test.TestScheduleItem;
+
+/**
+ * @author eng
+ * 
+ */
+public class TestScheduler extends UnicastRemoteObject implements ScheduleDespatcher, AsynchronousScheduler {
+
+	static int ng = 0;
+
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+
+	private String rhost;
+
+	/**
+	 * @throws RemoteException
+	 */
+	public TestScheduler(String rhost) throws RemoteException {
+		super();
+		this.rhost = rhost;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see ngat.sms.ScheduleDespatcher#nextScheduledJob()
+	 */
+	public ScheduleItem nextScheduledJob() throws RemoteException {
+
+		ng++;
+		System.err.println("TestScheduler: Schedule request: " + ng);
+
+		String date = sdf.format(new Date());
+
+		XGroup group = new XGroup();
+		group.setName("TG-" + date);
+
+		// Create a new Sequence.
+		XIteratorRepeatCountCondition multiple = new XIteratorRepeatCountCondition(1 + (int) (Math.random() * 3));
+		XIteratorComponent root = new XIteratorComponent("Root", multiple);
+
+		// (1) Make up a star
+		XExtraSolarTarget star = new XExtraSolarTarget("TestStar-" + ng);
+		star.setRa(Math.random() * Math.PI * 2.0);
+		star.setDec((Math.random() - 0.5) * Math.PI);
+
+		// Setup a selector for the star and a component wrapper
+		XTargetSelector targetSelector = new XTargetSelector(star);
+		ISequenceComponent targetSelectComponent = new XExecutiveComponent("Targetting", targetSelector);
+
+		// Add the selector to the root iterator
+		root.addElement(targetSelectComponent);
+
+		// (2) Make up a config.
+		XImagerInstrumentConfig ratcam = new XImagerInstrumentConfig("TestRatcam-" + ng);
+		ratcam.setInstrumentName("RATCAM");
+		XFilterSpec filterSpec = new XFilterSpec();
+		filterSpec.addFilter(new XFilterDef("SDSS-R"));
+		filterSpec.addFilter(new XFilterDef("clear"));
+		ratcam.setFilterSpec(filterSpec);
+		XDetectorConfig detector = new XDetectorConfig();
+		detector.setXBin(2);
+		detector.setYBin(2);
+		ratcam.setDetectorConfig(detector);
+
+		// Setup a selector for the config and a component wrapper
+		IInstrumentConfigSelector instSelector = new XInstrumentConfigSelector(ratcam);
+		ISequenceComponent instSelectComponent = new XExecutiveComponent("Instrument", instSelector);
+
+		// Add the selector to the root iterator
+		root.addElement(instSelectComponent);
+
+		// Switch on the Autoguider
+		XAutoguiderConfig agon = new XAutoguiderConfig(IAutoguiderConfig.ON, "AutoOnMandatory");
+		ISequenceComponent autoOnComp = new XExecutiveComponent("AutoOn", agon);
+		root.addElement(autoOnComp);
+
+		// (3) Make up an exposure
+		XMultipleExposure mult = new XMultipleExposure(5.0 + Math.random() * 60000.0, 1 + (int) (Math.random() * 3),
+				false);
+
+		// Setup a component wrapper
+		ISequenceComponent exposureComponent = new XExecutiveComponent("Exposure", mult);
+
+		// Add the selector to the root iterator
+		root.addElement(exposureComponent);
+
+		// (4) Make up a Frodo sequence.
+
+		// (4a) Make a frodo red branch
+		//XIteratorComponent redBranch = new XIteratorComponent("RED-BRANCH", new XIteratorRepeatCountCondition(1));
+
+		XInstrumentSequenceComponent redBranch = new XInstrumentSequenceComponent("RED_BRANCH", "FRODO_RED", new XIteratorRepeatCountCondition(1));
+		
+		XDualBeamSpectrographInstrumentConfig red1 = new XDualBeamSpectrographInstrumentConfig("CfgRed-1");	
+		red1.setInstrumentName("FRODO_RED");
+		red1.setResolution(XDualBeamSpectrographInstrumentConfig.HIGH_RESOLUTION);
+
+		XDetectorConfig redDet = new XDetectorConfig();
+		redDet.setXBin(1);
+		redDet.setYBin(8);
+		red1.setDetectorConfig(redDet);
+		IInstrumentConfigSelector red1Selector = new XInstrumentConfigSelector(red1);
+		ISequenceComponent red1SelectComponent = new XExecutiveComponent("Instrument", red1Selector);
+
+		redBranch.addElement(red1SelectComponent);
+
+		XMultipleExposure redex1 = new XMultipleExposure(20000.0, 2, false);
+		ISequenceComponent redex1Component = new XExecutiveComponent("RedEx1of2", redex1);
+
+		redBranch.addElement(redex1Component);
+
+		XDualBeamSpectrographInstrumentConfig red2 = new XDualBeamSpectrographInstrumentConfig("CfgRed-2");
+		red2.setInstrumentName("FRODO_RED");
+		red2.setResolution(XDualBeamSpectrographInstrumentConfig.LOW_RESOLUTION);
+
+		XDetectorConfig red2Det = new XDetectorConfig();
+		red2Det.setXBin(1);
+		red2Det.setYBin(8);
+		red2.setDetectorConfig(red2Det);
+		IInstrumentConfigSelector red2Selector = new XInstrumentConfigSelector(red2);
+		ISequenceComponent red2SelectComponent = new XExecutiveComponent("Instrument", red2Selector);
+
+		redBranch.addElement(red2SelectComponent);
+
+		// Calib-lampflat
+
+		XLampFlat lampflat = new XLampFlat("Lamp-XeNe");
+		lampflat.setLamp(new XLampDef("Xe-Ne"));
+
+		ISequenceComponent lampComponent = new XExecutiveComponent("Lamp", lampflat);
+
+		redBranch.addElement(lampComponent);
+
+		XMultipleExposure redex2 = new XMultipleExposure(20000.0, 2, false);
+		ISequenceComponent redex2Component = new XExecutiveComponent("RedEx2of2", redex2);
+
+		redBranch.addElement(redex2Component);
+
+		// (4b) Make a frodo blue branch
+		XInstrumentSequenceComponent blueBranch = new XInstrumentSequenceComponent("BLUE-BRANCH", "FRODO_BLUE", new XIteratorRepeatCountCondition(1));
+
+		XDualBeamSpectrographInstrumentConfig blue1 = new XDualBeamSpectrographInstrumentConfig("CfgBlue-1");
+		blue1.setInstrumentName("FRODO_BLUE");
+		blue1.setResolution(XDualBeamSpectrographInstrumentConfig.HIGH_RESOLUTION);
+
+		XDetectorConfig blueDet = new XDetectorConfig();
+		blueDet.setXBin(1);
+		blueDet.setYBin(8);
+		blue1.setDetectorConfig(blueDet);
+		IInstrumentConfigSelector blue1Selector = new XInstrumentConfigSelector(blue1);
+		ISequenceComponent blue1SelectComponent = new XExecutiveComponent("Instrument", blue1Selector);
+
+		blueBranch.addElement(blue1SelectComponent);
+
+		XMultipleExposure blueex1 = new XMultipleExposure(160000.0, 1, false);
+		ISequenceComponent blueex1Component = new XExecutiveComponent("BlueEx1of1", blueex1);
+
+		blueBranch.addElement(blueex1Component);
+
+		// Calib-DARK
+
+		XDark dark = new XDark("Dark-Blue");
+		dark.setExposureTime(10000.0);
+
+		ISequenceComponent darkComponent = new XExecutiveComponent("Dark-Blue", dark);
+
+		blueBranch.addElement(darkComponent);
+
+		// the full FRODO branch
+		XBranchComponent frodoSequence = new XBranchComponent("FRODO", redBranch, blueBranch);
+
+		// Add the FRODO sequence to the root iterator
+		root.addElement(frodoSequence);
+
+		// Switch off the Autoguider
+		XAutoguiderConfig agoff = new XAutoguiderConfig(IAutoguiderConfig.OFF, "AutoOff");
+		ISequenceComponent autoOffComp = new XExecutiveComponent("AutoOff", agoff);
+		root.addElement(autoOffComp);
+
+		GroupItem groupItem = new GroupItem(group, root);
+		XTag tag = new XTag();
+		tag.setName("T1");
+		XUser user = new XUser("bert.smith");
+		XProposal proposal = new XProposal("TL09A001");
+		
+		groupItem.setTag(tag);
+		groupItem.setUser(user);
+		groupItem.setProposal(proposal);
+		 
+		groupItem.setHId(666);
+
+		// lookup XMGr it may be on another host esp during testing
+		ExecutionUpdater xm = null;
+		try {
+			ExecutionUpdateManager xmgr = (ExecutionUpdateManager) Naming.lookup("rmi://" + rhost
+					+ "/ExecutionUpdateManager");
+
+			xm = xmgr.getExecutionUpdater(group.getID());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		// The XM may be null if we couldn't find the manager...
+		TestScheduleItem schedule = new TestScheduleItem(groupItem, xm);
+
+		return schedule;
+
+	}
+
+	/** Return a schedule after a delay. */
+	public void requestSchedule(AsynchronousScheduleResponseHandler asrh) throws RemoteException {
+
+		// spin off a numbered thread and let it reply after a while
+
+		AsynchResponder ar = new AsynchResponder(asrh);
+		(new Thread(ar)).start();
+
+	}
+
+	private class AsynchResponder implements Runnable {
+
+		AsynchronousScheduleResponseHandler asrh;
+
+		private AsynchResponder(AsynchronousScheduleResponseHandler asrh) {
+			this.asrh = asrh;
+		}
+
+		public void run() {
+
+			ScheduleItem sched = null;
+
+			try {
+				System.err.println("TS:: Calling nextSchedJob() for handler: " + asrh);
+				sched = nextScheduledJob();
+				System.err.println("TS:: Schedule done");
+			} catch (Exception e) {
+				System.err.println("TS:: Error obtaining schedule: " + e);
+				e.printStackTrace();
+				try {
+					String message = "Unable to generate schedule: " + e;
+					System.err.println("TS:: Sending error message to handler: [" + message + "]");
+					asrh.asynchronousScheduleFailure(5566, message);
+				} catch (Exception e2) {
+					System.err.println("TS:: Unable to send error message to handler: " + e2);
+					e2.printStackTrace();
+				}
+				return;
+			}
+
+			// ok wait a while and send reply.....
+			try {
+				long delay = 20000L + (long) (10000.0 * Math.random());
+				System.err.println("TS::I shall be delaying for: " + delay + " ms before replying");
+				try {
+					asrh.asynchronousScheduleProgress("I'm on the case and will return a schedule to you in " + delay
+							+ " ms, please be patient");
+				} catch (Exception ee) {
+					System.err.println("TS:: Unable to send progress message to handler: " + ee);
+				}
+				Thread.sleep(delay);
+			} catch (InterruptedException ix) {
+			}
+
+			try {
+				System.err.println("TS:: " + sdf.format(new Date()) + "Sending schedule reply to handler: " + asrh);
+				asrh.asynchronousScheduleResponse(sched);
+			} catch (Exception e3) {
+				System.err.println("TS:: Unable to send schedule reply to handler: " + e3);
+				e3.printStackTrace();
+			}
+		}
+
+	}
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+
+		try {
+
+			String rhost = args[0];
+
+			TestScheduler test = new TestScheduler(rhost);
+
+			Naming.rebind("rmi://localhost/ScheduleDespatcher", test);
+			System.err.println("TestScheduler:: Bound as despatcher...");
+
+			Naming.rebind("rmi://localhost/AsynchScheduler", test);
+			System.err.println("TestScheduler:: Bound as asynch scheduler...");
+
+			while (true) {
+				try {
+					Thread.sleep(60000L);
+				} catch (InterruptedException ix) {
+				}
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+}

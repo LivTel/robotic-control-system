@@ -1,0 +1,89 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.astrometry.*;
+import ngat.util.*;
+
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.lang.reflect.*;
+
+public class CalibrationDayModalControlAgent extends Calibration_Ops_Task {
+
+    protected static final String CLASS = "CalibDayMCA";
+
+    protected static CalibrationDayModalControlAgent instance;
+    
+    public CalibrationDayModalControlAgent(String name, TaskManager manager) {
+	super(name, manager);
+	plannedTasks = new TreeMap();	
+    }
+
+    /** Creates the initial instance of the ModalTask.
+     */
+    public void initialize(ModalTask mt) {  	
+	instance = (CalibrationDayModalControlAgent)mt;
+	adf.setTimeZone(RCS_Controller.UTC);
+    }
+
+    /** Returns a reference to the singleton instance.*/
+    public static ModalTask getInstance() {
+	return instance;
+    }
+
+    /** Overridden to carry out specific work after the init() method is called.
+     * Sets a number of FITS headers and subscribes to any required events.*/
+    public void onInit() {
+	super.onInit();
+	opsLog.log(1, "Starting Calibration-(DAY)-Operations Mode.");
+    }
+    
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Calibration-(DAY)-Operations Mode.");
+    }
+
+}

@@ -1,0 +1,934 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+package ngat.rcs.science;
+
+import ngat.rcs.*;
+import ngat.rcs.telemetry.DefaultGroupOperationsMonitor;
+import ngat.rcs.telemetry.GroupOperationsMonitor;
+import ngat.rcs.tmm.Task;
+import ngat.rcs.tmm.TaskList;
+import ngat.rcs.tmm.TaskManager;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.sciops.TargetTranslator;
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.tocs.*;
+import ngat.rcs.calib.*;
+import ngat.sms.GroupItem;
+
+import ngat.net.*;
+import ngat.fits.*;
+import ngat.phase2.*;
+import ngat.instrument.*;
+import ngat.phase2.nonpersist.*;
+import ngat.astrometry.*;
+import ngat.message.RCS_TCS.*;
+
+import java.util.*;
+import java.text.*;
+
+/**
+ * This Task creates a series of TCS and ICS Tasks to carry out the
+ * configuration and slewing of the Telescope and setting up of the relevant
+ * instruments.
+ * 
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: Group_Task.java,v 1.9 2008/11/21 09:40:08 eng Exp eng $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/science/RCS/Group_Task.java,v $
+ * </dl>
+ * 
+ * @author $Author: eng $
+ * @version $Revision: 1.9 $
+ */
+public class Group_Task extends ParallelTaskImpl {
+
+	public static final double IOFF = Math.toRadians(70.0);
+
+	/** ERROR_BASE for this Task type. */
+	public static final int ERROR_BASE = 1600;
+
+	public static final int MISSING_GROUP_ERROR = 601601;
+
+	public static final int SEQUENCE_FAILED_ERROR = 601602;
+
+	/** Error when we cant get a rotator tracking solution. */
+	public static final int ROTATOR_TRACKING_SOLUTION_ERROR = 601603;
+
+	/** Delay after slew before starting first exposure. */
+	public static final long FIRST_EXPOSURE_DELAY_TIME = 30000L;
+
+	/**
+	 * Smallest difference between offsets from same target for which we bother
+	 * to slew.
+	 */
+	public static final double SMALLEST_OFFSET_DISTANCE = 1.0;
+
+	/** Reference to the Group of Observations to be performed. */
+	protected Group group;
+
+	private GroupItem groupItem;
+	
+	protected long firstExposureSettlingTime;
+
+	/** True if Cardinal Pointing is in force. */
+	protected boolean cardinalPointing = false;
+
+	private CardinalPointingCalculator cpc;
+
+	/** Iterator over observation sequence list. */
+	private Iterator iobseq;
+
+	/** Observation sequence count. */
+	private volatile int countObs = 0;
+
+	/** Currently in-use CP angle. */
+	private volatile double lastCardinalPointingAngle;
+
+	/** The currently executing observation. */
+	private Observation lastObs = null;
+
+	/** Number of distinctly defined observations to perform. */
+	int nobs;
+
+	/** Number of observation sequences to perform. */
+	int nseq;
+
+	DefaultGroupOperationsMonitor gom;
+	
+	/**
+	 * Create an Group_Task using the supplied Group and settings.
+	 * 
+	 * @param group
+	 *            The Group of Observations to perform.
+	 * @param name
+	 *            The unique name/id for this task.
+	 * @param manager
+	 *            The Task's manager.
+	 */
+	public Group_Task(String name, TaskManager manager, Group group, GroupItem groupItem) {
+		super(name, manager);
+		this.group = group;
+		this.groupItem = groupItem;
+		ISite site = RCS_Controller.controller.getSite();
+		cpc = new BasicCardinalPointingCalculator(site);
+		gom = RCS_Controller.controller.getGroupOperationsMonitor();
+	}
+
+	/**
+	 * Handle failure of subtask.
+	 * 
+	 */
+	public void onSubTaskFailed(Task task) {
+		super.onSubTaskFailed(task);
+
+		switch (task.getErrorIndicator().getErrorCode()) {
+		case Observation_Sequence_Task.CONFIG_ERROR:
+		case Observation_Sequence_Task.TELESCOPE_ERROR:
+			// Invariably fatal. - stop the telescope if its moving.
+			failed(SEQUENCE_FAILED_ERROR, "Observation Sequence failed due to: "
+					+ task.getErrorIndicator().getErrorString());
+			break;
+		default:
+			failed(task.getErrorIndicator().getErrorCode(), "Observation Sequence failed due: "
+					+ task.getErrorIndicator().getErrorString());
+		}
+
+	}
+
+	public void onSubTaskAborted(Task task) {
+		super.onSubTaskAborted(task);
+	}
+
+	public void onSubTaskDone(Task task) {
+		super.onSubTaskDone(task);
+
+		if (task instanceof Observation_Sequence_Task) {
+
+			Observation_Sequence_Task currentObservationSequence = createNextObservationSequenceTask(false, 0L);
+
+			// got one - stick it on the tasklist
+			if (currentObservationSequence != null)
+				taskList.addTask(currentObservationSequence);
+
+		}
+
+	}
+
+	public void onAborting() {
+		super.onAborting();
+
+		if (config.getProperty("abort.stop.axes") == null) {
+			opsLog.log(1, "Aborting Group: Attempting to Track off axes");
+			taskList.addTask(new Track_Task(name + "/EM_TRK_OFF_AZ", this, TRACK.AZIMUTH, TRACK.OFF));
+			taskList.addTask(new Track_Task(name + "/EM_TRK_OFF_ALT", this, TRACK.ALTITUDE, TRACK.OFF));
+			taskList.addTask(new Track_Task(name + "/EM_TRK_OFF_ROT", this, TRACK.ROTATOR, TRACK.OFF));
+		} else {
+			opsLog.log(1, "Aborting Group: Attempting to stop axes");
+			StopTask stopAzTask = new StopTask(name + "/EM_STOPAZ", this, STOP.AZIMUTH);
+			taskList.addTask(stopAzTask);
+			StopTask stopAltTask = new StopTask(name + "/EM_STOPALT", this, STOP.ALTITUDE);
+			taskList.addTask(stopAltTask);
+			StopTask stopRotTask = new StopTask(name + "/EM_STOPROT", this, STOP.ROTATOR);
+			taskList.addTask(stopRotTask);
+		}
+		
+		IExecutionFailureContext error = new XBasicExecutionFailureContext(abortCode, abortMessage);
+		gom.notifyListenersGroupCompleted(groupItem, error);
+	}
+
+	public void onDisposal() {
+		super.onDisposal();
+		
+	}
+
+	public void onCompletion() {
+		super.onCompletion();
+		gom.notifyListenersGroupCompleted(groupItem, null);
+	}
+
+	public void onFailure() {	
+		super.onFailure();
+		int errCode = (errorIndicator != null ? errorIndicator.getErrorCode():-1);
+		String errMsg  = (errorIndicator != null ? errorIndicator.getErrorString():"UNKNOWN");
+		IExecutionFailureContext error = new XBasicExecutionFailureContext(errCode, errMsg);
+		gom.notifyListenersGroupCompleted(groupItem, error);
+	}
+
+	public void preInit() {
+		super.preInit();
+
+		firstExposureSettlingTime = config.getLongValue("settling.time", FIRST_EXPOSURE_DELAY_TIME);
+		cardinalPointing = (config.getProperty("cardinal.pointing", "false")).equals("true");
+
+	}
+
+	/** Overridden to carry out specific work after the init() method is called. */
+	public void onInit() {
+
+		String info = "";
+
+		if (group instanceof MonitorGroup) {
+
+			long now = System.currentTimeMillis();
+
+			MonitorGroup mgroup = (MonitorGroup) group;
+
+			long startDate = mgroup.getStartDate();
+			long period = mgroup.getPeriod();
+			float floatFraction = mgroup.getFloatFraction();
+			long window = (long) ((double) floatFraction * (double) period);
+
+			double fPeriod = (double) (now - startDate) / (double) period;
+			double iPeriod = Math.rint(fPeriod);
+
+			long startFloat = startDate + (long) ((iPeriod - (double) floatFraction / 2.0) * period);
+			long endFloat = startDate + (long) ((iPeriod + (double) floatFraction / 2.0) * period);
+
+			info = "\n    Start date is:  " + sdf.format(new Date(startDate)) + "\n         Fraction:  "
+					+ ((int) (50.0f * floatFraction)) + "\n %Float Period No:  " + fPeriod + "\n  Last period was:  "
+					+ mgroup.getLastPeriod() + "\n Float (" + iPeriod + ") runs:" + "\n             From:  "
+					+ sdf.format(new Date(startFloat)) + "\n               To:  " + sdf.format(new Date(endFloat));
+
+			FITS_HeaderInfo.current_GRPTIMNG.setValue("MONITOR");
+			FITS_HeaderInfo.current_GRPMONP.setValue(new Double(period / 1000));
+			FITS_HeaderInfo.current_GRPMONWN.setValue(new Double(window / 1000));
+		} else if (group instanceof FixedGroup) {
+
+			long fixedTime = ((FixedGroup) group).getFixedTime();
+
+			info = "\n   Fixed time: " + sdf.format(new Date(fixedTime));
+
+			FITS_HeaderInfo.current_GRPTIMNG.setValue("FIXED");
+			FITS_HeaderInfo.current_GRPMONP.setValue(new Double(0.0));
+			FITS_HeaderInfo.current_GRPMONWN.setValue(new Double(0.0));
+		} else if (group instanceof RepeatableGroup) {
+
+			RepeatableGroup rgroup = (RepeatableGroup) group;
+
+			info = "\n  Repeatable..";
+
+			FITS_HeaderInfo.current_GRPTIMNG.setValue("REPEATABLE");
+			FITS_HeaderInfo.current_GRPMONP.setValue(new Double(rgroup.getMinimumInterval()));
+			FITS_HeaderInfo.current_GRPMONWN.setValue(new Double(0.0));
+		} else if (group instanceof EphemerisGroup) {
+
+			EphemerisGroup egroup = (EphemerisGroup) group;
+
+			info = "\n Ephemeris..";
+
+			FITS_HeaderInfo.current_GRPTIMNG.setValue("EPHEMERIS");
+			FITS_HeaderInfo.current_GRPMONP.setValue(new Double(0.0));
+			FITS_HeaderInfo.current_GRPMONWN.setValue(new Double(0.0));
+		} else {
+			info = "\n Flexible..";
+
+			FITS_HeaderInfo.current_GRPTIMNG.setValue("FLEXIBLE");
+			FITS_HeaderInfo.current_GRPMONP.setValue(new Double(0.0));
+			FITS_HeaderInfo.current_GRPMONWN.setValue(new Double(0.0));
+		}
+
+		FITS_HeaderInfo.current_GRPEDATE.setValue(sdf.format(new Date(group.getExpiryDate())));
+		FITS_HeaderInfo.current_GRPNOMEX.setValue(new Double(group.getNominalExecutionTime() / 1000));
+		FITS_HeaderInfo.current_GRPSEECO.setValue(Group.toSeeingString(group.getMinimumSeeing()));
+		FITS_HeaderInfo.current_GRPLUNCO.setValue(Group.toLunarString(group.getMinimumLunar()));
+
+		opsLog.log(1, "Starting Group-Sequence: " + "\n   Group:   " + group.getFullPath() + "\n    Type:   "
+				+ group.getClass().getName() + "\n    Info:   " + info);
+
+		// FITS headers for Identity.
+
+		Path path = new Path(group.getFullPath());
+		String tagName = path.getTagByName();
+		FITS_HeaderInfo.current_TAGID.setValue(tagName);
+		FITS_HeaderInfo.current_USERID.setValue(path.getUserByName());
+		FITS_HeaderInfo.current_PROPID.setValue(path.getProposalByName());
+		FITS_HeaderInfo.current_GROUPID.setValue(path.getGroupByName());
+
+		// Decide which type of Group we are doing for data-compression.
+		// if (tagName.equals("UKPUST"))
+		// FITS_HeaderInfo.current_COMPRESS.setValue("AMATEUR");
+		// else
+		FITS_HeaderInfo.current_COMPRESS.setValue("PROFESSIONAL");
+
+		// Set AcquImage to Blank as standard - this should be overridden by any
+		// actual acqus
+		FITS_HeaderInfo.current_ACQIMG.setValue("NOT_APPLICABLE");
+
+	}
+
+	/**
+	 * Creates the TaskList for this TaskManager. Only a single OST is created
+	 * to start with.
+	 */
+	protected TaskList createTaskList() {
+
+		Observation observation = null;
+
+		if (group == null) {
+			errorLog.log(1, CLASS, name, "createTaskList",
+					"Failed to create Task List for Group_Task: Group not defined");
+			failed = true;
+			errorIndicator.setErrorCode(MISSING_GROUP_ERROR);
+			errorIndicator.setErrorString("Failed to create Task List for Group_Task: Group not defined.");
+			return null;
+		}
+
+		// Check if we will do a RUNAT or a MULTRUN.
+		int nexp = 0;
+
+		nobs = group.getObservations().size();
+
+		// Extract the sequence - this may need deducing if not already setup
+		// explicitly.
+		Vector v = null;
+		v = group.getSequence();
+		System.err.println("GT::CrtTaskList::Group sequence is: " + v);
+		if (v == null || v.size() == 0) {
+			v = new Vector();
+			Iterator it = group.listAllObservations();
+			while (it.hasNext()) {
+				observation = (Observation) it.next();
+				v.add(observation.getName());
+			}
+		}
+
+		nseq = v.size(); // we need this to determine the last obs.
+		FITS_HeaderInfo.current_GRPNUMOB.setValue(new Integer(nseq));
+
+		System.err.println("GT::CrtTaskList:Group sequence after filling is: " + v);
+
+		// Check if the single sequenced obs contains a single exposure only
+		try {
+			if (nseq == 1) {
+				// could use group.getObservations().get(0) instead ?
+				Iterator it = group.listAllObservations();
+				Observation obs = (Observation) it.next();
+				nexp = obs.getNumRuns();
+			}
+		} catch (Exception e) {
+			System.err.println("GroupTask::Exception while trying to extract observation exposure count");
+			e.printStackTrace();
+		}
+		taskLog.log(2, CLASS, name, "CreateTaskList", "Total of " + nobs + " observations in group in sequence of "
+				+ nseq);
+
+		boolean fixed = false;
+		long fixedTime = 0L;
+
+		if ((group instanceof FixedGroup)) {
+
+			if ((nseq == 1) && (nexp == 1)) {
+				// Do FIXED TIME Observation - Single RUNAT Exposure.
+				fixed = true;
+				fixedTime = ((FixedGroup) group).getFixedTime();
+			}
+
+		}
+
+		// Extract the iterator - need this as OSTs complete
+		iobseq = v.iterator();
+
+		// Create the first OST...
+		Observation_Sequence_Task currentObservationSequence = createNextObservationSequenceTask(fixed, fixedTime);
+
+		if (currentObservationSequence != null)
+			taskList.addTask(currentObservationSequence);
+
+		return taskList;
+	}
+
+	/** Set the reference to the Group of Observations to be performed. */
+	public void setGroup(Group group) {
+		this.group = group;
+	};
+
+	/** Create an OST given previous obs. */
+	private Observation_Sequence_Task createNextObservationSequenceTask(boolean fixed, long fixedTime) {
+
+		long now = System.currentTimeMillis();
+
+		// Is there a next OST ?
+		if (iobseq.hasNext()) {
+
+			countObs++;
+
+			// flag to indicate whether the OST MAY need to control the
+			// autoguider or not.
+			// this is set on first or subsequent obs if a change occurs which
+			// needs
+			// ag switching off before and on after. This deicision is
+			// ultimately made
+			// at next level down by OT depending on any offsets.
+			boolean mayControlAutoguider = false;
+
+			// flag to indicate if the OST should switch teh autoguider off
+			// before slewing etc
+			boolean switchAutoguiderOffAtStart = false;
+
+			String obsName = (String) iobseq.next();
+
+			Observation currentObs = group.findObservation(obsName);
+			Instrument currInst = Instruments.findInstrumentFor(currentObs.getInstrumentConfig());
+
+			Observation_Sequence_Task currentObservationSequence = new Observation_Sequence_Task(name + "/OBS("
+					+ countObs + ")", this, currentObs, false, fixed, fixedTime, false);
+			// That last false means we DO track after completion !
+
+			// Fix to let p = -1 groups set standard flag
+			if (group.getPriority() == -1)
+				currentObservationSequence.setStandard(true);
+
+			// Always slew on first/ not on following if they are same target
+
+			// If this is the first observation in the group sequence.
+			if (lastObs == null) {
+				taskLog.log(2, CLASS, name, "CreateTaskList",
+						"Starting determination of Obs Sequence operations for first observation of " + nseq);
+
+				currentObservationSequence.setDoSlew(true);
+				currentObservationSequence.setDoRotate(true);
+				if (currentObs.getRotatorMode() == TelescopeConfig.ROTATOR_MODE_SKY) {
+
+					if (cardinalPointing) {
+
+						long exec = calculateExecTime(currentObs);
+
+						try {
+							taskLog.log(2, CLASS, name, "CreateTaskList",
+									"Starting determination of CP solution for first observation of " + nseq);
+
+							double currentCardinalPointingAngle = cpc.getBestCardinalAngle(makeTarget(currentObs
+									.getSource()), IOFF, now, now + exec);
+
+							taskLog.log(2, CLASS, name, "CreateObsSequence",
+									"New cardinal pointing solution using CP angle: "
+											+ Position.toDegrees(currentCardinalPointingAngle, 2));
+
+							currentObs.setRotatorAngle(currentCardinalPointingAngle);
+							lastCardinalPointingAngle = currentCardinalPointingAngle;
+
+						} catch (Exception cpx) {
+
+							// Hopefully this will be very rare, best we can do
+							// is to fail the group...
+							failed(ROTATOR_TRACKING_SOLUTION_ERROR, "Unable to solve for rotator tracking.", cpx);
+							return null;
+
+						}
+
+					} // if cp in force
+
+				} // if rot mode SKY
+
+				currentObservationSequence.setFirstExposureDelay(firstExposureSettlingTime);
+				// AG flags
+
+				currentObservationSequence.setSwitchAutoguiderOffAtStart(true);
+				currentObservationSequence.setTrackBeforeStart(true);
+				currentObservationSequence.setApertureOffsetRequired(true);
+
+				// TODO first obs MUST do an acquire (if needed by its
+				// instrument).
+				if (currInst.getRequiresAcquisition())
+					currentObservationSequence.setDoAcquire(true);
+
+				taskLog.log(2, CLASS, name, "CreateTaskList",
+						"Enabling SLEW, ROTATE, TRACK_AXES_ON, AG_ACQUIRE and APERTURE_OFFSET for first obs of " + nseq
+								+ " with AXIS_SETTLE_DELAY: " + (firstExposureSettlingTime / 1000) + " Sec");
+
+			} else {
+				taskLog.log(2, CLASS, name, "CreateTaskList",
+						"Starting determination of Obs Sequence operations for observation " + countObs + " of nseq");
+				if (lastObs.getSource() != null) {
+					taskLog.log(2, CLASS, name, "CreateTaskList", "Checking for same target:: Last target: "
+							+ lastObs.getSource().getName() + ", This target: " + currentObs.getSource().getName());
+
+					// Check target changed or offsets.
+					boolean targetChanged = true;
+					if (lastObs.getSource().getName().equals(currentObs.getSource().getName())) {
+
+						// Same target but, check if they have the same offsets.
+
+						double deltara = Math.abs(currentObs.getSourceOffsetRA() - lastObs.getSourceOffsetRA());
+						double deltadec = Math.abs(currentObs.getSourceOffsetDec() - lastObs.getSourceOffsetDec());
+
+						// TODO this needs converting to arcsec as its probably
+						// in radians....
+						double deltaoff = deltara + deltadec;
+
+						if (deltaoff < SMALLEST_OFFSET_DISTANCE) {
+							// small offset
+							taskLog.log(2, CLASS, name, "CreateTaskList", "Same target, small offset");
+							targetChanged = false;
+						} else {
+							// big offset
+							taskLog.log(2, CLASS, name, "CreateTaskList", "Same target, large offset");
+							targetChanged = true;
+						}
+
+					} else {
+						// diff target
+						taskLog.log(2, CLASS, name, "CreateTaskList", "Different target");
+						targetChanged = true;
+					}
+
+					currentObservationSequence.setDoSlew(targetChanged);
+
+					// new rotator check START
+					boolean rotatorChanged = true;
+					if (lastObs.getRotatorMode() != currentObs.getRotatorMode()) {
+						rotatorChanged = true;
+						taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator mode has changed");
+					} else {
+
+						switch (currentObs.getRotatorMode()) {
+						case TelescopeConfig.ROTATOR_MODE_MOUNT:
+
+							double deltarot = rotdiff(lastObs.getRotatorAngle(), currentObs.getRotatorAngle());
+							taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator angle abs-difference: "
+									+ Position.toDegrees(deltarot, 3));
+
+							if (lastObs.getRotatorAngle() != currentObs.getRotatorAngle()) {
+								rotatorChanged = true;
+								taskLog.log(2, CLASS, name, "CreateObsSequence",
+										"Rotator angle has changed in current mode");
+							} else {
+								rotatorChanged = false;
+								taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator mode and angle same");
+							}
+
+							break;
+
+						case TelescopeConfig.ROTATOR_MODE_SKY:
+
+							if (cardinalPointing) {
+								taskLog.log(2, CLASS, name, "CreateTaskList",
+										"Starting determination of CP solution for observation " + countObs + " of "
+												+ nseq);
+
+								long exec = calculateExecTime(currentObs);
+								boolean sameAngle = false;
+								try {
+									sameAngle = cpc.isFeasibleSkyAngle(lastCardinalPointingAngle, 
+											makeTarget(currentObs.getSource()),IOFF, now, now + exec);
+								} catch (Exception cpx) {
+									failed(ROTATOR_TRACKING_SOLUTION_ERROR,
+											"Unable to solve for rotator tracking.", cpx);
+									return null;
+								}
+								
+								if (sameAngle) {
+									rotatorChanged = false;
+									taskLog.log(2, CLASS, name, "CreateObsSequence",
+											"Current Cardinal pointing solution using CP angle: "
+													+ Position.toDegrees(lastCardinalPointingAngle, 2)
+													+ " is still valid for at least " + (exec / 1000) + " S");
+
+									// Need to set this even though we dont
+									// expect to issue a ROT SKY
+									// as a ROT_CORR may be required and we need
+									// that angle...
+									currentObs.setRotatorAngle(lastCardinalPointingAngle);
+
+								} else {
+									taskLog.log(2, CLASS, name, "CreateObsSequence",
+											"Current Cardinal pointing solution using CP angle: "
+													+ Position.toDegrees(lastCardinalPointingAngle, 2)
+													+ " is no longer valid, attempting new solution...");
+									try {
+										double currentCardinalPointingAngle = cpc.getBestCardinalAngle(makeTarget(currentObs
+												.getSource()), IOFF, now, now + exec);
+											
+											
+										rotatorChanged = true;
+										taskLog.log(2, CLASS, name, "CreateObsSequence",
+												"New cardinal pointing solution using CP angle: "
+														+ Position.toDegrees(currentCardinalPointingAngle, 2));
+
+										currentObs.setRotatorAngle(currentCardinalPointingAngle);
+										lastCardinalPointingAngle = currentCardinalPointingAngle;
+
+									} catch (Exception cpx) {
+
+										// Hopefully this will be very rare,
+										// best we can do is to fail the
+										// group...
+										failed(ROTATOR_TRACKING_SOLUTION_ERROR,
+												"Unable to solve for rotator tracking.", cpx);
+										return null;
+
+									}
+
+								}
+
+							} else {
+
+								deltarot = rotdiff(lastObs.getRotatorAngle(), currentObs.getRotatorAngle());
+								taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator angle abs-difference: "
+										+ Position.toDegrees(deltarot, 3));
+
+								if (lastObs.getRotatorAngle() != currentObs.getRotatorAngle()) {
+									rotatorChanged = true;
+									taskLog.log(2, CLASS, name, "CreateObsSequence",
+											"Rotator angle has changed in current mode");
+								} else {
+									rotatorChanged = false;
+									taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator mode and angle same");
+								}
+
+							}
+
+							break;
+
+						default:
+							taskLog.log(2, CLASS, name, "CreateObsSequence",
+									"Angle calc not required for current rotator mode");
+							rotatorChanged = false;
+						}
+
+					}
+
+					if (rotatorChanged) {
+						currentObservationSequence.setDoRotate(true);
+					} else {
+						if (targetChanged)
+							currentObservationSequence.setDoRotate(true);
+						else
+							currentObservationSequence.setDoRotate(false);
+					}
+
+					// new rotator check END
+
+					if (targetChanged || rotatorChanged) {
+						currentObservationSequence.setFirstExposureDelay(firstExposureSettlingTime);
+
+						currentObservationSequence.setTrackBeforeStart(true);
+						taskLog.log(2, CLASS, name, "CreateTaskList",
+								"Enabling AG_STOP on previous sequence due to target/rotator change");
+						taskLog.log(2, CLASS, name, "CreateTaskList",
+								"Enabling AXIS_SETTLE_DELAY and AG_ACQUIRE due to target/rotator change");
+
+						// go
+						if (currentObs.getRotatorMode() == TelescopeConfig.ROTATOR_MODE_SKY) {
+
+							if (cardinalPointing) {
+								taskLog.log(2, CLASS, name, "CreateTaskList",
+										"Starting determination of CP solution for observation " + countObs + " of "
+												+ nseq);
+
+								long exec = calculateExecTime(currentObs);
+								boolean sameAngle = false;
+								try {
+									sameAngle = cpc.isFeasibleSkyAngle(lastCardinalPointingAngle, 
+											makeTarget(currentObs.getSource()),IOFF, now, now + exec);
+								} catch (Exception cpx) {
+									failed(ROTATOR_TRACKING_SOLUTION_ERROR,
+											"Unable to solve for rotator tracking.", cpx);
+									return null;
+								}
+								
+								currInst = Instruments.findInstrumentFor(currentObs.getInstrumentConfig());
+								if (sameAngle) {								
+									rotatorChanged = false;
+									currentObs.setRotatorAngle(lastCardinalPointingAngle);
+									taskLog.log(2, CLASS, name, "CreateObsSequence",
+											"Current Cardinal pointing solution using CP angle: "
+													+ Position.toDegrees(lastCardinalPointingAngle, 2)
+													+ " is still valid for at least " + (exec / 1000) + " S");
+
+								} else {
+									taskLog.log(2, CLASS, name, "CreateObsSequence",
+											"Current Cardinal pointing solution using CP angle: "
+													+ Position.toDegrees(lastCardinalPointingAngle, 2)
+													+ " is no longer valid, attempting new solution...");
+									try {
+										double currentCardinalPointingAngle = cpc.getBestCardinalAngle(makeTarget(currentObs
+												.getSource()), IOFF, now, now + exec);
+										rotatorChanged = true;
+										taskLog.log(2, CLASS, name, "CreateObsSequence",
+												"New cardinal pointing solution using CP angle: "
+														+ Position.toDegrees(currentCardinalPointingAngle, 2));
+
+										currentObs.setRotatorAngle(currentCardinalPointingAngle);
+										lastCardinalPointingAngle = currentCardinalPointingAngle;
+
+									} catch (Exception cpx) {
+
+										// Hopefully this will be very rare,
+										// best we can do is to fail the
+										// group...
+										failed(ROTATOR_TRACKING_SOLUTION_ERROR,
+												"Unable to solve for rotator tracking.", cpx);
+										return null;
+
+									}
+
+								}
+
+							} else {
+
+								double deltarot = rotdiff(lastObs.getRotatorAngle(), currentObs.getRotatorAngle());
+								taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator angle abs-difference: "
+										+ Position.toDegrees(deltarot, 3));
+
+								if (lastObs.getRotatorAngle() != currentObs.getRotatorAngle()) {
+									rotatorChanged = true;
+									taskLog.log(2, CLASS, name, "CreateObsSequence",
+											"Rotator angle has changed in current mode");
+								} else {
+									rotatorChanged = false;
+									taskLog.log(2, CLASS, name, "CreateObsSequence", "Rotator mode and angle same");
+								}
+
+							}
+
+						}
+
+						// stop
+
+					} else {
+						// No movement required so axes should be tracking
+						// anyway..
+						taskLog.log(2, CLASS, name, "CreateTaskList",
+								"Disable TRACK_AXES_ON due to position and rotator NO change");
+						currentObservationSequence.setTrackBeforeStart(false);
+					}
+
+					// Check whether the instrument has changed.
+					boolean instrumentChanged = false;
+					if (lastObs.getInstrumentConfig() != null && currentObs.getInstrumentConfig() != null) {
+						Instrument lastInst = Instruments.findInstrumentFor(lastObs.getInstrumentConfig());
+						currInst = Instruments.findInstrumentFor(currentObs.getInstrumentConfig());
+						if (lastInst != currInst) {
+							instrumentChanged = true;
+						}
+					}
+
+					// TODO If target changed OR rotator changed OR instrument
+					// changed
+					// need to do an aperture offset i.e. -
+					// ost.setApertureOffset(true)
+					if (targetChanged || rotatorChanged || instrumentChanged) {
+						currentObservationSequence.setApertureOffsetRequired(true);
+
+						// AG flags
+						currentObservationSequence.setSwitchAutoguiderOffAtStart(true);
+
+						// TODO first obs MUST do an acquire (if needed by its
+						// instrument).
+						if (currInst.getRequiresAcquisition())
+							currentObservationSequence.setDoAcquire(true);
+
+					}
+
+				} // TEST TARGET CHANGED
+
+			} // TEST FOR FIRST OBS or OTHER (including last in sequence)
+
+			if (countObs == nseq) {
+				// Allow track off after completion of last obs
+				if (config.getProperty("track.axes.off") != null) {
+					currentObservationSequence.setTrackAfterDone(false);
+					// currentObservationSequence.setSwitchAutoguiderOffAtEnd(true);
+					taskLog.log(2, CLASS, name, "CreateTaskList",
+							"Enable TRACK_OFF and AG_STOP on last observation, this is " + countObs + " of " + nseq);
+				} else {
+					taskLog.log(2, CLASS, name, "CreateTaskList",
+							"Disable TRACK_OFF on last observation due to track.axes.off flag not set");
+				}
+			} else {
+				// Dont track off after completion of obs
+				currentObservationSequence.setTrackAfterDone(true);
+				taskLog.log(2, CLASS, name, "CreateTaskList",
+						"Enable TRACK to continue for all ##but last## observation, this is " + countObs + " of "
+								+ nseq);
+
+			} // EXTRA TEST FOR LAST OBS IN SEQ
+
+			// Let the OST know if it needs to control the AG unless we are on
+			// Ag_NEVER
+			if (currentObs.getAutoGuiderUsageMode() == TelescopeConfig.AGMODE_OPTIONAL
+					|| currentObs.getAutoGuiderUsageMode() == TelescopeConfig.AGMODE_MANDATORY)
+				currentObservationSequence.setControlAutoguider(true);
+			else
+				currentObservationSequence.setControlAutoguider(false);
+
+			lastObs = currentObs;
+			return currentObservationSequence;
+		}
+
+		return null;
+
+	}
+
+	private XExtraSolarTarget makeTarget(Source source) {
+		Position pos = source.getPosition();
+		XExtraSolarTarget star = new XExtraSolarTarget(source.getName());
+		star.setRa(pos.getRA());
+		star.setDec(pos.getDec());
+		return star;
+	}
+
+	/**
+	 * Utility to calculate the absolute difference between 2 directional
+	 * angles.
+	 * 
+	 * @param a
+	 *            An angle (rads).
+	 * @param b
+	 *            An angle (rads).
+	 * @return Absolute difference between a and b (rads).
+	 */
+	private double rotdiff(double a, double b) {
+		while (a < 0.0)
+			a += Math.PI * 2.0;
+		while (a > Math.PI * 2.0)
+			a -= Math.PI * 2.0;
+		while (b < 0.0)
+			b += Math.PI * 2.0;
+		while (b > Math.PI * 2.0)
+			b -= Math.PI * 2.0;
+		double d = Math.abs(a - b);
+		return Math.min(d, Math.PI * 2.0 - d);
+	}
+
+	/** Calculate the exec time of an observation. */
+	private long calculateExecTime(Observation observation) {
+		InstrumentConfig instConfig = observation.getInstrumentConfig();
+		Instrument inst = Instruments.findInstrumentFor(instConfig);
+
+		int mosaic = 1;
+		switch (observation.getMosaic().getPattern()) {
+		case Mosaic.ARRAY:
+			mosaic = observation.getMosaic().getCellsRA() * observation.getMosaic().getCellsDec();
+			break;
+		case Mosaic.SINGLE:
+			mosaic = 1;
+			break;
+		case Mosaic.VERTICAL:
+		case Mosaic.HORIZONTAL:
+		case Mosaic.SLOPE_UP:
+		case Mosaic.SLOPE_DOWN:
+			mosaic = 3;
+			break;
+		case Mosaic.CROSS:
+		case Mosaic.X:
+			mosaic = 5;
+			break;
+		case Mosaic.HOLE:
+			mosaic = 8;
+			break;
+		case Mosaic.GRID:
+			mosaic = 9;
+			break;
+		default:
+			mosaic = 1;
+		}
+
+		// Multruns.
+		int multruns = observation.getNumRuns();
+
+		// Maximal time for an observation.
+		long maximalObserveTime = (long) (mosaic * (Group.MAXIMAL_OFFSET_TIME + multruns
+				* (observation.getExposeTime() + Group.MAXIMAL_READOUT_TIME + Group.MAXIMAL_DPRT_TIME)));
+
+		// Nominal time for an observation.
+		long nominalObserveTime = (long) (mosaic * (Group.NOMINAL_OFFSET_TIME + multruns
+				* (observation.getExposeTime() + inst.calculateReadoutTime(instConfig))));
+
+		taskLog.log(2, CLASS, name, "calculateExecTime", "Observation exec time: Nominal = "
+				+ (nominalObserveTime / 1000) + " S, Maximal = " + (maximalObserveTime / 1000) + " S");
+
+		return nominalObserveTime + 5 * 60 * 1000L;
+
+	}
+
+}
+
+/**
+ * $Log: Group_Task.java,v $ /** Revision 1.9 2008/11/21 09:40:08 eng /**
+ * updated /** /** Revision 1.8 2007/09/27 13:20:32 snf /** typo /** /**
+ * Revision 1.7 2007/09/27 13:19:27 snf /** added checks for sequencing required
+ * /** /** Revision 1.6 2007/07/05 11:34:11 snf /** chekcin /** /** Revision 1.5
+ * 2007/03/26 07:53:16 snf /** added test for aperture offset rewquired /** /**
+ * Revision 1.4 2007/03/21 11:28:02 snf /** comment for checking aperture offset
+ * required /** /** Revision 1.3 2007/01/08 11:19:28 snf /** Changed value of ID
+ * to OBS(nn) /** /** Revision 1.2 2007/01/07 17:33:36 snf /** added config for
+ * settling time, previously hardcoded. /** /** Revision 1.1 2006/12/12 08:27:29
+ * snf /** Initial revision /** /** Revision 1.1 2006/05/17 06:32:29 snf /**
+ * Initial revision /** /** Revision 1.2 2002/09/16 09:38:28 snf /** *** empty
+ * log message *** /** /** Revision 1.1 2001/04/27 17:14:32 snf /** Initial
+ * revision /**
+ */
+

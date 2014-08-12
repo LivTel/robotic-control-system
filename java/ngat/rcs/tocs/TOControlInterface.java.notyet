@@ -1,0 +1,13 @@
+package ngat.rcs.tocs;
+
+import java.rmi.*;
+
+import ngat.phase2.*;
+
+public interface TOControlInterface extends Remote {
+
+    public void tocSlew(Source source, TOControlResponseHandler trh) throws RemoteException;
+
+    public void tocConfigure(InstrumentConfig config, TOControlResponseHandler trh) throws RemoteException;
+
+}

@@ -1,0 +1,47 @@
+#!/bin/csh
+#
+#-----------------------------
+# RCS Environment Setup.
+#-----------------------------
+#
+
+# RCS Common environment.
+setenv RCS_HOME   ${DEPLOY_HOME}/rcs
+
+# Subdirectories.
+setenv RCS_SCRIPT ${RCS_HOME}/scripts
+setenv RCS_CONFIG ${RCS_HOME}/config
+setenv RCS_INST   ${RCS_HOME}/instruments
+
+# Control agent specifics.
+setenv RCS_PCA    ${RCS_HOME}/planetarium
+setenv RCS_TOCA   ${RCS_HOME}/toop
+
+setenv RCS_EXEC_INFO ${RCS_HOME}/rcs.properties
+setenv RCS_SITE_INFO ${RCS_CONFIG}/site.properties
+setenv RCS_INST_INFO ${RCS_CONFIG}/instruments.properties
+
+setenv RCS_JAR ${RCS_HOME}/rcs_class.jar
+
+# Setup any extra PATH here.
+setenv PATH ${PATH}:${RCS_HOME}
+setenv PATH ${PATH}:${RCS_SCRIPT}
+setenv PATH ${PATH}:${RCS_PCA}/scripts
+setenv PATH ${PATH}:${RCS_TOCA}/scripts
+
+# Setup any extra CLASSPATH here.
+echo $CLASSPATH | grep ${RCS_JAR} > /dev/null
+if ( $status != 0 ) then
+    setenv CLASSPATH ${CLASSPATH}:${RCS_JAR}
+endif
+ 
+
+# Setup any extra LD_LIBRARY_PATH here.
+foreach file ($DEPLOY_UTIL)
+    echo $LD_LIBRARY_PATH | grep $file > /dev/null
+    if ( $status != 0 ) then
+	setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${file}
+    endif
+end
+
+

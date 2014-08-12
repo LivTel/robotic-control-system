@@ -1,0 +1,44 @@
+#
+# Robotic Astronomical Telescope Camera and Filterwheel.
+#
+ratcam.ID   = RATCAM
+ratcam.name = RatCam
+ratcam.desc = Robotic Astronomical Telescope Camera and Filterwheel
+
+#
+# SuperNovae IR Camera.
+#
+supircam.ID   = SUPIRCAM
+supircam.name = SupIRCam CCD Camera
+supircam.desc = SuperNovae CCD Camera
+
+#
+# Gamma Ray Optical Polarimetry Experiment GROPE/RINGO_STAR.
+#
+ringo.ID   = RINGO
+ringo.name = RINGO
+ringo.desc = Polarimeter
+
+#
+# Meaburn NuView-II Low Resolution Spectrograph
+#
+#meaburn.ID   = MEABURN
+#meaburn.name = MEABURN
+#meaburn.desc = Meaburn NuView-II Low Resolution spectrograph
+
+#
+# RISE Rapid Readout Camera
+#
+
+rise.ID = RISE
+rise.name = RISECam
+rise.desc = RISE Rapid Readout Camera
+
+#
+# FRODO Frodospec 2 arm spectrograph
+#
+frodo.ID   = FRODO
+frodo.name = FRODOSpec
+frodo.desc = FRODO 2 Arm spectrograph
+
+

@@ -1,0 +1,26 @@
+#!/bin/csh
+ 
+# --------------------------------
+# Data Generator for: System data.
+# --------------------------------
+ 
+set DEPLOY_DATA = $DEPLOY_HOME/data
+ 
+set data = $DEPLOY_DATA/system.data
+touch $data
+
+set POLL = 600
+
+while (1)
+
+    echo ..
+    set time  = `date -u "+%Y-%m-%dT%H:%M:%S"`
+    set avail = `df | grep '/home' | awk '{print $4}'`
+    set dhome = `df | grep '/home' | awk '{print $5}' | sed -e s/%//`
+
+    echo $time $avail $dhome 
+    echo $time $avail $dhome >&! $data
+
+    sleep $POLL
+
+end

@@ -1,0 +1,846 @@
+<?xml version = "1.0" ?>
+
+<?xml-stylesheet type = "text/css" href = "project.css" ?>
+
+<project id="RCS" title="Robotic Control System">
+
+  <description>
+    <docref url="location of project doc"/>
+      
+      The RCS is designed to act like an astronomer in charge...blah, blah  
+      add stuff from a SPIE paper here...
+  </description>
+  
+  <!-- CALIBRATION OPERATIONS -->
+  <subproject id="CALIB" title="Calibration Operations">
+    <description>
+      This operating mode is used to perform various calibration operations at different times
+      of the day and night. These include:-
+      <ul>
+	<li> Twilight (sky) flats.</li>
+	<li> Focus procedure.</li>
+	<li> Standards for various instruments.</li>
+	<li> Autoguider focus.</li>
+	<li> Pointing calibration.</li>
+	<li> Daytime calibration for instruments.</li>
+      </ul>
+      The times for these operations will vary from, night to night - e.g. dependant on sunset time etc 
+      and may require to be run at fixed or variable intervals in the night. 
+      They may also depend on previous invokations of themselves and other calibration operations.
+      
+      <p/>There are 2 fundamentally different approaches to the scheduling of these ops.
+	
+	<p/>LT Model - This involves scheduling the ops at times relative to sunset, twilight etc - 
+	  The daily variation is then taken care of automatically.
+	  
+	  <p/>FT Model - The times must be fitted into gaps between fixed RTI sessions which are predefined 
+	    upto a month in advance - the daily variation would then have to be explicitly scheduled taking 
+	    into account these RTI windows.
+	    
+	    <p/>The aim of this workflow is to identify ways in which both models can be incorporated into 
+	      the CAL MCA configuration.
+	      
+	      <p/>This will require both the CAL MCAs? (DCAL and NCAL) or a combined class and the 
+		individual CalibrationTasks? and subclasses to be modified and configured appropriately.
+    </description>
+
+    <workflow id = "xx" title = "General configuration and implementation">
+      <description>
+	Covers the imlementation of the CAL MCA, its configuration and that of the various MTAs which
+	implement the different CALIB operations.
+      </description>
+    </workflow>
+
+
+  </subproject>
+  
+  <!-- SCIENCE OPERATIONS -->
+  <subproject id="SCIENCE" title="Science Operations">
+    <description>
+      Science or offline operations are performed by default in any available time. This is the default
+      operating mode of the telescope during the night.
+    </description>
+
+    <workflow id = "" title = "Autoguider integration">
+      <description>
+	Integration of the autoguider to science programs.
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "Group types handling">
+      <description>
+	Covering different group types and special handling.
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "Error Handling">
+      <description>
+		Intelligent handling of error conditions.
+      </description>
+      
+      <note class = "ENT" date = "2005=02-24T08:34">
+		There is a problem with the LT rotator due to the way it is kept at ROT MNT 0 + FLOAT and never
+		moves far from this position - it appears to 'stick' physically. A program of excercise is proposed
+		<ul>
+	  		<li>At the start of each slew to observation.</li>
+	  		<li>At the start of the night.</li>
+		</ul>
+      </note>
+      
+      <change author="snf" date="2005=02-24T08:34" id = "x">
+		<classref name = "ObservationSequenceTask" package = "ngat.rcs.science"/>
+	  	<detail>
+	    	A set of new variables has been added to handle the start-of-observation excercise of the rotator.
+	    	A flag <code>doExcerciseRotator</code> is set from config parameter <i>excercise.rotator</i> which
+	    	determines if the rotator should be excercised each slew. The variables <code>rotatorExcerciseAngleLo</code>
+	    	and <code>rotatorExcerciseAngleHi</code> are set respectively from config parameters
+	    	<i>rotator.excercise.angle.lo</i> and <i>rotator.excercise.angle.hi</i>. If not specified the defaults
+	    	are set from the constants DEFAULT_ROTATOR_EXCERCISE_ANGLE_LO and DEFAULT_ROTATOR_EXCERCISE_ANGLE_HI.
+	    	<p/>There are some changes to the task sequencing code to deal with this option - this may need more
+	      	looking at as there are quite a few variations depending on whether either or both the <code>doRotate</code> 
+	      	and <code>doSlew</code> options are selected - watch this.
+	  	</detail>
+      </change>
+
+    </workflow>
+
+    <workflow id = "WF_013" title = "Observation sequencing ">
+      
+       <description>
+	This workflow deals with the sequencing of operations during an observation in science mode.
+      </description>
+
+      <note class = "ENT" date = "2005-03-23T11:40">
+		At the Dev Mtg 22-03-2005 it was decided to institute the use of the INST ACQUIRE command.
+		<p/>This envisages a procedure as follows:-
+	  	<ol>
+	    	<li>Slew onto target - TCS GOTO command</li>
+	    	<li>Configure instrument - ICS CONFIG command</li>
+	    	<li>Request instrument adjusts position - ICS ACQUIRE command</li>
+	    	<li>Expose instrument - ICS EXPOSE command e.g. MULTRUN</li>	 
+	  	</ol> 
+	  	<p/>Note: Slew and Config can be issued in parallel, then Acquire then Expose.
+      </note>
+  
+      <change author="snf" date="2005=04-04T15:00" id = "x">
+		<classref name = "GroupSequenceTask" package = "ngat.rcs.science"/>
+	  <detail>
+	    The constructor has been modified to accept a new parameter <code>maxGroupLength</code>
+	    detailing the maximum length of valid group (nominal exec time). This is passed by SCA
+	    from its own configurable maxGroupLength. The value is passed into the ScheduleTask as its
+	    <code>latestTime</code> value.
+	  </detail>
+      </change>
+
+       <change author="snf" date="2005=04-04T15:00" id = "x">
+	<classref name = "ScienceControlAgent" package = "ngat.rcs.science"/>
+	  <detail>
+	    New variable <code>maxGroupLength</code> detailing the maximum length of valid group (nominal exec time).
+	    This is obtained from config parameter <i>max.group.length</i> and set to the default value of:-
+	    DEFAULT_MAX_GROUP_LENGTH if not configured. It is passed as an extra parameter to the GroupSequenceTask.
+	  </detail>
+      </change>
+    </workflow>
+    
+  </subproject>
+  
+  <!-- PLANETARIUM OPERATIONS -->
+  <subproject id="POS" title="Planetarium Operations">
+
+    <description>
+      Planetarium operations are performed during pre-arranged slots/windows setup in the window schedule file.
+      This file is generated by the FTOC and uploaded during the day several times a month. During POS mode
+      the telescope is controlled via a web interface (RTI) communicating with the PCR using the PCP protocol 
+      relayed on to the RCS using JSOs.
+    </description>
+
+    <workflow id = "" title = "G2 Command migration">
+      <description>
+	Migration to G2 future command set, implementation and ongoing test program.
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "Mosaicing">
+      <description>
+	Implementation and testing of the mosaicing procedure
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "Abort responses">
+      <description>
+	Handling the responses to various abort reasons and propagating back to RTI.
+      </description>
+    </workflow>
+
+  </subproject>
+  
+  <!-- TARGET OF OPPORTUNITY -->
+  <subproject id="TOCS" title="Target of Opportunity Operations">
+    
+    <description>
+      The TOCS is responsible for control of the telescope on inception of alerts of various types. The controller
+      is in fact an intelligent agent located on a nearby proxy - (soas to provide fast return of image data for
+      processing). This operating mode typically has priority over all others.
+    </description>
+    
+    <workflow id="WF_002" title="General Protocol">
+      
+      <description>
+	Handling general TOCS protocol issues      
+      </description>
+      
+      <change author="snf" date="2005-03-17T11:55" id="2">                
+	<classref name="TOCServerImpl" package ="ngat.rcs.tocs"/>
+	  <docref url="file:///home/dev/src/rcs/docs/change_2.txt"/>
+	    <detail>Changed timeout block to allow PSI to wait on task completion</detail>
+      </change>
+ 
+    </workflow>
+
+    <action ref="COMPILE_200503171204"></action>
+
+    <!-- TO Instrumentation -->
+    <workflow id="WF_003" title="Instrumentation">
+      
+      <description>           
+	This workflow is intended to cover any instrument related issues including 
+	<ul>
+	  <li>Enhancements to the INSTR command for new or existing instruments.</li>
+	  <li>Testing of all instrument interactions</li>
+	  <li>Task implementation relating to instruments</li>
+	</ul>
+      </description>
+      
+      <change author = "snf" date = "2005-03-17T15:51" >
+	<classref name="TOC_GenericCommandImpl" package ="ngat.rcs.tocs"/>
+	  <detail>Added a new instrument command parameter for the IRCAM</detail>
+      </change>
+      
+      <change author = "snf" date = "2005-03-21T15:00">
+	<classref name = "TOC_GenericCommandImpl" package ="ngat.rcs.tocs"/>
+	  <detail>Added optional calibrate before and after parameters to (all) instrument commands.
+	    <p/>If these are ommitted the <i>default</i> settings for the instrument are used.
+	  </detail>
+      </change>
+
+     <change author = "snf" date = "2006-09-06T12:04">
+       <classref name = "TOC_GenericCommandImpl" package ="ngat.rcs.tocs"/>
+          <detail>Added options to INSTR command handling. New Instrument names
+             <dl>
+               <dt>RATCAM</dt> 
+               <dd>As before but now specific for dev.lt.RATCamConfig</dd>
+               <dt>HAWKCAM</dt>
+               <dd>Generates a dev.lt.HawkCamConfig</dd>
+               <dt>DILLCAM</dt>
+               <dd> Intended to generate a dev.lt.DillCamConfig but does RATCam for now</dd>
+             </dl>
+          </detail>
+     </change>
+
+
+    </workflow>
+
+    <!-- TO Accounting -->
+    <workflow id="WF_009" title="Accounting">
+      
+      <description>           
+	This workflow is intended to cover issues relating to TO accounting. This will include:-
+	<ul>
+	  <li>Update of Phase2DB with proposal/tag used time for the assigned TO proposal</li>
+	  <li>TO Service accounting</li>
+	</ul>
+      </description>
+            
+    </workflow>
+    
+    
+  </subproject>
+  
+  <!-- COMMUNICATIONS -->
+  <subproject id="COMMS" title="Communications">
+    
+    <description>
+      The RCS has to communicate with a number of external subsystems to instigate control of
+      the telescope and its associated instruments and to collate environmental data. 
+    </description>
+    
+    <workflow id="WF_001" title="Command Translator">
+      
+      <description>
+	The CommandTranslator is a module which translates commands received from the various
+	executive tasks and status collators as JMS objects (JSOs) into the native format for
+	the TCS and other external subsystems. Additionally native responses are translated
+	back to JSOs to supply the appropriate type of response to the originating task/collator.             
+      </description>
+      
+      <change author="snf" date="2005-03-17T08:00" id="1">
+	<classref name="LT_RGO_TCS_CommandTranslator" package = "ngat.rcs.control"/>
+	  <detail>Modified the translator for AZIMUTH command to convert from
+	    encapsulated units (radians) to TCS units (degrees)</detail>
+      </change>
+      <action ref="COMPILE_200503170909"/>
+	
+    </workflow>
+
+     <workflow id="WF_014" title="CIL Handling">
+      <description>
+	The CIL layer is responsible for handling the sending and receiving of UDP messages via the
+	CIL interface. Commands (JSO) are received from clients (TMM Tasks and SCM Collators) via a
+	SlotConnection. Handlers are created and registered for these agianst a generated sequence number.
+	The Reader thread receives replies and places into a queue. The despatcher checks the queue,
+	looks up the registered handler and sends the translated reply to the original client.
+      </description>
+
+      <note class = "ENT" date = "2005-04-01T08:30">
+	The CIL handling has blown up several times now with the old - 'flat-line" effect i.e. the status
+	informaiton is not updated. This is due to the Despatcher not proceeeding with the sending of the
+	reply - generally an ERROR class reply. It now looks like this occurs with the following sequence:-
+
+	<ul>
+	  <li> Despatcher     -> handler.proxyError(data)</li>
+	  <li> Handler        -> serverImpl.sendDone(data)</li>
+	  <li> JMSServerImpl  -> connection.send(done)</li>
+	  <li> SlotConnection -> send(done)</li>
+	</ul>
+
+	It looks like the call to SlotConnection.send() is blocked due to either:-
+	<ul>
+	  <li> Buffer is full (it is a single item buffer) - i.e. client has not emptied it.</li>
+	  <li> Client failed to call notify on emptying.</li>
+	</ul>
+
+      </note>
+
+      <change author = "snf" date = "2005-04-01T12:00">
+	<classref name = "RCSSubsystemConnectionFactory" package = "ngat.rcs.comms"/>
+	  <detail>
+	    Changed the default size for a SlotConnection to be 5 rather than 1.
+	    This is hoped to avoid a full buffer even if there is something in it.
+	  </detail>
+      </change>
+
+      <change author = "snf" date = "2005-04-01T12:00">
+	<classref name = "JMSMAprotocolServerImpl" package = "ngat.net"/>
+	  <detail>
+	    Modified the call to <i>sendDone()</i> to call <i>iconnection.send(data, timeout)</i>
+	    using the value of handler.getHandlingTime().
+	  </detail>
+      </change>
+
+      <change author = "snf" date = "2005-04-01T12:00">
+	<classref name = "IConnection" package = "ngat.net"/>
+	  <detail>
+	    Added a new abstract method <i>send(data, timeout)</i> to allow the send operation
+	    to timeout. Currently only a receive can timeout.
+	  </detail>
+      </change>
+      
+      <change author = "snf" date = "2005-04-01T12:00">
+	<classref name = "SlotConnection" package = "ngat.net"/>
+	  <detail>
+	    Implemented the  new method <i>send(data, timeout)</i> to allow the send operation
+	    to timeout.
+	  </detail>
+      </change>
+
+    </workflow>
+
+  </subproject>
+  
+  <!-- EVENT MESSAGING -->
+  <subproject id="EMM" title="Event Messaging">
+    <description>
+      Events are propagated around the system between the SCM, TMM and SM. These include:-
+      
+      <ul>
+	<li> action events from the SM to initiate activity from the TMM.</li>
+	<li> environmental alerts from the SCM to SM to prompt reactive behaviour.</li>
+	<li> task events from the TMM to the SM to notify completion status.</li>
+	<li> other control events can be generated by external users and other modules as required.</li>
+      </ul>
+    </description>
+
+    <workflow id = "" title = "General implementation">
+      <description>
+	Implementation and testing of EMM.
+	</description>
+    </workflow>
+
+  </subproject>
+  
+
+  <!-- INSTRUMENT SUPPORT -->
+  <subproject id="ISS" title="Instrument Support">
+    
+    <description> 
+      The RCS must store details of the various Instrument Control Systems (ICS) and their
+      ranges of available and current configurations. Ths ICS are able to send commands to
+      the RCS for information and for forwarding (possibly modified) to the TCS in order to
+      allow for instrument-specific positioning adjustments. This Workflow is intended to
+      handle these issues.
+    </description>
+
+    <workflow id = "WF_010" title = "Instrument control actions">
+      
+      <description>
+	This workflow deals with issues relating to the selection and configuration of
+	instruments in Science,Planetarium and TO operations.
+      </description>   
+
+
+    </workflow>
+    
+    <workflow id = "WF_012" title = "Instrument adjustment of telescope">
+      
+      <description>
+	This workflow is to deal with issues relating to the instruments' adjustment of
+	the telescope via INST_ISS commands via the RCS to the TCS.
+      </description>
+      
+      <note class = "ENT" date = "2005-03-23T13:33">
+	At the Dev Mtg 22-03-2005 it was decided to add a response delay to the ISS_OFFSET_RADEC
+	command soas to ensure the telescope had stopped moving before the completion reply is
+	sent back to the calling instrument.
+      </note>
+
+      <change author="snf" date="2005-03-23T13:30" id="1">
+	<classref name="ISS_CommandImpl" package = "ngat.rcs.iss"/>
+	  <detail>A new parameter <code>responseDelay</code> is calculated when the class is instantiated using
+	    the overridable method <i>calculateResponseDelay()</i>. This by default returns 0 (zero). The 
+	    <i>handleResponse()</i> method has been doctored to include a sleep for this period after receiving the reply before
+	  sending on to the caller (ICS). There is some danger here in that the handleReply() method is called by
+	  the CCT created by the CommandImpl whereas the <i>handleRequest()</i> method was called by the SCT and is in a 
+	  timeout waitfor which is not currently updatable - i.e. it does not keep re-entering if the response
+	  has not yet been detected</detail>
+      </change>
+
+      <change author="snf" date="2005-03-23T13:30" id="1">
+	<classref name="ISS_OFFSET_RA_DECCommandImpl" package = "ngat.rcs.iss"/>
+	  <detail>The method <i>calculateResponseDelay()</i> is overridden to return 10 secs.
+	  </detail>
+      </change>
+
+    </workflow>
+
+    <workflow id = "" title = "FITS headers">
+      <description>
+	Generation of FITS headers from TCS queries and from internal state.
+      </description>
+      
+      <change author = "snf" date ="2005-09-28T15:32">
+	<classref name = "FITS_HeaderInfo" package = "ngat.rcs.iss"/>
+	  <detail>
+	    A large number of new headers have been added to cover most of the data available
+	    via TCS SHOW commands. These are now grouped together into blocks related to the
+	    ngat.message.RCS_TCS.TCS_Status segment in which they reside. The card numbers
+	    are also grouped into decades. Some new MOON parameters are now available.
+	    The <code>limits</code> segment has not been included. The units parameters
+	    have mostly not yet been filled in.
+	  </detail>
+      </change>
+
+       <change author = "snf" date ="2005-09-28T15:32">
+	<classref name = "ISS_GET_FITSCommandImpl" package = "ngat.rcs.iss"/>
+	  <detail>
+	    The new FITS header cards are now inlcuded into the properties sent back to the
+	    ISS in the reply message.
+	  </detail>
+      </change>
+
+    </workflow>
+
+  </subproject>
+  
+
+  <!-- TASK MANAGEMENT -->
+  <subproject id="TMM" title="Task Management">
+
+    <description>
+      The TMM is responsible for instigating actions on request from the SM. It consists of a hierarchy
+      of ManagerTasks reported to by lower level Executive tasks which carry out telescope and instrument
+      control actions. 
+      The following components are used:-
+      <dl>
+	<dt>TMMSequencer</dt>
+	<dd>handles requests from CA on MCA yield</dd>
+	<dt>TMMRecoveryRegistry</dt>
+	<dd>Centralized point for collecting task recovery information</dd>
+	<dt>TMMCOnfigRegistry</dt>
+	<dd>Centralized point for collecting task configuration</dd>
+      </dl>
+    </description>
+
+    <workflow id = "" title = "Sequencer">
+      <description>
+	The Sequencer handles requests from the CA when the controlling MCA yields after completing a job.
+	Here we cover the general protocol and interaction with the SM and CA.
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "Recovery Registry">
+      <description>
+	The recovery registry contains details in a simplified format to control the response of MTAs to
+	failure of their subservient MTAs and ETAs. The response can be customized to suit varying daily
+	handling of errors.
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "Config Registry">
+      <description>
+	The config registry contains details of configuration parameters used by any MTA or ETA which needs
+	to be set up from day to day to suit operational requirements.
+      </description>
+    </workflow>
+
+    <workflow id = "" title = "General Mode Control">
+     <description>
+      Covers general issues relating to mode control agents.
+</description>
+
+<!-- Added new fields activity to MCA -->
+
+</workflow>
+
+
+  </subproject>
+  
+
+  <!-- STATUS COLLATION -->
+  <subproject id="SCM" title="Status Collation">
+    
+    <description>
+      The SCM is responsible for collecting environmental status from external systems and for
+      filtering and applying rules to allow reactive input to the overall control model.
+    </description> 
+        
+    <workflow id = "WF_005" title = "Sensors">
+      <description>
+	Sensors are used to store and present data from various collation mechanisms using a standard
+	inerface..
+      </description>
+      
+      <change author="snf" date="2005-03-23T12:32" id="1">
+	<classref name="CCDSeeing" package = "ngat.rcs.scm.collation"/>
+	  <detail>Added a new temporary field <code>lastSeeing</code> to store the last value of the <i>atmospheric.seeing</i>
+	    parameter which was used to update this sensor. This is to be used by input devices to allow
+	    a form of prefiltering of the input data soas to disallow 'unbelievable' data.</detail>
+      </change>
+
+      <change author="snf" date="2005-03-23T12:32" id="1">
+	<classref name="ExposureTask" package  = "ngat.rcs.tmm.executive"/>
+	  <detail>Added new parameter <code>max_seeing</code> to record the maximum seeing we will accept
+	    as being valid as returned from the DPRT in the DP_ACK message. This is configured from the
+	    task.config as parameter <i>max.usable.seeing</i> under this task's id. If not set the default value supplied as
+	    the constant DEFAULT_MAX_SEEING is used. When a new seeing value is obtained from the DPRT this is compared
+	    to the <code>max_seeing</code> and if it is more, the value obtained from <i>CCDSeeing.getLastSeeing()</i> 
+	    is used and fed back into the CCDSeing sensor. - this is a temporary fix and really needs to be handled 
+	    by modification of the class used as the seeing predictor.
+	  </detail>
+      </change>
+      
+      
+    </workflow>
+    
+    <workflow id = "WF_007" title = "Filters">
+      
+      <description>
+	Filters are used to smooth the output gathered from sensors. There are a number of different
+	classes of filter.
+      </description>
+      
+      <note class = "TBD" date = "2005-03-21T16:00">Need to sort out the rain filter for LT which shows reverse state 
+	from what it actually is
+      </note>
+      
+      <note class = "TBD" date = "2005-03-22T07:52"> 
+	There is a general problem with modal and steady filters we cannot set these up using a time period 
+	<p/>i.e. we want to be able to say something like 
+	  - return the steady (good) value over 20 minutes OR display a default (bad) value   
+      </note>
+            
+    </workflow>
+    
+    <workflow id = "WF_008" title = "Rules">
+      <description>
+	The rulebase contains details of how the output from filtered sensor readings is to be used to trigger
+	events to be propageted to the SM and TMM.
+      </description>
+    </workflow>
+
+    <workflow id = "WF_011" title = "Monitoring">
+      <description>
+	General monitoring issues.
+      </description>
+
+      <note class = "ENT" date = "2005-03-29T10:45">
+	There is a general problem with the LT in that due to the non-wrapped pipes for the ratcam, the rotator
+	is run in (ROT MOUNT 0 + ROT FLOAT) mode. This has resulted in a 'sticking' of the rotator during exposures.
+	The TrackingMonitor class is an experimental stand-alone class designed to receive status updates and
+	make decisions based on this data about the state of the rotator. This monitor requires to be enabled only
+	when an exposure is underway - i.e. we do not want to be firing off aborts during slews etc.
+      </note>
+   
+    
+    <change author = "snf" date = "2005-03-29T10:45">
+      <classref name = "ExposureTask" package = "ngat.rcs.tmm.executive"/>
+	<detail> 
+	  The TrackingMonitor is already switched on at the start of the exposure i.e. during the <i>onInit()</i> call
+	  to <i>.TrackingMonitor.reset()</i>.
+	  Now calls <i>TrackingMonitor.setEnableAlerts(false)</i> after the exposure has completed - i.e. <i>onDisposal</i>
+	  of this task.
+	</detail>
+    </change>
+
+    <change author = "snf" date = "2005-03-29T10:45">
+      <classref name = "RCSController" package = "ngat.rcs"/>
+	<detail> 
+	  New config variable <i>max.tracking.lost.time</i> default (10 sec) defines the time in millis for which tracking can 
+	  be lost before the TrackingMonitor signals an alert. 
+	</detail>
+    </change>
+
+    <change author = "snf" date = "2005-03-29T10:45">
+      <classref name = "TrackingMonitor" package = "ngat.rcs.scm.detection"/>
+	<detail> 
+	  New variables <code>rotTrackIsLost rotTrackLostAt rotTrackLostFor alertsEnabled</code> to determine when and
+	  if the rotator lost tracking during an exposure and whether to signal an alert. 
+	  New method <i>enableAlerts()</i> is called on reset to allow the posting of X_ROT_TRACK_LOST event
+	  when the rotator is seen to be not tracking for greater than <code>maxTrackLostTime</code>. 
+	  Some debug message code is generate by this class to indicate tracking status etc.
+	</detail>
+      </change>
+
+      <note class = "OBS" date = "2005-03-30T09:02">
+	Tested rotator exercise mode last night on LT. The rotator was unable to move to the requested angle
+	of 20 degrees and caused timeouts on both the SLEW and ROT MOU commands - these were retried and failed
+	again - rot-ex was disabled. The rotator tracking detection however appears to work OK - the rotator switched
+	to moving state during observations and this was picked up and X_ROT_TRACK_LOST event fired at the correct time
+	- note that it continues to be fired every update - not required but normally we would have aborted the current
+	Observation task by then - there may be a problem however if this gets fired off before the abort has actually 
+	started -needs an inhibit on the event after firing - i.e. we only ever need one tracking lost event to fire 
+	during an observation.
+      </note>
+
+      <change author = "snf" date = "2005-03-30T09:57">
+	<classref name = "TrackingMonitor" package = "ngat.rcs.scm.detection"/>
+	  <detail> 
+	    Modified soas to disable alerts after firing off an alert event. The alerts will then only be re-enabled
+	    by a reset when a new exposure is started.
+	  </detail>
+      </change>
+      
+
+      <note class = "ENT" date = "2005-09-28T16:55">
+	The autoguider is to be deployed shortly for testing. These is a need to monitor the autiguider LOCK state
+	while it is meant to be guiding a target. A new class AutoguiderMonitor related closely to the current
+	TrackingMonitor is to be created to handle lost locking of AG. This monitor requires to be enabled only
+	when an exposure is underway - i.e. we do not want to be firing off aborts during slews etc.
+      </note>
+      
+      <change author = "snf" date = "2005-09-28T16:55">
+	<classref name = "AutoguiderMonitor" package = "ngat.rcs.scm.detection"/>
+	  <detail> 
+	    New class to handle lost guiding of AG. This class is enabled by calls to reset()
+	  </detail>
+      </change>
+
+      <change author = "snf" date = "2005-09-28T16:55">
+	<classref name = "ExposureTask" package = "ngat.rcs.tmm.executive"/>
+	  <detail> 
+	    Added call to <i>AutoguiderMonitor.reset()</i> during <i>onInit()</i>.
+	    Calls <i>AutoguiderMonitor.setEnableAlerts(false)</i> after the exposure has completed - 
+	    i.e. <i>onDisposal()</i> of this task.
+	  </detail>
+      </change>
+
+      <change author = "snf" date = "2005-09-28T16:55">
+	<classref name = "RCSController" package = "ngat.rcs"/>
+	  <detail> 
+	    New config variable <i>max.guiding.lost.time</i> default (10 sec) defines the time in millis for which guiding can 
+	    be lost before the AutoguiderMonitor signals an alert. 
+	  </detail>
+      </change>
+
+      <note class = "ENT" date = "2005-09-28T16:55">
+	There may be some use in tying the 2 standalone monitors for Autoguider and Tracking into a more
+	generally configurable class which can be configured in SCM - new base class would be required
+	as well as appropriate and general enough configuration. Also a new mapping would be provided
+	via SCM or Monitors classes to access these.
+      </note>
+
+    </workflow>
+  </subproject>
+    
+  <!-- STATE DECISION MODEL -->
+  <subproject id="STATEMODEL" title="State Decision Model">
+    
+    <description>
+      The State Decision Model (SM) provides a link between the reactive inputs and the task actions
+    </description>
+    
+    <note class =  "OBS" date = "2005-03-22T07:55">There is a problem with system going to STANDBY during OPS - 
+      The SM is in INHIB but cannot escape to be able to OPER ON (e.g. to fix an unhomed axis) again. </note>
+    
+    <note class = "ENT" date = "2005-04-05T12:44">
+      The telescope does not stop tracking when an inhibit occcurs due to MCP or IMPAIR trigger. This would be a
+      useful thing as otherwise it tracks into limits as did occur last night.
+    </note>
+
+    <workflow id = "WF_016" title = "Changes to SM">
+      <description>
+	This workflow covers the SM changes and upgrades
+      </description>
+
+      <change author = "snf" date = "2005-04-05T12:47">
+	<classref name = "RCSControlAgent" package = "ngat.rcs.tmm.manager"/>
+	  <detail>
+	    A new action MAKE_SAFE is added with associated actionImplementor <i>safeAction()</i>.
+	    This causes a <code>MakeSafeTask</code> to be instantiated and fires off the SAFE_DONE or SAFE_FAILED
+	    events on completion.
+	  </detail>
+      </change>
+      
+      
+      <change author = "snf" date = "2005-04-05T12:47">
+	<classref name = "MakeSafeTask" package = "ngat.rcs.tmm.manager"/>
+	  <detail>
+	    New task to implement the SAFE action. This fires off TRACK OF on the 3 mech axes in succession
+	    with 5 second delays. Followed by PARK at 25 secs. If any task fails it is skipped except for PARK
+	    which has 2-3 goes.
+	  </detail>
+      </change>
+
+      <change author = "snf" date = "2005-04-05T12:47">
+	<config name = "state_variable"/>
+	<detail>
+	    Added new variable SAFE_OP to record the status of the MAKE_SAFE action.	    
+	</detail>
+      </change>
+
+      <change author = "snf" date = "2005-04-05T12:47">
+	<config name = "state_network"/>
+	<detail>
+	    New transient state TRANS_SAFE entered after ABORT_NIGHT_OPS with execution of the MAKE_SAFE
+	    action. SAFE_DONE or SAFE_FAILED move the SM onto INHIB_OPS. 
+	</detail>
+      </change>
+
+    </workflow>
+
+  </subproject>
+  
+  <!-- CONTROL AND MONITORING-->
+  <subproject id="CONTROL" title="Control and monitoring">
+    <description>
+      This project is concerned with interactions between the RCS and external GUI clients - both as controllers
+      and as receivers of telemetry.
+    </description>
+
+
+    <workflow id = "" title = "GUI control">
+      <description>
+	Covers the commands sent by the GUI and their implementation at the RCS.
+	</description>
+    </workflow>
+
+    <workflow id = "" title = "Monitoring">
+      <description>
+	Covers the data sent by the RCS to the GUI or other data handlers.
+      </description>
+
+<!-- Added new fileds agentName and agentActivity to ID_DONE -->
+
+    </workflow>
+
+  </subproject>
+  
+  <!-- System Configuration -->
+  <subproject id="config" title="Configuration">
+    <description>
+      The RCS has a large number of configuration files - this project aims to keep track of modifications
+      and upgrades to these.
+    </description>
+  </subproject>
+  
+  <!-- LOGGING -->
+  <subproject id="LOGGING" title="Logging">
+    <description>
+      This project aims to keep track of any changes made to the RCS logging facilities.
+    </description>
+    
+    <workflow id="WF_004" title="MCA Specific logging">
+      <description>      
+	This workflow is aimed at logging for the various control agents.
+      </description>
+    </workflow>
+    
+    <workflow id="WF_006" title="Task logging">
+      <description>
+	This workflow is aimed at the task (TMM) module logging.
+      </description>
+    </workflow>
+
+
+    <workflow id="WF_014" title="Remote logging">
+      <description>
+	This workflow is associated with remote logging - i.e. from a GUI or external client.
+     </description>
+
+      <change author = "snf" date = "2005-03-30T14:08">
+	<classref name = "GRAB_LOGImpl" package = "ngat.rcs.control"/>
+	  <detail>
+	    Changed this class soas to add a new TelemetryLogHandler to the named logger. This should send
+	    back each valid log message as a string formatted in a specific way (defaults to BasicLogFormatter).
+	  </detail>
+      </change>
+
+      <change author = "snf" date = "2005-03-30T14:08">
+	<classref name = "TelemetryLogHandler" package = "ngat.rcs.control"/>
+	  <create/>
+	  <detail>
+	      New LogHandler to push LogRecords to the Telemetry sender. Just publishes formatted log records
+	      as strings with appropriate formatting.
+	    </detail>
+      </change>
+
+    </workflow>
+
+
+
+  </subproject>
+
+  <!-- Activity Log -->
+  <activity>
+
+    <build action="compile" author="snf" date="2005-03-17T09:09" id="COMPILE_200503170909" success="true" >
+      
+    </build>
+
+    <build action="compile" author="snf" date="2005-03-17T12:04" id="COMPILE_200503171204" success="true">
+
+    </build>
+	  
+    <build action="release" author="snf" date="2005-03-23T15:13" id="RELEASE_200503231513">
+
+    </build>
+	
+    <build action="deploy" target="ftnocc" date="2005-03-23T15:13" id="DEPLOY_FTNOCC_200503231513">
+
+    </build>
+	  
+    <build action = "release" author = "snf" date = "2005-03-29T11:45" id = "RELEASE_200503291145">
+
+    </build>
+
+    <build action = "deploy" target = "ltocc" date = "2005-03-29T11:46" id = "DEPLOY_LTOCC_200503291146">
+
+    </build>
+
+
+    <!-- Current max workflow ID assigned -->
+
+    <wf_id count = "13"/>
+             
+  </activity>
+  
+</project>

@@ -1,0 +1,99 @@
+#!/bin/csh
+
+# Extract the Magnum "thin.cloud" data and check its timestamp against
+# the content of /occ/tmp/.conditions keyword "photom.time".
+
+set CONDITIONS = /occ/tmp/.conditions
+
+set STALE_TIME    = 300
+set LOOP_INTERVAL = 60
+set SAVED_DATA    = $DEPLOY_DATA/photom.data
+set DATA_URL      = http://banana.ifa.hawaii.edu/data/ft/metdata
+set EXT_THRESH    = 40.0
+
+while (1)
+
+    wget --tries=1  --output-document=$SAVED_DATA  $DATA_URL >& /dev/null
+    
+    if ($status == 0) then 
+
+	# New data timestamp
+	set yr  = `cat $SAVED_DATA | cut -d"," -f1`
+	set day = `cat $SAVED_DATA | cut -d"," -f2`
+	set tim = `cat $SAVED_DATA | cut -d"," -f3`
+
+	set cirrus = `cat $SAVED_DATA | cut -d"," -f15` 
+
+	if ($status == 0) then
+
+	    # Conditions data timestamp
+	    set cdt = `cat $CONDITIONS | grep 'fake.photom.time' | cut -d"=" -f2`
+    
+	    # New update timestamp
+	    set uts = `echo $yr $day $tim \
+	    | awk '{print "(((", $1, "* 365 +", $2, ")* 24 +", substr($3,1,2), ")* 60 +", substr($3,3,2), ")* 60 +", substr($3,5,2) }' | bc `
+
+	    # Current date 
+	    set now = `date -u "+%Y %j %H%M%S" \
+	    | awk '{print "(((", $1, "* 365 +", $2, ")* 24 +", substr($3,1,2), ")* 60 +", substr($3,3,2), ")* 60 +", substr($3,5,2) }' | bc `
+
+	    set ss = `echo $now " - " $uts | bc `
+
+	    echo "------------------------------------------------------------------------------"
+	    echo "Current timestamp = $now , Update timestamp = $uts , New data is $ss sec old" 
+
+	    cat $CONDITIONS     | grep -v "fake.photom" > ${CONDITIONS}.1
+	    cat ${CONDITIONS}.1 | grep -v "extinction"  > ${CONDITIONS}.2
+
+	    echo "fake.photom.time = ${yr}-${day}-${tim} " >> ${CONDITIONS}.2
+	    echo "fake.photom.cirrus = $cirrus " >> ${CONDITIONS}.2
+
+	    set diff = `echo "$ss < 120" | bc `
+
+	    if ($status == 0) then
+		echo "Data is valid"
+
+		set spec = `echo "$cirrus > $EXT_THRESH" | bc`
+		echo "With $cirrus thresh $EXT_THRESH Spectro = $spec"
+		if ($spec == 0) then
+		    set ext = "photometric"
+		else
+		    set ext = "spectroscopic"
+		endif
+
+		 echo "extinction = $ext " >> ${CONDITIONS}.2
+				
+	    else
+		echo "** Data is stale"
+
+		echo "extinction = spectroscopic " >> ${CONDITIONS}.2
+
+	    endif
+	    	   
+	    mv ${CONDITIONS}.2 $CONDITIONS
+	
+	else
+	    echo "There was a problem extracting the cirrus data"
+
+	    # Leave the data values from last valid grab and switch ext to SPEC
+	    cat ${CONDITIONS} | grep -v "extinction"  > ${CONDITIONS}.1
+	    echo "extinction = spectroscopic" >> ${CONDITIONS}.1
+	    mv ${CONDITIONS}.1 $CONDITIONS
+
+	endif
+    else
+
+	echo "** No comms"
+	# Leave the data values from last valid grab and switch ext to SPEC
+	cat ${CONDITIONS} | grep -v "extinction"  > ${CONDITIONS}.1	
+	echo "extinction = spectroscopic" >> ${CONDITIONS}.1
+        mv ${CONDITIONS}.1 $CONDITIONS
+
+    endif
+    echo "------------------------------------------------------------------------------"
+    cat $CONDITIONS 
+    echo "------------------------------------------------------------------------------"
+    echo
+    sleep $LOOP_INTERVAL
+	
+end

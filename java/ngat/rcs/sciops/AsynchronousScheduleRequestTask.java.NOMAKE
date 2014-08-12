@@ -1,0 +1,102 @@
+/**
+ * 
+ */
+package ngat.rcs.sciops;
+
+import java.rmi.Naming;
+
+import ngat.rcs.tmm.TaskManager;
+import ngat.sms.AsynchronousScheduler;
+import ngat.sms.ScheduleItem;
+
+/**
+ * @author eng
+ * 
+ */
+public class AsynchronousScheduleRequestTask extends AsynchronousRemoteCallTask {
+
+    TestAsynchronousScheduleResponseHandler ash;
+
+    ScheduleItem schedule;
+
+    String schedHost = "ltdev1";
+
+    /**
+     * @return the schedule
+     */
+    public ScheduleItem getSchedule() {
+	return schedule;
+    }
+
+    /**
+     * @param name
+     * @param manager
+     */
+    public AsynchronousScheduleRequestTask(String name, TaskManager manager) {
+	super(name, manager);
+	schedHost = System.getProperty("experimental.scheduler.host", "localhost");
+    }
+
+    protected long calculateTimeout() {
+	return 600000L;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * ngat.rcs.sciops.AsynchronousRemoteCallTask#createActiveResponder()
+     */
+    protected AsynchronousResponseHandler createActiveResponder() throws Exception {
+	ash  = new TestAsynchronousScheduleResponseHandler(this);	
+	return ash;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ngat.rcs.sciops.AsynchronousRemoteCallTask#makeRemoteCall()
+     */
+    protected void makeRemoteCall() throws Exception {
+	// TODO Auto-generated method stub
+	logger.create().extractCallInfo().info().level(3)
+	    .msg("Making asynch schedule request using: rmi://"+schedHost+"/AsynchScheduler")
+	    .send();
+	AsynchronousScheduler asched = (AsynchronousScheduler)Naming.lookup("rmi://"+schedHost+"/AsynchScheduler");
+	logger.create().extractCallInfo().info().level(3)
+	    .msg("Obtained reference to remote scheduler at: "+asched)
+	    .send();
+	asched.requestSchedule(ash);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ngat.rcs.sciops.AsynchronousRemoteCallTask#onDisposal()
+     */
+    protected void onDisposal() {
+	logger.create().extractCallInfo().info().level(3)
+	    .msg("Special disposal of AsynchScheduleRequestor")
+	    .send();
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ngat.rcs.sciops.AsynchronousRemoteCallTask#onInit()
+     */
+    protected void onInit() {
+	logger.create().extractCallInfo().info().level(3)
+	    .msg("Special initialization of asynch schedule requestor")
+	    .send();
+    }
+
+    protected void onCompletion() {
+	schedule = ash.getSched();
+	logger.create().extractCallInfo().info().level(3)
+	    .msg("Setting schedule from response handler")
+	    .send();
+    }
+
+
+}

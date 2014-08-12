@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# ---------------------------------------------------
+# Init Launcher for: Robotic Control Watchdog (RCW).
+# ---------------------------------------------------
+
+. /opt/ngat/etc/bashrc
+
+DAT=`date -u +"%j"`
+RCW_CONSOLE_LOG_FILE=${DEPLOY_TMP}/rcw_${DEPLOY_SYSTEM}.log
+
+# Source function library.
+/etc/rc.d/init.d/functions
+
+case "$1" in
+  start)
+	echo "Starting Robotic Control Watchdog. "
+	echo "Logging to: " ${RCW_CONSOLE_LOG_FILE}
+	${DEPLOY_BIN}/rcw start $DEPLOY_SYSTEM  1>> ${RCW_CONSOLE_LOG_FILE} 2>&1 & 
+	;;
+  stop)
+	echo "Shutting down Robotic Control Watchdog."
+	${DEPLOY_BIN}/rcw stop $DEPLOY_SYSTEM 1>> ${RCW_CONSOLE_LOG_FILE}_stop 2>&1 &     
+	;;
+  restart)
+	$0 stop
+	echo "Restarting in 10 secs" 
+	sleep 10
+	$0 start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit 0

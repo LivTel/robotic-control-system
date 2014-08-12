@@ -1,0 +1,424 @@
+/*   
+    Copyright 2006, Astrophysics Research Institute, Liverpool John Moores University.
+
+    This file is part of Robotic Control System.
+
+     Robotic Control Systemis free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Robotic Control System is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Robotic Control System; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+package ngat.rcs.calib;
+
+import ngat.rcs.*;
+
+import ngat.rcs.tmm.*;
+import ngat.rcs.tmm.executive.*;
+import ngat.rcs.tmm.manager.*;
+
+import ngat.rcs.emm.*;
+
+import ngat.rcs.scm.*;
+import ngat.rcs.scm.collation.*;
+import ngat.rcs.scm.detection.*;
+
+import ngat.rcs.comms.*;
+import ngat.rcs.control.*;
+import ngat.rcs.statemodel.*;
+
+import ngat.rcs.iss.*;
+
+import ngat.rcs.pos.*;
+import ngat.rcs.tocs.*;
+import ngat.rcs.science.*;
+
+
+
+import ngat.net.*;
+import ngat.math.*;
+import ngat.phase2.*;
+import ngat.astrometry.*;
+import ngat.util.*;
+import ngat.phase2.nonpersist.*;
+import ngat.message.RCS_TCS.*;
+
+import java.io.*;
+import java.util.*;
+
+/** This Task creates a series of tasks 
+ * to determine the optimum focus position for the Autoguider.
+ *
+ * <dl>
+ * <dt><b>RCS:</b>
+ * <dd>$Id: AGFocusCalibrationTask.java,v 1.1 2006/12/12 08:25:56 snf Exp $
+ * <dt><b>Source:</b>
+ * <dd>$Source: /home/dev/src/rcs/java/ngat/rcs/calib/RCS/AGFocusCalibrationTask.java,v $
+ * </dl>
+ * @author $Author: snf $
+ * @version $Revision: 1.1 $
+ */
+public class AGFocusCalibrationTask extends CalibrationTask {
+    
+    /** ERROR_BASE for this Task type.*/
+    public static final int ERROR_BASE = 900;
+
+    public static final int SUBTASK_FAILED       = 600900;
+    
+    public static final int ILLEGAL_SOURCE_ERROR = 600901;
+
+    /** Constant: Indicates the lower focus offset limit for the AgFocus calibration (mm). */
+    public static final double AGFOCUS_DEFAULT_FOCUS_START = -25.0;
+    
+    /** Constant: Indicates the upper focus offset limit for the AgFocus calibration (mm).*/
+    public static final double AGFOCUS_DEFAULT_FOCUS_STOP = +25.0;
+    
+    /** Constant: Indicates the increment in the focus offset for the AgFocus calibration (mm).*/
+    public static final double AGFOCUS_DEFAULT_FOCUS_INCREMENT = 0.5;
+    
+    /** The start value for the range of AG-focus settings to try (mm).*/
+    protected double focusStart;
+    
+    /** The focus increment to use (mm).*/
+    protected double focusIncrement;
+    
+    /** The final value for the range of AG-focus settings to try (mm).*/
+    protected double focusStop;
+    
+    /** The source object to use as calibration for AG.*/
+    protected ExtraSolarSource calibSource;
+
+    /** The magnitude of the calibaration source.*/
+    protected double calibMagnitude;
+    
+    /** Switch ON Tracking in AZ.*/
+    protected Track_Task trackOnAzTask;
+
+    /** Switch ON Tracking in ALT.*/
+    protected Track_Task trackOnAltTask;
+    
+    /** Switch ON Tracking in ROT.*/
+    protected Track_Task trackOnRotTask;
+
+    /** Switch OFF Tracking in AZ.*/
+    protected Track_Task trackOffAzTask;
+    
+    /** Switch OFF Tracking in ALT.*/
+    protected Track_Task trackOffAltTask;
+    
+    /** Switch OFF Tracking in ROT.*/
+    protected Track_Task trackOffRotTask;
+    
+    /** Select autoguider.*/
+    AgSelectTask agSelectTask;
+
+    /** Move probe to centre.*/
+    AgMoveTask agMoveInTask;
+
+    /** Move probe to centre.*/
+    AgMoveTask agMoveOutTask;
+    
+    /** Slew to calibration source.*/
+    SlewTask   slewTask;
+
+    //AutoGuide_Move__Task currentAutoGuide_Move_IN_Task;// IN.
+
+    /** The sequence of AG-focus offsets.*/
+    AG_Focus_Cycle_Task theAG_Focus_Cycle_Task;
+    
+    /** Put AG-focus to optimum value.*/
+    AG_Focus_Task       optimumAG_Focus_Task;
+
+    //AutoGuide_Move_Task currentAutoGuide_Move_OUT_Task;// OUT.
+
+    /** Create an AGFocusCalibrationTask. Involves moving AG mech IN, Carry out 
+     * AG_Focus cycle, set opt focus then move AG mech OUT. 
+     * @param focusStart The start value of the range of AG-focus settings to use (mm).
+     * @param focusStop The final value of the range of AG-focus settings to use (mm).
+     * @param focusIncrement The focus increment to use (mm).
+     * @param name The unique name/id for this TaskImpl - 
+     * should be based on the COMMAND_ID.
+     * @param manager The Task's manager.
+     */
+    public AGFocusCalibrationTask(String      name,
+				  TaskManager manager,
+				  File        configFile,
+				  File        historyFile,
+				  Long        maxDuration,
+				  Integer     invokation) {
+	super(name, manager, configFile, historyFile, maxDuration, invokation);
+    }
+    
+    protected void configure() throws IOException , IllegalArgumentException {
+	ConfigurationProperties config = new ConfigurationProperties();	
+	config.load(new FileInputStream(configFile));
+	
+	focusStart     = config.getDoubleValue("agfocus.start",     AGFOCUS_DEFAULT_FOCUS_START);
+	focusStop      = config.getDoubleValue("agfocus.stop",      AGFOCUS_DEFAULT_FOCUS_STOP);    
+	focusIncrement = config.getDoubleValue("agfocus.increment", AGFOCUS_DEFAULT_FOCUS_INCREMENT);
+   	System.err.println("****************READING ST "+focusStart+" STO "+focusStop + " INC "+focusIncrement);
+    }
+    
+    /** TEMP### If any ST fails we just give up.*/
+    public void onSubTaskFailed(Task task) {
+	super.onSubTaskFailed(task);
+	ErrorIndicator ei = task.getErrorIndicator();
+	failed(SUBTASK_FAILED, ei.getErrorString(), null);
+    }
+    
+    /** */
+    public void onSubTaskAborted(Task task) {
+	super.onSubTaskAborted(task);
+    }
+    
+    /** */
+    public void onSubTaskDone(Task task) {
+	super.onSubTaskDone(task);
+	if (task == theAG_Focus_Cycle_Task) {
+	    double optimumFocus = theAG_Focus_Cycle_Task.getOptimumFocus(); 
+	    double chi = theAG_Focus_Cycle_Task.getChi();
+	    // We could revise decision here based on the Chi.
+	    optimumAG_Focus_Task.setFocus(optimumFocus);
+	}
+	// This is an ordinary Ag_Focus_Task so we log its completion to OPS.
+	if (task == optimumAG_Focus_Task) {
+	    opsLog.log(1,"Completed Autoguider-Focus Calibration/Optimum-focus-set.");
+	}
+
+    }
+    
+    /**  */
+    public void onAborting() {
+	synchronized (taskList) {
+	    super.onAborting();	  
+	    taskList.addTask(new Track_Task(name+"-(TrackOff)",
+					    this,
+					    TRACK.ALTITUDE,
+					    TRACK.OFF));
+	    taskList.addTask(new Track_Task(name+"-(TrackOff)",
+					    this,
+					    TRACK.AZIMUTH,
+					    TRACK.OFF));
+	    taskList.addTask(new Track_Task(name+"-(TrackOff)",
+					    this,
+					    TRACK.ROTATOR,
+					    TRACK.OFF));
+	}
+	
+    }      
+  
+    public void onCompletion() {
+	super.onCompletion();
+	opsLog.log(1, "Completed Autoguider-Focus Calibration.");
+    }
+
+    /** Overriden to write to the Ops log after failure, prior to disposal.*/
+    public void onFailure() {
+	super.onFailure();
+	opsLog.log(1, "Failed Autoguider-Focus Calibration"+
+		   "\n\tCode:      "+errorIndicator.getErrorCode()+
+		   "\n\tReason:    "+errorIndicator.getErrorString()+
+		   "\n\tException: "+errorIndicator.getException());
+    }
+
+
+    /** Overwritten to choose the best calibration source, just before the task runs.
+     * Note: We also get the exposure time for this source.
+     */
+    public void preInit() {
+	super.preInit();
+	Standards standards = Standards.getStandards("FOCUS_CAM");
+	if (standards != null) {	   
+	    Standards.FieldSet fields = standards.getStandardFields(); 	  
+	    if (fields != null) {		
+		fields.pickHighestField();
+		calibSource    = (ExtraSolarSource)fields.getCurrentHighestField().getField();
+		calibMagnitude = fields.getCurrentHighestField().getMagnitude();
+	    }
+	}
+    }   
+    
+    /** Overridden to carry out specific work just after the tasklist is created.*/
+    public void onInit() {
+	super.onInit();	
+	if (calibSource == null) return;
+	Position target = calibSource.getPosition();
+	taskLog.log(ENTER, 3, CLASS, name, "onInit", "Setting FITS headers.");
+	opsLog.log(1, "Starting Autoguider-Focus Calibration."+
+		   "\n Focus Range:    "+
+		   "\n        From:    "+focusStart+" (mm)."+
+		   "\n          To:    "+focusStop+" (mm)."+
+		   "\n   Increment:    "+focusIncrement+" (mm)."+
+		   "\n       Stops:    "+((focusStop-focusStart)/focusIncrement)+
+		   "\n      Source:    "+calibSource.getName()+
+		   "\n          RA:    "+Position.toHMSString(target.getRA())+
+		   "\n         Dec:    "+Position.toDMSString(target.getDec())+
+		   "\n          HA:    "+Position.toHMSString(target.getHA())+
+		   "\n     Azimuth:    "+Position.toDegrees(target.getAzimuth(), 3)+
+		   "\n    Altitude:    "+Position.toDegrees(target.getAltitude(), 3));
+	
+	FITS_HeaderInfo.current_GROUPID.setValue ("LT-AG-FOCUS-GROUP");	 	
+	FITS_HeaderInfo.current_COMPRESS.setValue("NONE");	   
+	FITS_HeaderInfo.current_RADECSYS.setValue("FK5");
+	
+	// ## If calibSource is null this will fail horribly !
+
+	FITS_HeaderInfo.current_EQUINOX.setValue (""+calibSource.getEquinoxLetter()+calibSource.getEquinox());
+	FITS_HeaderInfo.current_CAT_RA.setValue  (FITS_HeaderInfo.toHMSString(calibSource.getRA()));
+	FITS_HeaderInfo.current_CAT_DEC.setValue (FITS_HeaderInfo.toDMSString(calibSource.getDec()));
+	FITS_HeaderInfo.current_CAT_EPOC.setValue(new Double(calibSource.getEpoch()));
+	FITS_HeaderInfo.current_CAT_NAME.setValue(calibSource.getName());
+	FITS_HeaderInfo.current_OBJECT.setValue  (calibSource.getName());
+	
+	FITS_HeaderInfo.current_PM_RA.setValue   (new Double(calibSource.getPmRA()));
+	FITS_HeaderInfo.current_PM_DEC.setValue  (new Double(calibSource.getPmDec()));
+	FITS_HeaderInfo.current_PARALLAX.setValue(new Double(calibSource.getParallax()));
+	//FITS_HeaderInfo.current_RADVEL   = calibSource.getRadialVelocity();
+	FITS_HeaderInfo.current_RATRACK.setValue (new Double(0.0));
+	FITS_HeaderInfo.current_DECTRACK.setValue(new Double(0.0));	 
+
+    }
+    
+    /** Creates the TaskList for this TaskManager.
+     */
+    protected TaskList createTaskList(TaskMonitorFactory tmfactory) {
+	
+	
+	if (calibSource == null) {
+	    //Major error !	   
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed setting source for AG-Focus calibration: No suitable source was found.");
+	    failed = true;
+	    errorIndicator.setErrorCode(ILLEGAL_SOURCE_ERROR);
+	    errorIndicator.setErrorString("Failed setting source for AG-Focus calibration: No suitable source was found.");
+	    return null;	    
+	}
+	
+	// Tracking on.
+	trackOnAzTask = new Track_Task(name+"/TRK_ON_AZ", 
+				     this, 
+				     TRACK.AZIMUTH, 
+				     TRACK.ON);
+	taskList.addTask(trackOnAzTask);
+	
+	trackOnAltTask = new Track_Task(name+"/TRK_ON_ALT", 
+				     this, 
+				     TRACK.ALTITUDE, 
+				     TRACK.ON);
+	taskList.addTask(trackOnAltTask);
+	
+	trackOnRotTask = new Track_Task(name+"/TRK_ON_ROT", 
+				     this, 
+				     TRACK.ROTATOR, 
+				     TRACK.ON);
+	taskList.addTask(trackOnRotTask);
+
+	// Select AG.
+	agSelectTask = new AgSelectTask(name+"/AG_SEL", this,
+					AGSELECT.CASSEGRAIN);
+	taskList.addTask(agSelectTask);
+	
+	// Probe to centre.
+	TelescopeConfig tc1 = new TelescopeConfig();
+	tc1.setGuideProbePosition(100.0);
+	agMoveInTask = new AgMoveTask(name+"/AGPROBE",
+				      this,
+				      tc1);
+	taskList.addTask(agMoveInTask);
+	
+	// Slew to Calibration source.
+	slewTask = new SlewTask(name+"/SLEW",
+				this,
+				calibSource);
+	taskList.addTask(slewTask);
+	
+	// ##TBD 2. Move AG feed mirror IN.
+	//currentAutoGuide_Move_IN_Task = new AutoGuide_Move_Task(IN);
+	//taskList.addTask(currentAutoGuide_Move_Task);
+
+	// Do the Focus calibration stuff.
+	theAG_Focus_Cycle_Task = new AG_Focus_Cycle_Task(name+"/AG_Focus_Cycle",
+							 this,
+							 focusStart,
+							 focusStop,
+							 focusIncrement);
+	taskList.addTask(theAG_Focus_Cycle_Task);
+	
+	// Set the optimum focus.
+	optimumAG_Focus_Task = new AG_Focus_Task(name+"/Opt_Focus",
+						 this,
+						 0.0);
+	taskList.addTask(optimumAG_Focus_Task);
+
+	// Move AG feed mirror OUT.	
+	TelescopeConfig tc2 = new TelescopeConfig();
+	tc2.setGuideProbePosition(0.0);
+	agMoveOutTask = new AgMoveTask(name+"/AGPROBE",
+				       this,
+				       tc2);
+	taskList.addTask(agMoveOutTask);
+
+	// Tracking off.
+	trackOffAzTask = new Track_Task(name+"/TRK_OFF", 
+				     this, 
+				     TRACK.AZIMUTH, 
+				     TRACK.OFF);
+	taskList.addTask(trackOffAzTask);
+	trackOffAltTask = new Track_Task(name+"/TRK_OFF", 
+				     this, 
+				     TRACK.ALTITUDE, 
+				     TRACK.OFF);
+	taskList.addTask(trackOffAltTask);
+	trackOffRotTask = new Track_Task(name+"/TRK_OFF", 
+				     this, 
+				     TRACK.ROTATOR, 
+				     TRACK.OFF);
+	taskList.addTask(trackOffRotTask);
+
+	// Setup sequence.
+	try {	  
+	    taskList.sequence(trackOnAzTask,          slewTask);
+	    taskList.sequence(trackOnAltTask,         slewTask);
+	    taskList.sequence(trackOnRotTask,         slewTask);
+	    taskList.sequence(agSelectTask,           agMoveInTask);
+	    taskList.sequence(slewTask,               theAG_Focus_Cycle_Task);
+	    taskList.sequence(agMoveInTask,           theAG_Focus_Cycle_Task);
+	    taskList.sequence(theAG_Focus_Cycle_Task, optimumAG_Focus_Task);
+	    taskList.sequence(optimumAG_Focus_Task,   agMoveOutTask);
+	    taskList.sequence(agMoveOutTask,          trackOffAzTask);
+	    taskList.sequence(agMoveOutTask,          trackOffAltTask); 
+	    taskList.sequence(agMoveOutTask,          trackOffRotTask);
+	} catch (TaskSequenceException tx) {
+	    errorLog.log(1, CLASS, name, "createTaskList", 
+			 "Failed to create Task Sequence for AG-Focus calibration:"+tx);
+	    failed = true;
+	    errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+	    errorIndicator.setErrorString("Failed to create Task Sequence for AG-Focus calibration.");
+	    errorIndicator.setException(tx);
+	    return null;
+	}
+
+	return taskList;
+    }
+    
+}
+
+/** $Log: AGFocusCalibrationTask.java,v $
+/** Revision 1.1  2006/12/12 08:25:56  snf
+/** Initial revision
+/**
+/** Revision 1.1  2006/05/17 06:31:23  snf
+/** Initial revision
+/**
+/** Revision 1.1  2002/09/16 09:38:28  snf
+/** Initial revision
+/** */
+
