@@ -163,7 +163,9 @@
 		<echo message="Jarring main" />
 		<jar jarfile="${javalib.dir}/${jar}" basedir="${build.class}" update="true" />
 
-
+		<!-- set perm rw-rw-r -->
+		<chmod file= "${javalib.dir}/${jar}" perm="664"/>
+		
 	</target>
 
 	<!-- BUILD AND JAR-->

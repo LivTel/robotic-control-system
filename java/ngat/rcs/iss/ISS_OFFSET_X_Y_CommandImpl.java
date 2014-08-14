@@ -99,7 +99,7 @@ public class ISS_OFFSET_X_Y_CommandImpl extends ISS_CommandImpl {
 				acquireInstrumentName);
 		double rotatorOffset = 0.0;
 		try {
-			InstrumentRegistry ireg = RCS_Controller.controller
+			ngat.icm.InstrumentRegistry ireg = RCS_Controller.controller
 					.getInstrumentRegistry();
 			InstrumentCapabilities icap = ireg.getCapabilitiesProvider(aid)
 					.getCapabilities();
