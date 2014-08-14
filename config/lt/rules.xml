@@ -140,12 +140,12 @@
     <item> rain </item>
   </filter>
 
-  <filter name = "B_SKYAMB" class = "AVERAGE">
+<!--  <filter name = "B_SKYAMB" class = "AVERAGE">
     <source> METEO </source>
     <category> CLOUD </category>
     <item> skyamb </item>
     <period unit = "mins"> 2 </period>
-  </filter>
+  </filter>-->
 
   <filter name = "T_DUST" class = "AVERAGE">
     <source> METEO </source>

@@ -1,0 +1,28 @@
+
+# ============================================
+# Standard Star Fields - Configuration format.
+# ============================================
+#
+# Notes.
+#
+# 1. Star Fields do NOT have to be in order of RA etc.
+#
+#
+#
+#
+standards.1.ID		=	MyLittleStar
+standards.1.field.ra	=	12:22:13.00
+standards.1.field.dec	=	+23:15:45.00
+standards.1.focus.ra	=	12:22:46.00
+standards.1.focus.dec	=	+23:18:00.00
+standards.1.focus.mag	=	12.0
+
+standards.2.ID		=	AnotherLittleStar
+standards.2.field.ra	=	14:22:13.00
+standards.2.field.dec	=	-3:15:45.00
+standards.2.focus.ra	=	14:22:46.00
+standards.2.focus.dec	=	-3:18:00.00
+standards.2.focus.mag	=	12.2
+
+etc
+etc

@@ -1,0 +1,19 @@
+#!/bin/csh
+
+foreach file (*)
+
+    set other = ../../devtest/config/$file
+
+    echo "=======================================================================" |& tee -a check.log
+    echo "Checking $file against $other ..." |& tee -a check.log
+    echo "=======================================================================" |& tee -a check.log
+
+    diff $file $other |& tee -a check.log
+
+#    sleep 2
+
+    echo |& tee -a check.log
+    echo |& tee -a check.log
+    echo |& tee -a check.log
+
+end

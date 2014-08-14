@@ -157,7 +157,7 @@
 	</end-offset>
 	<window>2700000</window>
 	<interval>82400000</interval>
-      </evening-skyflats>
+      </evening-skyflats> 
       <priority> 5 </priority>
       <history file="/occ/rcs/instruments/io:o.calib.dat" />
     </calibration>
@@ -256,8 +256,9 @@
 	<!-- 2014-03-20 RJS Increased from -89.5 to -87.8 because WCS ROT error was coming in at 358.3 -->
 	<rotator-offset> -87.8 </rotator-offset> 
 	<!-- Up until Jun 2014 aperture-offset x="57" y="-47" /> -->
-	<!-- Following values by IAS 2014-06-12 -->
-	<aperture-offset x="40" y="0" />
+	<!-- Value by IAS 2014-06-12 <aperture-offset x="40" y="0" /> -->
+	<!-- Following from RJS 2014-06-13. No hardware change. Just fine tuning IAS's 2014-06-12 work -->
+	<aperture-offset x="30" y="-20" />
       </capabilities>
 
       <detector>

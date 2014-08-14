@@ -1,0 +1,723 @@
+=======================================================================
+Checking agent.properties against ../../devtest/config/agent.properties ...
+=======================================================================
+30c30
+< agent.3.class		= ngat.rcs.tmm.manager.BackgroundControlAgent
+---
+> agent.3.class		= ngat.rcs.tms.manager.BackgroundControlAgent
+
+
+
+=======================================================================
+Checking agfocus_calib.properties against ../../devtest/config/agfocus_calib.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking all_blanks.cat against ../../devtest/config/all_blanks.cat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking background_ops.properties against ../../devtest/config/background_ops.properties ...
+=======================================================================
+7a8
+> catalog = config/bg_std.cat
+11c12
+< #ag.mandatory
+---
+> ag.mandatory
+21,23d21
+< # this line is needed for now till I change the config() method
+< catalog = none
+< 
+29,30c27
+< primary.catalog 		= config/ratcam_std.cat
+< 
+---
+> primary.catalog = config/ratcam_std.cat
+43c40
+< # enable secondary
+---
+> # do NOT enable secondary
+46,47c43
+< secondary.catalog = config/io:o_std.cat
+< secondary.upper.beam.element	= Clear
+---
+> secondary.upper.beam.element 	= Clear
+49,50c45,46
+< 
+< secondary.config.0.ID           = SDSS-R
+---
+> secondary.catalog = config/io:o_std.cat
+> secondary.config.0.ID           = IO-SDSS-R
+55c51
+< secondary.config.1.ID           = SDSS-Z
+---
+> secondary.config.1.ID           = IO-SDSS-Z
+
+
+
+=======================================================================
+Checking bg_std.cat against ../../devtest/config/bg_std.cat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking calib_day_ops.properties against ../../devtest/config/calib_day_ops.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking calib_night_ops.properties against ../../devtest/config/calib_night_ops.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking calib_ops.properties against ../../devtest/config/calib_ops.properties ...
+=======================================================================
+17,18c17
+< #focus.instrument.config.file = config/telfocus_RATCAM.properties
+< focus.instrument.config.file = config/telfocus_IO.properties
+---
+> focus.instrument.config.file = config/telfocus_inst.properties
+21a21,22
+> meaburn.blank.catalog = config/all_blanks.cat
+> ringo.blank.catalog = config/all_blanks.cat
+27,44c28
+< # set sun level to control evening flats 
+< evening.skyflats.min.solar.elevation = -10.0
+< evening.skyflats.max.solar.elevation = -1.0 
+< evening.skyflats.min.duration = 480000L
+< # using 8 minutes as minumum time for flats
+< 
+< # set sun levels to control morning flats
+< morning.skyflats.min.solar.elevation = -14.0
+< morning.skyflats.max.solar.elevation = -3.0
+< morning.skyflats.min.duration = 480000L
+< # using 8 minutes as minimum time for flats
+< 
+< 
+< # Calib skyflats weighting
+< calib.weight.same     = 2.0
+< calib.weight.other    = 0.0
+< calib.weight.random   = 5.0
+< calib.weight.priority = 1.0
+---
+> evening.skyflats.latest.start.offset  = 1800000L
+45a30,31
+> morning.skyflats.earliest.start.offset	= 3000000L
+> morning.skyflats.latest.start.offset  	= 600000L
+46a33,37
+> morning.skyflats.min.solar.elevation = -8.8
+> #morning.skyflats.max.solar.elevation= -5.2
+> # 2009-05-27 Changed from 5.2 to 2.5 as experiment. RJS. Bug 1518
+> morning.skyflats.max.solar.elevation= -2.5
+> morning.skyflats.minimum.duration     	= 480000L
+
+
+
+=======================================================================
+Checking callout.config against ../../devtest/config/callout.config ...
+=======================================================================
+
+
+
+=======================================================================
+Checking callout.properties against ../../devtest/config/callout.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking checkem against ../../devtest/config/checkem ...
+=======================================================================
+diff: ../../devtest/config/checkem: No such file or directory
+
+
+
+=======================================================================
+Checking checkem~ against ../../devtest/config/checkem~ ...
+=======================================================================
+diff: ../../devtest/config/checkem~: No such file or directory
+
+
+
+=======================================================================
+Checking daytime_calib.properties against ../../devtest/config/daytime_calib.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking daytime_ops.properties against ../../devtest/config/daytime_ops.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking focus_std.cat against ../../devtest/config/focus_std.cat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking io_o_flats.cat against ../../devtest/config/io_o_flats.cat ...
+=======================================================================
+1,15c1,13
+<  ioo_blank00	23:48:11.9 00:56:51 J2000
+<  ioo_blank03	02:57:49.8 -00:08:42 J2000
+<  ioo_blank04N   04:29:48.2 54:15:22 J2000
+<  ioo_wfsblank1  08:00:32.0 49:56:49 J2000
+<  ioo_blank09    09:11:56.6 -07:52:16 J2000
+<  ioo_wfsblank2  12:00:14.1 40:55:01 J2000
+<  ioo_blank13Na  13:36:06.6 62:14:18 J2000
+<  ioo_wfcblank1  15:01:55.0 29:56:23 J2000
+<  ioo_blank15    15:15:40.7 -00:42:16 J2000
+<  ioo_blank17    16:52:31.0 -15:30:29 J2000
+<  ioo_blank19    19:21:25.3 12:29:28 J2000
+<  ioo_blank23    23:15:49.5 11:25:24 J2000
+<  ioo_wfcblank2  22:57:40.9 00:06:32 J2000
+< 
+< 
+---
+> ioo_blank00    23:48:11.9  00:56:51 J2000	0 Attach:ioo_blank00.jpg     
+> ioo_blank03    02:57:49.8 -00:08:42 J2000 	2 Attach:ioo_blank03.jpg     
+> ioo_blank04N   04:29:48.2  54:15:22 J2000 	0 Attach:ioo_blank04N.jpg    Dust cloud(10' dia). Just enough for IO:O?
+> ioo_wfsblank1  08:00:32.0  49:56:49 J2000 	2 Attach:ioo_wfsblank1.jpg   Not very blank
+> ioo_blank09    09:11:56.6 -07:52:16 J2000 	1 Attach:ioo_blank09.jpg     
+> ioo_wfsblank2  12:00:14.1  40:55:01 J2000 	4 Attach:ioo_wfsblank2.jpg   Not very blank
+> ioo_blank13Na  13:36:06.6  62:14:18 J2000 	1 Attach:ioo_blank13Na.jpg   
+> ioo_wfcblank1  15:01:55.0  29:56:23 J2000 	0 Attach:ioo_wfcblank1.jpg   Note 1
+> ioo_blank15    15:15:40.7 -00:42:16 J2000 	3 Attach:ioo_blank15.jpg     Not very blank
+> ioo_blank17    16:52:31.0 -15:30:29 J2000 	0 Attach:ioo_blank17.jpg     Many faint stars, but none R<14
+> ioo_blank19    19:21:25.3  12:29:28 J2000 	3 Attach:ioo_blank19.jpg     Dust cloud, marginally too small for IO:O
+> ioo_blank23    23:15:49.5  11:25:24 J2000 	2 Attach:ioo_blank23.jpg     
+> ioo_wfcblank2  22:57:40.9  00:06:32 J2000 	2 Attach:ioo_wfcblank2.jpg   
+
+
+
+=======================================================================
+Checking io:o_std.cat against ../../devtest/config/io:o_std.cat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking iss.properties against ../../devtest/config/iss.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_dgw_args against ../../devtest/config/lt_dgw_args ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_exec_DEFAULT against ../../devtest/config/lt_exec_DEFAULT ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_focus_FOCUS.properties against ../../devtest/config/lt_focus_FOCUS.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_oss_monitor_gen_args against ../../devtest/config/lt_oss_monitor_gen_args ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_rcs_args against ../../devtest/config/lt_rcs_args ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_rcw_args against ../../devtest/config/lt_rcw_args ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_site against ../../devtest/config/lt_site ...
+=======================================================================
+
+
+
+=======================================================================
+Checking lt_sys_gen_args against ../../devtest/config/lt_sys_gen_args ...
+=======================================================================
+
+
+
+=======================================================================
+Checking met_sim.properties against ../../devtest/config/met_sim.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking oss_monitor.properties against ../../devtest/config/oss_monitor.properties ...
+=======================================================================
+2,4c2,4
+< base.model.url 	   =  rmi://oss.lt.com
+< synoptic.model.url =  rmi://occ.lt.com/SynopticModelProvider
+< scheduler.url      =  rmi://occ.lt.com/ScheduleDespatcher
+---
+> base.model.url 	   =  rmi://rowena
+> synoptic.model.url =  rmi://rowena/SynopticModelProvider
+> scheduler.url      =  rmi://rowena/ScheduleDespatcher
+\ No newline at end of file
+
+
+
+=======================================================================
+Checking planetarium_ops.properties against ../../devtest/config/planetarium_ops.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking pointing_calib.properties against ../../devtest/config/pointing_calib.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking ratcam_flats.cat against ../../devtest/config/ratcam_flats.cat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking ratcam_std.cat against ../../devtest/config/ratcam_std.cat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking recovery.properties against ../../devtest/config/recovery.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking schedule.properties against ../../devtest/config/schedule.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking science_ops.properties against ../../devtest/config/science_ops.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking site.properties against ../../devtest/config/site.properties ...
+=======================================================================
+9,10c9,10
+< longitude	= -17.8792
+< tzoffset	= 0
+---
+> longitude	= 155
+> tzoffset	= 10
+
+
+
+=======================================================================
+Checking skyflat_calib.properties against ../../devtest/config/skyflat_calib.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking soca_ops.properties against ../../devtest/config/soca_ops.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking standards.config against ../../devtest/config/standards.config ...
+=======================================================================
+
+
+
+=======================================================================
+Checking standards.properties against ../../devtest/config/standards.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking standards_RAT_calib.properties against ../../devtest/config/standards_RAT_calib.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking standards.txt against ../../devtest/config/standards.txt ...
+=======================================================================
+
+
+
+=======================================================================
+Checking system.properties against ../../devtest/config/system.properties ...
+=======================================================================
+4a5,6
+> # Base offset for rotator calculations 
+> # DEFUNCT rotator.sky.base.offset = 56.6
+6,18c8
+< # Which mode to sue when calculating remaining runtime for rotator calculations
+< # Default: normal, Alt: fraction
+< rotator.runtime.calculator.mode = fraction
+< 
+< # Base offset for rotator mount to sky angle conversion (degs)
+< # RATCam was at 56.6
+< #rotator.sky.base.offset = 56.6
+< # 2014-03-12 we switched the reference master instrumnet to be IO:O
+< # The ROTATIONAL OFFSET item in the TCS INS config file is 104.0
+< rotator.sky.base.offset = 104.0
+< 
+< # Which command to send to move the science fold deployment (defunct?)
+< # Default: RETRACT, Alt: INLINE
+---
+> # This can either be INLINE or RETRACT anything else is assumed RETRACT 
+22c12
+< #science.fold.simulation
+---
+> science.fold.simulation
+37c27,32
+< #activate.experimental.mode
+---
+> # DEFUNCT activate.experimental.mode
+> 
+> # Where do we get scheduled data from (SPARE.lt.com)
+> #experimental.scheduler.host = 150.204.240.39
+> #experimental.scheduler.host = l50.204.240.126
+> experimental.scheduler.host = l50.204.240.131
+39,40d33
+< # Where do we get scheduled data from (defunct?)
+< experimental.scheduler.host = 150.204.240.39
+42c35
+< # New Science mode (always?/ defunct?)
+---
+> # New Science mode
+45,46d37
+< # Moving target acquisition threshold rate (as/sec)
+< moving.target.threshold.rate = 0.001
+48,49d38
+< # impossibly fast - effectively turns it off
+< #moving.target.threshold.rate = 2000.0
+
+
+
+=======================================================================
+Checking task.properties against ../../devtest/config/task.properties ...
+=======================================================================
+7c7
+< tmm.manager.InitializeTask focus.altitude		= 90.0
+---
+> tms.manager.InitializeTask focus.altitude		= 90.0
+9,10c9,10
+< tmm.manager.InitializeTask focus.low.limit 		= 10.0
+< tmm.manager.InitializeTask focus.high.limit		= 40.0
+---
+> tms.manager.InitializeTask focus.low.limit 		= 10.0
+> tms.manager.InitializeTask focus.high.limit		= 40.0
+12,13d11
+< #Following line 2004-08-27 (RJS)
+< tmm.manager.InitializeTask focus.function.slope	= -0.0638
+14a13,14
+> #Following line 2004-08-27 (RJS)
+> tms.manager.InitializeTask focus.function.slope	= -0.0638
+16c16
+< #tmm.manager.InitializeTask focus.function.zero  = 28.205
+---
+> #tms.manager.InitializeTask focus.function.zero  = 28.205
+18c18
+< #tmm.manager.InitializeTask focus.function.zero  = 28.053
+---
+> #tms.manager.InitializeTask focus.function.zero  = 28.053
+20c20
+< #tmm.manager.InitializeTask focus.function.zero  = 28.133
+---
+> #tms.manager.InitializeTask focus.function.zero  = 28.133
+22c22
+< #tmm.manager.InitializeTask focus.function.zero  = 28.199
+---
+> #tms.manager.InitializeTask focus.function.zero  = 28.199
+24c24
+< #tmm.manager.InitializeTask focus.function.zero  = 28.276
+---
+> #tms.manager.InitializeTask focus.function.zero  = 28.276
+26,42c26
+< #tmm.manager.InitializeTask focus.function.zero  = 28.226
+< #Following line (28.348) RJS 2011-09-20. Derived from 9 focus runs since 2011-08-20  SMF uLynx work
+< #tmm.manager.InitializeTask focus.function.zero  = 28.348
+< #2011-09-27 updated to 28.379 on bases if four focus runs
+< #tmm.manager.InitializeTask focus.function.zero  = 28.379
+< #2011-11-16 following O installation
+< #tmm.manager.InitializeTask focus.function.zero  = 28.319
+< #2012-04-28 following spacer installation
+< #tmm.manager.InitializeTask focus.function.zero  = 22.07
+< #2012-06-22 Very small (0.05mm) tweak based on a month's worth of nightly telfocus runs.
+< #tmm.manager.InitializeTask focus.function.zero  = 22.12
+< #2013-06-04 Tweak due to primary realuminisation
+< #tmm.manager.InitializeTask focus.function.zero  = 22.35
+< #2013-07-15 Update by +0.08mm on basis of nightly telfocus
+< #tmm.manager.InitializeTask focus.function.zero  = 22.43
+< #2013-08-07 RJS Update by -0.09mm on basis of nightly telfocus
+< tmm.manager.InitializeTask focus.function.zero  = 22.34
+---
+> tms.manager.InitializeTask focus.function.zero  = 28.226
+44,45d27
+< tmm.manager.InitializeTask initial.instrument	= IO:O
+< tmm.manager.InitializeTask initial.autoguider	= CASSEGRAIN
+47,48d28
+< tmm.manager.InitializeTask open.mirror.cover	= true
+< tmm.manager.InitializeTask exercise.rotator = false
+50,61c30,31
+< # comment out to disable
+< tmm.manager.InitializeTask set.apertures = true
+< 
+< # AG Focus value
+< # set by IAS 29/9/10 (this date looks wrong?) for new autoguider mounting
+< # tmm.manager.InitializeTask ag.focus	= 8.3 
+< # set by IAS 31/5/12 after shift in to allow RINGO2 defocus
+< #  tmm.manager.InitializeTask ag.focus	= 13.2
+< 
+< # set by JMM 04/06/13 after primary realuminisation and shift of default focus
+< # instrument to IO:O
+< tmm.manager.InitializeTask ag.focus  = 12.17
+---
+> tms.manager.InitializeTask initial.instrument	= IO:O
+> tms.manager.InitializeTask initial.autoguider	= CASSEGRAIN
+62a33,34
+> tms.manager.InitializeTask open.mirror.cover	= true
+> tms.manager.InitializeTask exercise.rotator = false
+63a36,37
+> # comment out to disable
+> tms.manager.InitializeTask set.apertures = true
+64a39,41
+> # AG Focus value
+> # set by IAS 29/9/10 for new autoguider mounting
+> tms.manager.InitializeTask ag.focus	= 8.3
+70c47
+< tmm.manager.AutoFocusTask focus.altitude              = 90.0
+---
+> tms.manager.AutoFocusTask focus.altitude              = 90.0
+72,73c49,50
+< tmm.manager.AutoFocusTask focus.low.limit             = 10.0
+< tmm.manager.AutoFocusTask focus.high.limit            = 40.0
+---
+> tms.manager.AutoFocusTask focus.low.limit             = 10.0
+> tms.manager.AutoFocusTask focus.high.limit            = 40.0
+75,76c52,53
+< tmm.manager.AutoFocusTask focus.function.slope                = -0.0638
+< tmm.manager.AutoFocusTask focus.function.zero                 = 28.205
+---
+> tms.manager.AutoFocusTask focus.function.slope                = -0.0638
+> tms.manager.AutoFocusTask focus.function.zero                 = 28.205
+82,83c59,60
+< #tmm.manager.RotatorExerciseTask inc.right = 4.0
+< #tmm.manager.RotatorExerciseTask inc.left  = 4.0
+---
+> #tms.manager.RotatorExerciseTask inc.right = 4.0
+> #tms.manager.RotatorExerciseTask inc.left  = 4.0
+87,88c64,65
+< tmm.manager.RotatorExerciseTask limit.right = 75.0
+< tmm.manager.RotatorExerciseTask limit.left  = 20.0
+---
+> tms.manager.RotatorExerciseTask limit.right = 75.0
+> tms.manager.RotatorExerciseTask limit.left  = 20.0
+91c68
+< tmm.manager.RotatorExerciseTask slew.count = 4
+---
+> tms.manager.RotatorExerciseTask slew.count = 4
+94c71
+< tmm.manager.RotatorExerciseTask slew.timeout = 65000
+---
+> tms.manager.RotatorExerciseTask slew.timeout = 65000
+101c78
+< tmm.manager.RotatorCorrectionTask rotator.correction = 0.5 
+---
+> tms.manager.RotatorCorrectionTask rotator.correction = 0.5 
+107c84
+< tmm.manager.FinalizeTask   magic.azimuth            = 217.25
+---
+> tms.manager.FinalizeTask   magic.azimuth            = 217.25
+110,112c87,89
+< tmm.manager.FinalizeTask   magic.rotator	= true
+< tmm.manager.FinalizeTask   magic.rotator.min	= -20 
+< tmm.manager.FinalizeTask   magic.rotator.max 	= 20
+---
+> tms.manager.FinalizeTask   magic.rotator	= true
+> tms.manager.FinalizeTask   magic.rotator.min	= -20 
+> tms.manager.FinalizeTask   magic.rotator.max 	= 20
+120,122c97,99
+< #tmm.manager.TemporaryAutoFlatsTask bad.zone = true
+< tmm.manager.TemporaryAutoFlatsTask bad.zone.min = 145.0
+< tmm.manager.TemporaryAutoFlatsTask bad.zone.max = 185.0
+---
+> #tms.manager.TemporaryAutoFlatsTask bad.zone = true
+> tms.manager.TemporaryAutoFlatsTask bad.zone.min = 145.0
+> tms.manager.TemporaryAutoFlatsTask bad.zone.max = 185.0
+124c101
+< tmm.manager.TemporaryAutoFlatsTask catalog = config/ratcam_flats.cat
+---
+> tms.manager.TemporaryAutoFlatsTask catalog = config/ratcam_flats.cat
+
+
+
+=======================================================================
+Checking tcs_cil_handler.properties against ../../devtest/config/tcs_cil_handler.properties ...
+=======================================================================
+
+
+
+=======================================================================
+Checking telescope_calib_history.dat against ../../devtest/config/telescope_calib_history.dat ...
+=======================================================================
+Binary files telescope_calib_history.dat and ../../devtest/config/telescope_calib_history.dat differ
+
+
+
+=======================================================================
+Checking telescope_calib.properties against ../../devtest/config/telescope_calib.properties ...
+=======================================================================
+14,19c14,15
+< # TELFOCUS calib range. Range * 0.5 either side of nominal
+< #Default telfocus.focus.range 	= 1.0
+< # RJS 2011-11-22
+< #telfocus.focus.range 	= 0.6
+< # RJS 2012-05-21 reduced from 0.6 to 0.5mm
+< telfocus.focus.range 	= 0.5
+---
+> # TELFOCUS calib maximum focus
+> telfocus.focus.range 	= 1.0
+22,24c18,19
+< #Default telfocus.focus.step 	= 0.1
+< #RJS 2011-10-14
+< telfocus.focus.step	= 0.05
+---
+> #telfocus.focus.step	= 0.05
+> telfocus.focus.step 	= 0.1
+26c21
+< # TELFOCUS calib signal-noise ratio NOTUSED
+---
+> # TELFOCUS calib signal-noise ratio
+29,31c24,25
+< # TELFOCUS calib instrument selection 
+< #telfocus.instrument	= RATCAM
+< telfocus.instrument	= IO:O
+---
+> # TELFOCUS calib instrument selection
+> telfocus.instrument	= RATCAM
+33c27
+< # TELFOCUS EXPOSURE (ms) 
+---
+> # TELFOCUS EXPOSURE (ms)
+
+
+
+=======================================================================
+Checking telfocus_calib.properties against ../../devtest/config/telfocus_calib.properties ...
+=======================================================================
+41c41
+< telfocus.inst.config	= config/telfocus_IO.properties
+---
+> telfocus.inst.config	= config/telfocus_inst.properties
+
+
+
+=======================================================================
+Checking telfocus_IO.properties against ../../devtest/config/telfocus_IO.properties ...
+=======================================================================
+diff: ../../devtest/config/telfocus_IO.properties: No such file or directory
+
+
+
+=======================================================================
+Checking to_ops.properties against ../../devtest/config/to_ops.properties ...
+=======================================================================
+1d0
+< 
+53c52
+< microlens.service.user                = Hundertmark.Markus
+---
+> microlens.service.user                = Horne.Keith
+55,57c54
+< #microlens.service.proposal            = PL12B12
+< #microlens.service.proposal            = PL13A07a
+< microlens.service.proposal	      = PL14A17
+---
+> microlens.service.proposal            = PL11A13
+91c88
+< grb.post.1hour.proposal 		= PL13B11
+---
+> grb.post.1hour.proposal 		= PL11B22
+98,107c95,104
+< #lofar.transient.ID 			= LOFARTransient
+< #lofar.transient.priority		= 4
+< #lofar.transient.session.allocation       = 3600000
+< #lofar.transient.period.allocation        = 7200000
+< 
+< #lofar.transient.tag			= JMU
+< #lofar.transient.user			= Bersier.David
+< #lofar.transient.program 		= XJL09A06 
+< #lofar.transient.proposal		= JQ12A01
+< #lofar.transient.group			= lofar-transient
+---
+> lofar.transient.ID 			= LOFARTransient
+> lofar.transient.priority		= 4
+> lofar.transient.session.allocation       = 3600000
+> lofar.transient.period.allocation        = 7200000
+> 
+> lofar.transient.tag			= JMU
+> lofar.transient.user			= Bersier.David
+> lofar.transient.program 		= XJL09A06 
+> lofar.transient.proposal		= JL11B07
+> lofar.transient.group			= lofar-transient
+
+
+
+=======================================================================
+Checking tweak_minus.dat against ../../devtest/config/tweak_minus.dat ...
+=======================================================================
+diff: ../../devtest/config/tweak_minus.dat: No such file or directory
+
+
+
+=======================================================================
+Checking tweak_plus.dat against ../../devtest/config/tweak_plus.dat ...
+=======================================================================
+diff: ../../devtest/config/tweak_plus.dat: No such file or directory
+
+
+
+=======================================================================
+Checking tweaks.dat against ../../devtest/config/tweaks.dat ...
+=======================================================================
+
+
+
+=======================================================================
+Checking tweak_zero.dat against ../../devtest/config/tweak_zero.dat ...
+=======================================================================
+diff: ../../devtest/config/tweak_zero.dat: No such file or directory
+
+
+
