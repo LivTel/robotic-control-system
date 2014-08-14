@@ -2234,7 +2234,7 @@ public class RCS_Controller implements Logging {
 			// "max.rotator.tracking.error", 60.0) / 3600.0));
 			// arcsec-rads
 
-			defaultTrackingMonitor.setTrackAz(true); // TODO snf 23may2011
+			defaultTrackingMonitor.setTrackAz(true); 
 			// DISABLE
 
 			// StatusPool.register(defaultTrackingMonitor,
