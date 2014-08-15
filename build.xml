@@ -25,7 +25,7 @@
 	<property name="src.dir" value="${project.dir}/java" />
 
 	<!-- Build Directories -->
-	<property name="build.dir" value="${env.LT_HOME}/bin/rcs" />
+	<property name="build.dir" value="${env.HOME}/build/rcs" />
 	<property name="build.src" value="${build.dir}/src" />
 	<property name="build.class" value="${build.dir}/java" />
 	<property name="build.dist" value="${build.dir}/dist" />
