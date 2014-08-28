@@ -32,6 +32,8 @@ import ngat.phase2.Ringo2PolarimeterConfig;
 import ngat.phase2.Ringo2PolarimeterDetector;
 import ngat.phase2.Ringo3PolarimeterConfig;
 import ngat.phase2.Ringo3PolarimeterDetector;
+import ngat.phase2.SpratConfig;
+import ngat.phase2.SpratDetector;
 import ngat.phase2.THORConfig;
 import ngat.phase2.THORDetector;
 import ngat.phase2.Window;
@@ -39,6 +41,7 @@ import ngat.phase2.XDualBeamSpectrographInstrumentConfig;
 import ngat.phase2.XFilterDef;
 import ngat.phase2.XFilterSpec;
 import ngat.phase2.XImagerInstrumentConfig;
+import ngat.phase2.XImagingSpectrographInstrumentConfig;
 import ngat.phase2.XPolarimeterInstrumentConfig;
 import ngat.phase2.XTipTiltImagerInstrumentConfig;
 import ngat.phase2.XWindow;
@@ -353,10 +356,78 @@ public class ConfigTranslator {
 			}
 			throw new ConfigTranslationException("Unable to identify polarimeter from supplied config: " + config);
 
+		} else if (config instanceof XImagingSpectrographInstrumentConfig) {
+			
+			XImagingSpectrographInstrumentConfig xspec = (XImagingSpectrographInstrumentConfig) config;
+			
+			IDetectorConfig xdetector = xspec.getDetectorConfig();
+			int xBin = xdetector.getXBin();
+			int yBin = xdetector.getYBin();
+
+			if (xspec.getInstrumentName().equalsIgnoreCase("SPRAT")) {
+				SpratConfig spratc = new SpratConfig(config.getName());
+
+				SpratDetector spratDetector = (SpratDetector) spratc.getDetector(0);
+				spratDetector.clearAllWindows();
+				spratDetector.setXBin(xBin);
+				spratDetector.setYBin(yBin);
+
+				switch (xspec.getGrismPosition()) {
+					case XImagingSpectrographInstrumentConfig.GRISM_IN:
+						spratc.setGrismPosition(SpratConfig.POSITION_IN);
+						break;
+					case XImagingSpectrographInstrumentConfig.GRISM_OUT:
+						spratc.setGrismPosition(SpratConfig.POSITION_OUT);
+						break;
+					default:
+						break;
+					
+				}
+				
+				switch (xspec.getGrismRotation()) {
+					case XImagingSpectrographInstrumentConfig.GRISM_ROTATED:
+						spratc.setGrismPosition(1);
+						break;
+					case XImagingSpectrographInstrumentConfig.GRISM_NOT_ROTATED:
+						spratc.setGrismPosition(0);
+						break;
+					default:
+						break;
+					
+				}
+				
+				switch (xspec.getSlitPosition()) {
+					case XImagingSpectrographInstrumentConfig.SLIT_DEPLOYED:
+						spratc.setSlitPosition(SpratConfig.POSITION_IN);
+						break;
+					case XImagingSpectrographInstrumentConfig.SLIT_STOWED:
+						spratc.setSlitPosition(SpratConfig.POSITION_OUT);
+						break;
+					default:
+						break;
+					
+				}
+				
+				// nrc - 28-8-14 transfer any windows across
+				List windows = xdetector.listWindows();
+				Iterator iwin = windows.iterator();
+				int iiw = 0;
+				while (iwin.hasNext()) {
+					XWindow xwindow = (XWindow) iwin.next();
+					int xs = xwindow.getX();
+					int ys = xwindow.getY();
+					int xe = xs + xwindow.getWidth() - 1;
+					int ye = ys + xwindow.getHeight() - 1;
+					Window window = new Window(xs, ys, xe, ye);
+					window.setActive(true);
+					spratDetector.setWindow(iiw++, window);
+				}
+				return spratc;
+			} 
+			throw new ConfigTranslationException("Unable to identify imaging spectrograph from supplied config:" + config);
 		}
 
 		throw new ConfigTranslationException("Unable to determine required instrument from supplied config: " + config);
-
 	}
 
 	public static String determineInstrumentFromConfig(InstrumentConfig config) throws ConfigTranslationException {
@@ -375,6 +446,8 @@ public class ConfigTranslator {
 			return "RISE";
 		else if (config instanceof THORConfig)
 			return "THOR";
+		else if (config instanceof SpratConfig)
+			return "SPRAT";
 		else if (config instanceof FrodoSpecConfig) {
 			if (((FrodoSpecConfig) config).getArm() == FrodoSpecConfig.RED_ARM)
 				return "FRODO_RED";
