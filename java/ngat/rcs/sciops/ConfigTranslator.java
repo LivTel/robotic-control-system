@@ -386,10 +386,10 @@ public class ConfigTranslator {
 				
 				switch (xspec.getGrismRotation()) {
 					case XImagingSpectrographInstrumentConfig.GRISM_ROTATED:
-						spratc.setGrismPosition(1);
+						spratc.setGrismRotation(1);
 						break;
 					case XImagingSpectrographInstrumentConfig.GRISM_NOT_ROTATED:
-						spratc.setGrismPosition(0);
+						spratc.setGrismRotation(0);
 						break;
 					default:
 						break;
