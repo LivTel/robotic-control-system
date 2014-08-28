@@ -409,7 +409,7 @@ public class ConfigTranslator {
 				}
 				
 				// nrc - 28-8-14 transfer any windows across
-				List windows = xdetector.listWindows();
+				/*List windows = xdetector.listWindows();
 				Iterator iwin = windows.iterator();
 				int iiw = 0;
 				while (iwin.hasNext()) {
@@ -421,7 +421,7 @@ public class ConfigTranslator {
 					Window window = new Window(xs, ys, xe, ye);
 					window.setActive(true);
 					spratDetector.setWindow(iiw++, window);
-				}
+				}*/
 				return spratc;
 			} 
 			throw new ConfigTranslationException("Unable to identify imaging spectrograph from supplied config:" + config);

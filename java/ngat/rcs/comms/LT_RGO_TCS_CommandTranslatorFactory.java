@@ -486,13 +486,19 @@ public class LT_RGO_TCS_CommandTranslatorFactory implements CommandTranslatorFac
 
 			Position position = source.getPosition();
 
-			// Note: This is adding offsets rather poorly here.
-			// If end up wrapping the angles there will be
-			// "Reet trouble at t'TCS "
-
+			// Check for wrapping 360/0
 			double ra = position.getRA() + Math.toRadians(dra / 3600.0);
+			if (ra > 2.0*Math.PI)
+				ra -= 2.0*Math.PI;
+			if (ra < 0.0)
+				ra += 2.0*Math.PI;
+			
 			double dec = position.getDec() + Math.toRadians(ddec / 3600.0);
-
+			
+			// Check for overrun of zenith
+			if (dec > 0.5*Math.PI)
+				dec = Math.PI - dec;
+			
 			args = args + " " + Position.formatHMSString(ra, " ");
 			args = args + " " + Position.formatDMSString(dec, " ");
 
@@ -511,7 +517,15 @@ public class LT_RGO_TCS_CommandTranslatorFactory implements CommandTranslatorFac
 				// Add the NS tracking and all the other parameters
 				if (((SLEW) command).getNstrack()) {
 
+					if (! (source instanceof EphemerisSource)) {
+						System.err.println("CmdTrans:: Cannot NS track: "+source.getClass().getName());
+						return null;
+					}
+						//throw new Exception("Can only NS track ephemeris targets, this is a: "+source.getClass().getName());
+					
+					// this will be an ephemeris target
 					Tracking tracking = Astrometry.getPlanetTracking(source);
+					
 					double nstra = tracking.getNsTrackRA();
 					double nsdec = tracking.getNsTrackDec();
 
