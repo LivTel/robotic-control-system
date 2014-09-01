@@ -167,6 +167,43 @@
   </instrument>
 
 
+  <!-- ==================================== -->
+  <!-- SPRAT                               -->
+  <!-- ==================================== -->
+
+  <instrument name="SPRAT" type="ImagingSpectrograph" enabled="true">
+
+    <descriptor>
+      <name>SPRAT</name>
+      <class>camera.grismatic</class>
+    </descriptor>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>0.0</rotator-offset> 
+	<aperture-offset x="0" y="0" />
+
+      </capabilities>
+
+      <detector>
+	<array-size width="256" height="256" />
+	<plate-scale>0.67</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/sprat.calib.dat" />
+    </calibration>
+
+    <!--<monitor host="150.204.241.212" port="8374" interval="30000" />-->
+     <monitor host="localhost" port="6666" interval="30000" />
+    
+  </instrument>
+
 
 
   <!-- ==================================== -->
@@ -257,8 +294,10 @@
 	<rotator-offset> -87.8 </rotator-offset> 
 	<!-- Up until Jun 2014 aperture-offset x="57" y="-47" /> -->
 	<!-- Value by IAS 2014-06-12 <aperture-offset x="40" y="0" /> -->
-	<!-- Following from RJS 2014-06-13. No hardware change. Just fine tuning IAS's 2014-06-12 work -->
-	<aperture-offset x="30" y="-20" />
+	<!-- Following from RJS 2014-06-13. No hardware change. Just fine tuning IAS's 2014-06-12 work
+	<aperture-offset x="30" y="-20" /> -->
+	<!-- RJS 2014-08-16. Still too high in frame. Tweak a bit more. No hardware change. -->
+	<aperture-offset x="30" y="0" />
       </capabilities>
 
       <detector>

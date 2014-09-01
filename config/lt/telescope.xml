@@ -32,6 +32,15 @@
        <reboot> 1 </reboot>
     </instrument>
 
+
+<instrument name="SPRAT">
+  <alias> SPRAT </alias>
+  <mount> /mnt/rise-image </mount>
+       <port> 7 </port>
+       <reboot> 2 </reboot>
+</instrument>
+
+
     <instrument name="RISE">
        <alias> RISE </alias>
        <mount> /mnt/rise-image </mount>
