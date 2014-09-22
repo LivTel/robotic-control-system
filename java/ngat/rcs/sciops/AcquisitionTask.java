@@ -261,8 +261,8 @@ public class AcquisitionTask extends ParallelTaskImpl {
 					raRate = rates.getNsTrackingRateRA();
 					decRate = rates.getNsTrackingRateDec();
 					taskLog.log(1,
-						    "Tracking rates: RA: " + Math.toDegrees(raRate) * 3600.0 + " a/s, Dec"
-						    + Math.toDegrees(decRate) * 3600.0 + " a/s");
+						    "Tracking rates: RA: " + Math.toDegrees(raRate) * 3600.0 + " as/s, Dec"
+						    + Math.toDegrees(decRate) * 3600.0 + " as/s");
 					
 					movingTargetThreshold = MOVING_TARGET_RATE;
 					try {
@@ -274,9 +274,10 @@ public class AcquisitionTask extends ParallelTaskImpl {
 					    taskLog.log(1, "Unable to determine moving target threshold from sysconfig, using default");
 					}
 
-					taskLog.log(1, "Moving target threshold rate: "+Math.toDegrees(movingTargetThreshold)*3600.0+" a/s");
+					taskLog.log(1, "Moving target threshold rate: "+Math.toDegrees(movingTargetThreshold)*3600.0+" as/s");
 
-					if (raRate > movingTargetThreshold || decRate > movingTargetThreshold) {
+					// TODO this is approximate, should use spherical trig...
+					if ((Math.abs(raRate) + Math.abs(decRate))> movingTargetThreshold) {
 						taskLog.log(1, "Target is moving fast, use moving-acquire");
 						moving = true;
 					}
