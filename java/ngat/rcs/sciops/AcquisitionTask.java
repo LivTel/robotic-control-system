@@ -276,7 +276,20 @@ public class AcquisitionTask extends ParallelTaskImpl {
 
 					taskLog.log(1, "Moving target threshold rate: "+Math.toDegrees(movingTargetThreshold)*3600.0+" as/s");
 
-					// TODO this is approximate, should use spherical trig...
+					// TEST Calculate actual tracking in great-circle path...
+					try {
+						Coordinates ec = track.getCoordinates(rateTime);
+						double era  = ec.getRa();
+						double edec = ec.getDec();
+						double gcrate = Math.acos(Math.cos(edec)*Math.cos(edec+decRate)*Math.cos(raRate) + Math.sin(edec)*Math.sin(edec+decRate));
+						taskLog.log(1, "Computed GC tracking rate: "+Math.toDegrees(gcrate)*3600.0+" as/s");
+					} catch (Exception e) {
+						// not a problem, were not using this value yet...
+						taskLog.log(1, "Failed to compute GC tracking rate...ignored, using approximate rates");
+						e.printStackTrace();
+					}
+					
+					// TODO this is approximate, should use spherical trig GC calculation above...
 					if ((Math.abs(raRate) + Math.abs(decRate))> movingTargetThreshold) {
 						taskLog.log(1, "Target is moving fast, use moving-acquire");
 						moving = true;
