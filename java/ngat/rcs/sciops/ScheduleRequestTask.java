@@ -132,7 +132,7 @@ public class ScheduleRequestTask extends Default_TaskImpl {
 
 		if (extinction > 0.5)
 			return "SPECTROSCOPIC";
-		else if (extinction >= 0.0)
+		else if (extinction > 0.0)
 			return "PHOTOMETRIC";
 		else
 			return "UNKNOWN";
