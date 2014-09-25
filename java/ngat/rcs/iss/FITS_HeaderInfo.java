@@ -836,7 +836,7 @@ public class FITS_HeaderInfo implements Observer {
 	 */
 	public void update(Observable source, Object args) {
 		
-		System.err.println("FITS received update "+args.getClass().getName());
+		//System.err.println("FITS received update "+args.getClass().getName());
 		
 		if (!(args instanceof TCS_Status))
 			return;

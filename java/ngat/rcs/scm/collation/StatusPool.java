@@ -669,7 +669,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 	
 	
 	public void telescopeStatusUpdate(TelescopeStatus telstatus) throws RemoteException {
-		System.err.println("StatusPool::telescopeStatusUpdate: " + telstatus);
+		//System.err.println("StatusPool::telescopeStatusUpdate: " + telstatus);
 		
 		try {
 
@@ -806,7 +806,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 		if (telstatus instanceof SourceData) {
 		    SourceData srcData = (SourceData)telstatus;
 		    StatusPool.latest().source.timeStamp = telstatus.getStatusTimeStamp();
-		    System.err.println("StatusPool: telstatus:SourceData: "+srcData);
+		    //System.err.println("StatusPool: telstatus:SourceData: "+srcData);
 		    StatusPool.latest().source.srcName = srcData.srcName;
 		    StatusPool.latest().source.srcRa = srcData.srcRa;
 		    StatusPool.latest().source.srcDec = srcData.srcDec;
@@ -827,7 +827,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 		if (telstatus instanceof TimeData) {
                     TimeData timeData = (TimeData)telstatus;
                     StatusPool.latest().time.timeStamp = telstatus.getStatusTimeStamp();
-                    System.err.println("StatusPool: telstatus:TimeData: "+timeData);
+                    //System.err.println("StatusPool: telstatus:TimeData: "+timeData);
                     StatusPool.latest().time.mjd = timeData.mjd;
 		    StatusPool.latest().time.lst = timeData.lst;
 		    StatusPool.latest().time.ut1 = timeData.ut1;
@@ -838,7 +838,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 		if (telstatus instanceof AstrometryData) {
 			
 			AstrometryData ad = (AstrometryData) telstatus;
-			System.err.println("StatusPool: telstatus:Astro: "+ad.airmass);
+			//System.err.println("StatusPool: telstatus:Astro: "+ad.airmass);
 			StatusPool.latest().astrometry.timeStamp = telstatus.getStatusTimeStamp();
 			StatusPool.latest().astrometry.airmass = ad.airmass;
 			StatusPool.latest().astrometry.refractionHumidity = ad.refractionHumidity;
@@ -860,7 +860,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 	public void meteorologyStatusUpdate(MeteorologyStatus mstatus) throws RemoteException {
 		// TODO Auto-generated method stub
 	    try {
-		System.err.println("StatusPool::meteoStatusUpdate: " + mstatus.getClass().getName());
+		//System.err.println("StatusPool::meteoStatusUpdate: " + mstatus.getClass().getName());
 		if (mstatus instanceof WmsStatus) {
 			WmsStatus wms = (WmsStatus) mstatus;
 			StatusPool.latest().meteorology.timeStamp = mstatus.getStatusTimeStamp();
