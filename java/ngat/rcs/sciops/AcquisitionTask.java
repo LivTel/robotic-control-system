@@ -76,7 +76,14 @@ public class AcquisitionTask extends ParallelTaskImpl {
 
 	/** Acquisition Y offset (pix). */
 	private int offsetY;
-
+	
+	/**
+	 * How close the brightest object or target RA/Dec has to be to the target pixel
+	 * position (offsetX,offsetY) in arcseconds. 
+	 * There are two possibilities for each acquisition->target instrument combination, a low and high (normal and high precision.
+	 */
+	private double acquisitionThreshold;
+	
 	/** Tweak X offset (asec). */
 	private double tweakOffsetX;
 
@@ -212,11 +219,30 @@ public class AcquisitionTask extends ParallelTaskImpl {
 				// TODO break this down into bits...
 				InstrumentCapabilities acap = ireg.getCapabilitiesProvider(aid).getCapabilities();
 				taskLog.log(1, "Located instrument caps for acquisition instrument: " + aid.getInstrumentName());
+				// Get target position (offsetX/offsetY)
 				DetectorArrayPosition dap = acap.getAcquisitionTargetPosition(tid);
 				taskLog.log(1, "Located DAP for target instrument: " + tid.getInstrumentName());
 
 				offsetX = (int) dap.getDetectorArrayPositionX();
 				offsetY = (int) dap.getDetectorArrayPositionY();
+				// get the appropriate threshold
+				if(acquisitionConfig.getPrecision() == IAcquisitionConfig.NORMAL_PRECISION)
+				{
+					acquisitionThreshold = acap.getAcquisitionThreshold(tid,false);
+					taskLog.log(1, "Low Precision acquisition threshold for target instrument: "+tid.getInstrumentName()+
+								", using actual acquire instrument: "+useAcquireInstrument+" is "+acquisitionThreshold);
+				}
+				else if(acquisitionConfig.getPrecision() == IAcquisitionConfig.HIGH_PRECISION)
+				{
+					acquisitionThreshold = acap.getAcquisitionThreshold(tid,true);
+					taskLog.log(1, "High Precision acquisition threshold for target instrument: "+tid.getInstrumentName()+
+								", using actual acquire instrument: "+useAcquireInstrument+" is "+acquisitionThreshold);
+				}
+				else
+				{
+					failed(660122, "Unknown precision (" + acquisitionConfig.getPrecision() + ") for acquisition");
+					return null;
+				}
 			} catch (Exception e) {
 				failed(660109, "Unable to obtain acquisition offsets for: " + targetInstrumentName
 						+ ", using actual acquire instrument: " + useAcquireInstrument);
@@ -304,7 +330,7 @@ public class AcquisitionTask extends ParallelTaskImpl {
 			// for
 			InstrumentAcquireTask acquireTask = new InstrumentAcquireTask(name + "/ACQ(" + useAcquireInstrument + "->"
 					+ targetInstrumentName + ")", this, useAcquireInstrument, ra, dec, moving, raRate, decRate,
-					rateTime, offsetX, offsetY, useAcquireMode);
+					rateTime, offsetX, offsetY, acquisitionThreshold, useAcquireMode);
 
 			// ACQ(RATCAM->FRODO)
 			taskList.addTask(acquireTask);
@@ -618,6 +644,9 @@ public class AcquisitionTask extends ParallelTaskImpl {
 			collator.setAcquireImage(acfile);
 			collator.setAcqConfig(acquisitionConfig);
 			collator.setAcquireOffset(new DetectorArrayPosition(offsetX, offsetY));
+			// Do we need to add acquisitionThreshold here?
+			// We do if this needs to appear in the FITS headers, otherwise the ChangeTracker
+			// does not need to track it.
 			collator.setAcqInstrument(acqInstrumentName);
 
 		} // else if (task instanceof ApertureOffsetTask) {

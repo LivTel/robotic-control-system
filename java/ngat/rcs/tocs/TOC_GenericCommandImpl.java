@@ -958,10 +958,14 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		
 		int ax = 0;
 		int ay = 0;		
+		double acquisitionThreshold;
+		
 		try {
-			DetectorArrayPosition dap = icap.getAcquisitionTargetPosition(new InstrumentDescriptor("RATCAM"));
+			InstrumentDescriptor instrumentDescriptor = new InstrumentDescriptor("RATCAM");
+			DetectorArrayPosition dap = icap.getAcquisitionTargetPosition(instrumentDescriptor);
 			ax = (int) dap.getDetectorArrayPositionX();
 			ay = (int) dap.getDetectorArrayPositionY();
+			acquisitionThreshold = icap.getAcquisitionThreshold(instrumentDescriptor, false);
 		} catch (Exception e) {
 			e.printStackTrace();
 			processError("ILLEGAL_ACQUIRE_INSTRUMENT");
@@ -970,7 +974,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		
 		
 		TOCAcquireTask tacq = new TOCAcquireTask(tocAgent.getName() + "/TOCAcquire", tocAgent, this, ra, dec,
-				acqInstId, ax, ay, acqMode);
+				acqInstId, ax, ay, acquisitionThreshold, acqMode);
 
 		if (!tocAgent.addNextJob(tacq)) {
 			processError("QUEUE_OVERFLOW", "Too many requests queued - try again later.");

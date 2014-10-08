@@ -55,6 +55,12 @@ public class InstrumentAcquireTask extends Default_TaskImpl {
 	/** Focal plane offset Y.*/
 	protected int offsetY;
 	
+	/**
+	 * How close the brightest object or target RA/Dec has to be to the
+	 * target pixel position (offsetX,offsetY) for the acquisition to succeed.
+	 * The value is in decimal arcseconds. 
+	 */
+	protected double acquisitionThreshold;
 	
 	/** Acquisition mode: WCS or BRIGHTEST.*/
 	protected int acqMode;
@@ -93,6 +99,10 @@ public class InstrumentAcquireTask extends Default_TaskImpl {
 	 *            The X offset pixel.
 	 * @param offsetY
 	 *            The Y offset pixel.
+	 * @param acquisitionThreshold
+	 *            How close the brightest object or target RA/Dec has to be to the
+	 *            target pixel position (offsetX,offsetY) for the acquisition to succeed.
+	 *            The value is in decimal arcseconds. 
 	 * @param acqMode
 	 *            Acquisition mode.
 	 */
@@ -103,7 +113,7 @@ public class InstrumentAcquireTask extends Default_TaskImpl {
 			double raRate, 
 			double decRate,
 			long rateTime,
-			int offsetX, int offsetY, int acqMode) {
+			int offsetX, int offsetY, double acquisitionThreshold,int acqMode) {
 
 		super(name, manager, acqInstName);
 		this.acqInstName = acqInstName;
@@ -115,6 +125,7 @@ public class InstrumentAcquireTask extends Default_TaskImpl {
 		this.rateTime = rateTime;
 		this.offsetX = offsetX;
 		this.offsetY = offsetY;
+		this.acquisitionThreshold = acquisitionThreshold;
 		this.acqMode = acqMode;
 		ACQUIRE acquire = new ACQUIRE(name);
 		acquire.setRA(ra);
@@ -128,6 +139,7 @@ public class InstrumentAcquireTask extends Default_TaskImpl {
 		
 		acquire.setXPixel(offsetX);
 		acquire.setYPixel(offsetY);
+		acquire.setThreshold(acquisitionThreshold);
 		acquire.setAcquisitionMode(acqMode);
 		command = acquire;
 
@@ -139,7 +151,7 @@ public class InstrumentAcquireTask extends Default_TaskImpl {
 		super.onInit();
 		logger.log(1, CLASS, name, "onInit", "Starting Acquisition setup for target at J2K position: " + "RA: "
 				+ Position.toHMSString(ra) + ", Dec: " + Position.toDMSString(dec) + ", Using Acq Inst: " + acqInstName
-				+ ", Offsets: (" + offsetX + "," + offsetY + ") pix " + ", AcqMode = "
+				+ ", Offsets: (" + offsetX + "," + offsetY + ") pix " + ", threshold = "+acquisitionThreshold+" arcseconds, AcqMode = "
 				+ TelescopeConfig.toAquireModeString(acqMode));
 	}
 

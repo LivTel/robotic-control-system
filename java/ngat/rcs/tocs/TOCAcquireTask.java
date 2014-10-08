@@ -53,6 +53,12 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 	int ax;
 	int ay;
 
+	/**
+	 * How close the target pixel (ax,ay) has to be to the brightest object / 
+	 * target RA/Dec for the acquisition to have succeeded. In arcseconds.
+	 */
+	double acquisitionThreshold;
+	
 	/** Acquisition mode. */
 	int acqMode;
 
@@ -68,7 +74,7 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 	 *            The Task's manager.
 	 */
 	public TOCAcquireTask(String name, TaskManager manager, TOC_GenericCommandImpl implementor, double ra, double dec,
-			String acqInstId, int ax, int ay, int acqMode) {
+			String acqInstId, int ax, int ay, double acquisitionThreshold,int acqMode) {
 
 		super(name, manager, implementor);
 
@@ -77,6 +83,7 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 		this.acqInstId = acqInstId;
 		this.ax = ax;
 		this.ay = ay;
+		this.acquisitionThreshold = acquisitionThreshold;
 		this.acqMode = acqMode;
 
 	}
@@ -164,7 +171,7 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 		long rateTime = 0L;
 		boolean moving = false;
 		InstrumentAcquireTask acquireTask = new InstrumentAcquireTask("Acquire", this, acqInstId, ra, dec, moving,
-				raRate, decRate, rateTime, ax, ay, acqMode);
+				raRate, decRate, rateTime, ax, ay, acquisitionThreshold, acqMode);
 
 		taskList.addTask(acquireTask);
 
