@@ -226,13 +226,13 @@ public class AcquisitionTask extends ParallelTaskImpl {
 				offsetX = (int) dap.getDetectorArrayPositionX();
 				offsetY = (int) dap.getDetectorArrayPositionY();
 				// get the appropriate threshold
-				if(acquisitionConfig.getPrecision() == IAcquisitionConfig.NORMAL_PRECISION)
+				if(acquisitionConfig.getPrecision() == IAcquisitionConfig.PRECISION_NORMAL)
 				{
 					acquisitionThreshold = acap.getAcquisitionThreshold(tid,false);
 					taskLog.log(1, "Low Precision acquisition threshold for target instrument: "+tid.getInstrumentName()+
 								", using actual acquire instrument: "+useAcquireInstrument+" is "+acquisitionThreshold);
 				}
-				else if(acquisitionConfig.getPrecision() == IAcquisitionConfig.HIGH_PRECISION)
+				else if(acquisitionConfig.getPrecision() == IAcquisitionConfig.PRECISION_HIGH)
 				{
 					acquisitionThreshold = acap.getAcquisitionThreshold(tid,true);
 					taskLog.log(1, "High Precision acquisition threshold for target instrument: "+tid.getInstrumentName()+

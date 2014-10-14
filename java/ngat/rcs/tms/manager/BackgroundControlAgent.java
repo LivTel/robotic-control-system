@@ -408,7 +408,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 						IAcquisitionConfig.INSTRUMENT_CHANGE,
 						primaryInstrumentName, 
 						primaryInstrumentName, 
-						false);
+						false,IAcquisitionConfig.PRECISION_NOT_SET);
 				root.addElement(new XExecutiveComponent("focal-plane", aperture));
 
 				// autoguide if required
@@ -480,7 +480,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 				root.addElement(new XExecutiveComponent("slew", slew));
 
 				XAcquisitionConfig aperture = new XAcquisitionConfig(IAcquisitionConfig.INSTRUMENT_CHANGE,
-						secondaryInstrumentName, secondaryInstrumentName, false);
+						secondaryInstrumentName, secondaryInstrumentName, false, IAcquisitionConfig.PRECISION_NOT_SET);
 				root.addElement(new XExecutiveComponent("focal-plane", aperture));
 
 				// TODO remove beam steering for now....
