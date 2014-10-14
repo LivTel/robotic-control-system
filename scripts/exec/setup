@@ -35,22 +35,22 @@ touch /occ/tmp/.rcw
 echo "ENG" >> /occ/tmp/.rcw
 
 # setup sched file
-touch /occ/rcs/planetarium/schedule_0.wsf
+#touch /occ/rcs/planetarium/schedule_0.wsf
 
-echo "Unpacking certificates..."
-cd /occ/rcs/planetarium/keys
-tar xvf std_certs_latest
+#echo "Unpacking certificates..."
+#cd /occ/rcs/planetarium/keys
+#tar xvf std_certs_latest
 
-echo "Setting rti image processing wrappers executable..."
-cd /occ/rcs/planetarium/scripts
-chmod +x *
+#echo "Setting rti image processing wrappers executable..."
+#cd /occ/rcs/planetarium/scripts
+#chmod +x *
 
-echo "Extracting image processing executables..."
-cd /occ/rcs/planetarium/executables
-/bin/cp -fv gpp_latest /occ/util/gpp
-/bin/cp -fv ppp_latest /occ/util/ppp
-/bin/cp -fv gpp_cfg.txt /occ/misc/config/gpp.cfg
-/bin/cp -fv ppp_cfg.txt /occ/misc/config/ppp.cfg
+#echo "Extracting image processing executables..."
+#cd /occ/rcs/planetarium/executables
+#/bin/cp -fv gpp_latest /occ/util/gpp
+#/bin/cp -fv ppp_latest /occ/util/ppp
+#/bin/cp -fv gpp_cfg.txt /occ/misc/config/gpp.cfg
+#/bin/cp -fv ppp_cfg.txt /occ/misc/config/ppp.cfg
 
 
 echo "Done RCS setup"
