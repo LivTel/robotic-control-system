@@ -49,12 +49,9 @@ import ngat.rcs.scm.collation.*;
 import ngat.rcs.scm.collation.InstrumentStatusProvider;
 import ngat.rcs.scm.detection.*;
 import ngat.rcs.telemetry.DefaultGroupOperationsMonitor;
-import ngat.rcs.telemetry.GroupOperationsMonitor;
 import ngat.rcs.telemetry.InstrumentArchiveGateway;
 import ngat.rcs.telemetry.OperationsArchiveGateway;
-import ngat.rcs.telemetry.ReactiveSystemArchiveGateway;
 import ngat.rcs.telemetry.StateModelArchiveGateway;
-import ngat.rcs.telemetry.TaskArchiveGateway;
 import ngat.rcs.tms.*;
 import ngat.rcs.tms.executive.*;
 import ngat.rcs.tms.manager.*;
@@ -63,6 +60,7 @@ import ngat.util.*;
 import ngat.util.logging.*;
 import ngat.ems.*;
 import ngat.ems.test.*;
+import ngat.ims.*;
 import ngat.tcm.*;
 import ngat.tcm.test.*;
 
@@ -196,6 +194,11 @@ public class RCS_Controller implements Logging {
 	/** Failure exit code: Indicates EMS startup problem . */
 	public static final int EMS_CONFIG = 605020;
 
+	/** 
+	 * Failure exit code: Indicates IMS startup problem . 
+	 */
+	public static final int IMS_CONFIG = 605020;
+	
 	/** Failure exit code: Indicates GOM startup problem . */
 	public static final int GOM_CONFIG = 605020;
 
@@ -385,6 +388,12 @@ public class RCS_Controller implements Logging {
 
 	protected BasicMeteorologyProvider meteo;
 
+	/**
+	 * Instance that reads disk status (percentage used/free space)
+	 * from a file written by a cronjob.
+	 */
+	protected BasicDiskStatusProvider diskStatusProvider;
+	
 	/** A calibration monitor. */
 	protected BasicCalibrationMonitor bcalMonitor;
 
@@ -2042,6 +2051,36 @@ public class RCS_Controller implements Logging {
 			throw new RCSStartupException("Error initializing EMS MeteorologyProvider: " + ex, EMS_CONFIG);
 		}
 
+		// ---------------------------------------
+		// IMS (infrastructure monitoring System)
+		// ---------------------------------------
+		try
+		{
+			// create object for monitoring disk status
+			diskStatusProvider = new BasicDiskStatusProvider();
+			// add to RMI registry
+			Naming.rebind("rmi://localhost:1099/DiskStatus",diskStatusProvider);
+			bootLog.log(1, CLASS, rcsId, "init", "Bound DiskStatusProvider to local registry");
+			// create legacy disk status provider, this is an interface between
+			// the new RMI-based system an older legacy systems
+			LegacyDiskStatusProvider legacyDiskStatusProvider = new LegacyDiskStatusProvider();
+			// ensure the legacy data gets updated by the disk status provider.
+			diskStatusProvider.addDiskStatusUpdateListener(legacyDiskStatusProvider);
+			// link meteo provider to feed into SP
+			LegacyStatusProviderRegistry.getInstance().addStatusCategory("DISKS",legacyDiskStatusProvider);
+			bootLog.log(1, CLASS, rcsId, "init", "Bound legacy StatusPool to disk status updates");
+			// starts disk status monitoring thread
+			diskStatusProvider.startMonitoringThread(new URL("config/disk_status.properties"));
+			bootLog.log(1, CLASS, rcsId, "init", "Disk monitoring thread started.");
+		}
+		catch (Exception ex) 
+		{
+			bootLog.log(FATAL, 1, CLASS, rcsId, "init", "Error initializing DiskStatusProvider : ", null, ex);
+			throw new RCSStartupException("Error initializing IMS DiskStatusProvider: " + ex, IMS_CONFIG);
+		}
+
+		
+		
 		// ---------------------
 		// New Reactive System
 		// ---------------------
