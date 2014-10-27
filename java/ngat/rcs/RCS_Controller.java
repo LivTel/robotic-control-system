@@ -2070,7 +2070,7 @@ public class RCS_Controller implements Logging {
 			LegacyStatusProviderRegistry.getInstance().addStatusCategory("DISKS",legacyDiskStatusProvider);
 			bootLog.log(1, CLASS, rcsId, "init", "Bound legacy StatusPool to disk status updates");
 			// starts disk status monitoring thread
-			diskStatusProvider.startMonitoringThread(new URL("config/disk_status.properties"));
+			diskStatusProvider.startMonitoringThread(new URL("file:/config/disk_status.properties"));
 			bootLog.log(1, CLASS, rcsId, "init", "Disk monitoring thread started.");
 		}
 		catch (Exception ex) 
