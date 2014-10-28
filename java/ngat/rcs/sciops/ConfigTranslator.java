@@ -164,6 +164,10 @@ public class ConfigTranslator {
 				
 				// initially we dont care as there is no configurable filter available
 				
+				String filter0 = ((XFilterDef) filterList.get(0)).getFilterName();
+				if (tryIConfig(irc, filter0)) //mutates irc
+					return irc;
+				
 				return irc;
 				
 			} else if (ximager.getInstrumentName().equalsIgnoreCase("IO:O")) {
@@ -544,6 +548,29 @@ public class ConfigTranslator {
 	}
 
 	
+	private static boolean tryIConfig(IRCamConfig config , String filter0) {
+		System.err.println("Try i config: " + filter0 );
+		try {
+			FilterDescriptor fwheel = new FilterDescriptor(filter0, "irfilter");
+			
+			InstrumentDescriptor rid = ireg.getDescriptor("IO:I");
+			
+			Imager irArray = (Imager) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+		
+			FilterSet fsWheel = irArray.getFilterSet("wheel");
+			System.err.println("FWheel=" + fwheel);
+			
+			if (fsWheel.containsFilter(fwheel)) {
+				config.setFilterWheel(filter0);
+				return true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+		
+	}
 	
 	
 }
