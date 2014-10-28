@@ -71,11 +71,10 @@
 	  <central-wavelength> 6755.0 </central-wavelength>
 	</filter>
 	<filter>
-	  <name>H-Alpha-6822</name>
+	  <name>GG475+KG3</name>
 	  <class></class>
-	  <central-wavelength> 6822.0 </central-wavelength>
+	  <central-wavelength> 5500 </central-wavelength>
 	</filter>
-
       </filterset>
 
       <filterset name="lower_slide">
@@ -133,7 +132,7 @@
            <!-- <target name="FRODO" x="2228.0" y="1872.0" /> -->
 	   <!-- RJS 2014-09-15 simply put it back because the 2014-09-12 tweak did not seem to help -->
 	   <target name="FRODO" x="2220.0" y="1879.0"  lowThreshold="1.2" highThreshold="0.5"/>
-	   <target name="SPRAT" x="2067.9" y="2089.6"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <target name="SPRAT" x="2076.9" y="2088.4"  lowThreshold="1.2" highThreshold="0.5"/>
        </acquisition>
 
      </capabilities>
@@ -174,6 +173,47 @@
 
   </instrument>
 
+  <!-- ==================================== -->
+  <!-- IO_INFRARED                          -->
+  <!-- ==================================== -->
+
+  <instrument name="IO:I" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>IO:I</name>
+      <class>camera.infrared</class>
+    </descriptor>
+
+    <config>
+      <filterset name="wheel">
+	<filter>
+	  <name>H</name>
+	  <class></class>
+	  <central-wavelength> 16350.0 </central-wavelength>
+	</filter>
+      </filterset>
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>0.0</rotator-offset> 
+	<aperture-offset x="0" y="0" />
+      </capabilities>
+
+      <detector>
+	<array-size width="2048" height="2048" />
+	<plate-scale>0.18</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/io:i.calib.dat" />
+    </calibration>
+
+    <monitor host="192.168.1.46" port="7373" interval="30000" />
+
+    
+  </instrument>
 
   <!-- ==================================== -->
   <!-- SPRAT                               -->
@@ -194,8 +234,8 @@
 	<rotator-offset>+91.72</rotator-offset> 
 	<aperture-offset x="0" y="-9" />
 	<acquisition priority="1">
-	   <target name="SPRAT" x="520.3" y="170" lowThreshold="1.2" highThreshold="0.5" />
-	   <target name="FRODO" x="446.7" y="119.6" lowThreshold="1.2" highThreshold="0.5" />
+	   <target name="SPRAT" x="479" y="179" lowThreshold="1.2" highThreshold="0.5" />
+	   <target name="FRODO" x="446.7" y="122.6" lowThreshold="1.2" highThreshold="0.5" />
        </acquisition>
       </capabilities>
 
