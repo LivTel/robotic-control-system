@@ -40,6 +40,12 @@
        <reboot> 2 </reboot>
 </instrument>
 
+<instrument name="IO:I">
+  <alias> IOI </alias>
+  <mount> /mnt/ioi-image </mount>
+       <port> 3 </port>
+       <reboot> 2 </reboot>
+</instrument>
 
     <instrument name="RISE">
        <alias> RISE </alias>
