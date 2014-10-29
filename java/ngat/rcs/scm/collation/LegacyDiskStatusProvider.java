@@ -75,32 +75,32 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 	public void diskStatusUpdate(DiskStatus status) throws RemoteException
 	{
 		diskStatus.setTimeStamp(status.getStatusTimeStamp());
-		if((status.getMachineName() == "occ")&&(status.getDiskName().equals("/")))
+		if((status.getMachineName().equals("occ"))&&(status.getDiskName().equals("/")))
 		{
 			diskStatus.addData("free.space.occ",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.occ",status.getDiskPercentUsed());
 		}
-		else if((status.getMachineName() == "ltnas2")&&(status.getDiskName().equals("/mnt/archive2")))
+		else if((status.getMachineName().equals("ltnas2"))&&(status.getDiskName().equals("/mnt/archive2")))
 		{
 			diskStatus.addData("free.space.nas2",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.nas2",status.getDiskPercentUsed());
 		}
-		else if((status.getMachineName() == "rise")&&(status.getDiskName().equals("/mnt/rise-image")))
+		else if((status.getMachineName().equals("rise"))&&(status.getDiskName().equals("/mnt/rise-image")))
 		{
 			diskStatus.addData("free.space.rise",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.rise",status.getDiskPercentUsed());
 		}
-		else if((status.getMachineName() == "ringo3-1")&&(status.getDiskName().equals("/mnt/ringo3-1-image")))
+		else if((status.getMachineName().equals("ringo3-1"))&&(status.getDiskName().equals("/mnt/ringo3-1-image")))
 		{
 			diskStatus.addData("free.space.ringo3-1",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.ringo3-1",status.getDiskPercentUsed());
 		}
-		else if((status.getMachineName() == "ringo3-2")&&(status.getDiskName().equals("/mnt/ringo3-2-image")))
+		else if((status.getMachineName().equals("ringo3-2"))&&(status.getDiskName().equals("/mnt/ringo3-2-image")))
 		{
 			diskStatus.addData("free.space.ringo3-2",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.ringo3-2",status.getDiskPercentUsed());
 		}
-		else if((status.getMachineName() == "autoguider1")&&(status.getDiskName().equals("/mnt/autoguider-image")))
+		else if((status.getMachineName().equals("autoguider1"))&&(status.getDiskName().equals("/mnt/autoguider-image")))
 		{
 			diskStatus.addData("free.space.autoguider",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.autoguider",status.getDiskPercentUsed());
