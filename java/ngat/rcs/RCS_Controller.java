@@ -235,6 +235,9 @@ public class RCS_Controller implements Logging {
 	/** EMS Logging. */
 	private Logger emsLog;
 
+	/** IMS Logging. */
+	private Logger imsLog;
+
 	/** OPS Logging. */
 	private Logger opsLog;
 
@@ -1100,6 +1103,21 @@ public class RCS_Controller implements Logging {
 			ersLog.log(1, "LAUNCHER", "RCSController", "Initialized ERS log");
 		} catch (FileNotFoundException e) {
 			bootLog.log(1, CLASS, rcsId, "init", "Error creating filehandler [ERS_TXT] : " + e);
+		}
+
+		// EMS LOG
+		try {
+			File file = new File(logDir, "rcs_ims");
+			FileLogHandler fh = new FileLogHandler(file.getPath(), new BasicLogFormatter(150), FileLogHandler.HOURLY_ROTATION);
+			fh.setLogLevel(3);
+			fh.setName("IMS_TXT");
+			LogManager.registerHandler(fh);
+			imsLog = LogManager.getLogger("IMS");
+			imsLog.setLogLevel(3);
+			imsLog.addExtendedHandler(fh);
+			imsLog.log(1, "LAUNCHER", "RCSController", "Initialized IMS log");
+		} catch (FileNotFoundException e) {
+			bootLog.log(1, CLASS, rcsId, "init", "Error creating filehandler [IMS_TXT] : " + e);
 		}
 
 		// OPS LOG
