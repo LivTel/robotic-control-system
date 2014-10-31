@@ -139,21 +139,17 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 	public static final double DEFAULT_MAX_SEEING = 3.0;
 
 	/** Stores the times when the exposure DP reduction data was received. */
-	protected long[] exposureTimes;
+	protected ArrayList<Long> exposureTimes;
 
 	/** Stores the az at times when the exposure DP reduction data was received. */
-	protected double[] storeAz;
-
+	protected ArrayList<Double> storeAz;
 	/**
 	 * Stores the alt at times when the exposure DP reduction data was received.
 	 */
-	protected double[] storeAlt;
+	protected ArrayList<Double> storeAlt;
 
 	/** Number of exposure. */
 	protected int numExposures;
-
-	/** Stores the seeing data from each reduced image. */
-	protected double[] seeing;
 
 	/**
 	 * ### TEMP to determine the max seeing we will use to update the CCDSeeing.
@@ -248,10 +244,9 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 		if (exposure instanceof XMultipleExposure)
 			numExposures = ((XMultipleExposure) exposure).getRepeatCount();
 
-		exposureTimes = new long[numExposures];
-		seeing = new double[numExposures];
-		storeAz = new double[numExposures];
-		storeAlt = new double[numExposures];
+		exposureTimes = new ArrayList<Long>(numExposures);
+		storeAz = new ArrayList<Double>(numExposures);
+		storeAlt = new ArrayList<Double>(numExposures);
 
 		countCompletedExposures = 0;
 		countReducedExposures = 0;
@@ -371,7 +366,7 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 	// this.fixed = fixed;
 	// }
 
-	/** Sets whetehr to DP(RT) images. */
+	/** Sets whether to DP(RT) images. */
 	public void setDprt(boolean dprt) {
 		this.dprt = dprt;
 	}
@@ -418,7 +413,7 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 			if (fileName == null)
 				fileName = "NO_DP_FILENAME_AVAILABLE";
 
-			long time = exposureTimes[countReducedExposures];
+			long time = exposureTimes.get(countReducedExposures).longValue();
 
 			logger.log(3, CLASS, name, "handleAck", "Multrun DP(RT) completed:" + "\n Sample time   "
 					+ sdf.format(new Date(time)) + "\n File:         " + fileName + "\n Counts:       "
@@ -433,8 +428,6 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 			manager.sigMessage(this, EXPOSURE_SEEING, "" + mack.getSeeing());
 			manager.sigMessage(this, EXPOSURE_X, "" + mack.getXpix());
 			manager.sigMessage(this, EXPOSURE_Y, "" + mack.getYpix());
-			// seeing[countReducedExposures] = mack.getSeeing(); /// ?? ARCSECS
-			// ??
 
 			// NOTE: We need a way to decide if the data is allowed to go into
 			// the seeing monitor - some instruments should not be allowed
@@ -455,8 +448,8 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 			}
 
 			// - use the info for the time the exposure occurred.
-			double elev = storeAlt[countReducedExposures];
-			double az = storeAz[countReducedExposures];
+			double elev = storeAlt.get(countReducedExposures).doubleValue();
+			double az = storeAz.get(countReducedExposures).doubleValue();
 
 			// new model
 			double cosz = Math.cos(0.5 * Math.PI - elev);
@@ -522,12 +515,12 @@ public class Exposure_Task extends Default_TaskImpl implements AutoguiderAdjustm
 
 			logger.log(2, CLASS, name, "handleAck", "Multrun Exposure completed:" + " File: " + fileName);
 
-			exposureTimes[countCompletedExposures] = System.currentTimeMillis();
+			exposureTimes.add(countCompletedExposures,new Long(System.currentTimeMillis()));
 			// alt and az at that time also...
 			double alt = Math.toRadians(StatusPool.latest().mechanisms.altPos);
 			double az  = Math.toRadians(StatusPool.latest().mechanisms.azPos);
-			storeAlt[countCompletedExposures] = alt;
-			storeAz[countCompletedExposures] = az;
+			storeAlt.add(countCompletedExposures,new Double(alt));
+			storeAz.add(countCompletedExposures,new Double(az));
 
 			countCompletedExposures++;
 			// NOTE: We are setting this to the correct mount-relative location
