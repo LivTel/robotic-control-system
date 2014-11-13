@@ -140,12 +140,12 @@
     <item> rain </item>
   </filter>
 
-<!--  <filter name = "B_SKYAMB" class = "AVERAGE">
+  <filter name = "B_SKYAMB" class = "AVERAGE">
     <source> METEO </source>
     <category> CLOUD </category>
     <item> skyamb </item>
     <period unit = "mins"> 2 </period>
-  </filter>-->
+  </filter>
 
   <filter name = "T_DUST" class = "AVERAGE">
     <source> METEO </source>
@@ -251,13 +251,13 @@
        </rule>
        -->
 
-    <!-- <rule name = "CLOUD_HI" class = "timed">
+    <rule name = "CLOUD_HI" class = "timed">
       <period unit = "mins"> 10 </period>
       <criterion name = "C_CLOUD_HI" class = "GREATER">
         <minimum> -8.0 </minimum>
         <filter> B_SKYAMB </filter>
       </criterion>
-    </rule> -->
+    </rule>
     
     <!-- <rule name = "DUST_HI" class = "timed">
       <period unit = "mins"> 5 </period>
@@ -390,7 +390,7 @@
        </rule>
        -->
 
-    <!-- <rule name = "CLOUD_LO_1" class = "timed">
+    <rule name = "CLOUD_LO_1" class = "timed">
       <period unit = "mins"> 15 </period>
       <criterion name = "C_CLOUD_LO1" class = "LESS">
         <maximum> -9.0 </maximum>
@@ -406,7 +406,7 @@
       </criterion>
     </rule>
 
-    <rule name = "DUST_LO" class = "timed">
+    <!-- <rule name = "DUST_LO" class = "timed">
       <period unit = "mins"> 10 </period>
       <criterion name = "C_DUST_LO" class = "LESS">
         <maximum> 55.0 </maximum>
