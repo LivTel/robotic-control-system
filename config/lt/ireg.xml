@@ -71,9 +71,9 @@
 	  <central-wavelength> 6755.0 </central-wavelength>
 	</filter>
 	<filter>
-	  <name>H-Alpha-6822</name>
+	  <name>GG475+KG3+Pol</name>
 	  <class></class>
-	  <central-wavelength> 6822.0 </central-wavelength>
+	  <central-wavelength>5500.0 </central-wavelength>
 	</filter>
       </filterset>
 
