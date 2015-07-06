@@ -132,7 +132,9 @@
 	   <!-- RJS 2014-09-12 tweaked on basis of acquisitions 20140907 - 20140911 -->
            <!-- <target name="FRODO" x="2228.0" y="1872.0" /> -->
 	   <!-- RJS 2014-09-15 simply put it back because the 2014-09-12 tweak did not seem to help -->
-	   <target name="FRODO" x="2220" y="1879"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <!-- <target name="FRODO" x="2220" y="1879"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2015-07-03 -->
+	   <target name="FRODO" x="2238" y="1876"  lowThreshold="1.2" highThreshold="0.5"/>
 	   <!-- <target name="SPRAT" x="2077" y="2088"  lowThreshold="1.2" highThreshold="0.5"/> -->	<!-- x="2076.9" y="2088.4" -->
 	   <target name="SPRAT" x="2140" y="2095"  lowThreshold="1.2" highThreshold="0.5"/>
        </acquisition>
@@ -256,6 +258,40 @@
     <!--<monitor host="150.204.241.212" port="8374" interval="30000" />-->
     <!--<monitor host="localhost" port="6666" interval="30000" />-->
     <monitor host="192.168.1.46" port="8374" interval="30000" />
+  </instrument>
+
+  <!-- ==================================== -->
+  <!-- LOTUS                               -->
+  <!-- ==================================== -->
+
+  <instrument name="LOTUS" type="BlueTwoSlitSpectrograph" enabled="true">
+
+    <descriptor>
+      <name>LOTUS</name>
+      <class>camera.grismatic</class>
+    </descriptor>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>+0.0</rotator-offset> <!-- unknown -->
+	<aperture-offset x="0" y="0" />
+      </capabilities>
+
+      <detector>
+	<array-size width="4032" height="2688" />
+	<plate-scale>0.15</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/lotus.calib.dat" />
+    </calibration>
+
+    <monitor host="192.168.1.22" port="7679" interval="30000" />
   </instrument>
 
 

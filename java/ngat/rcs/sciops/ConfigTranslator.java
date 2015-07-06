@@ -24,6 +24,8 @@ import ngat.phase2.IInstrumentConfig;
 import ngat.phase2.IRCamConfig;
 import ngat.phase2.IRCamDetector;
 import ngat.phase2.InstrumentConfig;
+import ngat.phase2.LOTUSConfig;
+import ngat.phase2.LOTUSDetector;
 import ngat.phase2.OConfig;
 import ngat.phase2.ODetector;
 import ngat.phase2.RISEConfig;
@@ -430,7 +432,37 @@ public class ConfigTranslator {
 			} 
 			throw new ConfigTranslationException("Unable to identify imaging spectrograph from supplied config:" + config);
 		}
+		else if (config instanceof BlueTwoSlitSpectrographInstrumentConfig) 
+		{
+			BlueTwoSlitSpectrographInstrumentConfig btsspec = (BlueTwoSlitSpectrographInstrumentConfig) config;
+		
+			IDetectorConfig btsdetector = btsspec.getDetectorConfig();
+			int xBin = btsdetector.getXBin();
+			int yBin = btsdetector.getYBin();
 
+			if (btsspec.getInstrumentName().equalsIgnoreCase("LOTUS")) 
+			{
+				LOTUSConfig lotusc = new LOTUSConfig(config.getName());
+
+				LOTUSDetector lotusDetector = (LOTUSDetector) lotusc.getDetector(0);
+				lotusDetector.clearAllWindows();
+				lotusDetector.setXBin(xBin);
+				lotusDetector.setYBin(yBin);
+
+				switch (btsspec.getSlitWidth())
+				{
+					case BlueTwoSlitSpectrographInstrumentConfig.SLIT_NARROW:
+						lotusc.setSlitWidth(LOTUSConfig.SLIT_WIDTH_NARROW);
+						break;
+					case BlueTwoSlitSpectrographInstrumentConfig.SLIT_WIDE:
+						lotusc.setSlitWidth(LOTUSConfig.SLIT_WIDTH_WIDE);
+						break;
+					default:
+						break;
+				}
+			} 
+			throw new ConfigTranslationException("Unable to identify blur two slit spectrograph from supplied config:" + config);
+		}
 		throw new ConfigTranslationException("Unable to determine required instrument from supplied config: " + config);
 	}
 
@@ -452,6 +484,8 @@ public class ConfigTranslator {
 			return "THOR";
 		else if (config instanceof SpratConfig)
 			return "SPRAT";
+		else if (config instanceof LOTUSConfig)
+			return "LOTUS";
 		else if (config instanceof FrodoSpecConfig) {
 			if (((FrodoSpecConfig) config).getArm() == FrodoSpecConfig.RED_ARM)
 				return "FRODO_RED";
