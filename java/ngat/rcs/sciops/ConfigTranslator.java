@@ -46,6 +46,7 @@ import ngat.phase2.XImagerInstrumentConfig;
 import ngat.phase2.XImagingSpectrographInstrumentConfig;
 import ngat.phase2.XPolarimeterInstrumentConfig;
 import ngat.phase2.XTipTiltImagerInstrumentConfig;
+import ngat.phase2.XBlueTwoSlitSpectrographInstrumentConfig;
 import ngat.phase2.XWindow;
 
 /**
@@ -432,9 +433,9 @@ public class ConfigTranslator {
 			} 
 			throw new ConfigTranslationException("Unable to identify imaging spectrograph from supplied config:" + config);
 		}
-		else if (config instanceof BlueTwoSlitSpectrographInstrumentConfig) 
+		else if (config instanceof XBlueTwoSlitSpectrographInstrumentConfig) 
 		{
-			BlueTwoSlitSpectrographInstrumentConfig btsspec = (BlueTwoSlitSpectrographInstrumentConfig) config;
+			XBlueTwoSlitSpectrographInstrumentConfig btsspec = (XBlueTwoSlitSpectrographInstrumentConfig) config;
 		
 			IDetectorConfig btsdetector = btsspec.getDetectorConfig();
 			int xBin = btsdetector.getXBin();
@@ -451,10 +452,10 @@ public class ConfigTranslator {
 
 				switch (btsspec.getSlitWidth())
 				{
-					case BlueTwoSlitSpectrographInstrumentConfig.SLIT_NARROW:
+					case XBlueTwoSlitSpectrographInstrumentConfig.SLIT_NARROW:
 						lotusc.setSlitWidth(LOTUSConfig.SLIT_WIDTH_NARROW);
 						break;
-					case BlueTwoSlitSpectrographInstrumentConfig.SLIT_WIDE:
+					case XBlueTwoSlitSpectrographInstrumentConfig.SLIT_WIDE:
 						lotusc.setSlitWidth(LOTUSConfig.SLIT_WIDTH_WIDE);
 						break;
 					default:
