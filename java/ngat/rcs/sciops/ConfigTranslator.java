@@ -461,8 +461,9 @@ public class ConfigTranslator {
 					default:
 						break;
 				}
+				return lotusc;
 			} 
-			throw new ConfigTranslationException("Unable to identify blur two slit spectrograph from supplied config:" + config);
+			throw new ConfigTranslationException("Unable to identify blue two slit spectrograph from supplied config:" + config);
 		}
 		throw new ConfigTranslationException("Unable to determine required instrument from supplied config: " + config);
 	}
