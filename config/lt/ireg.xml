@@ -136,7 +136,14 @@
 	   <!-- RJS 2015-07-03 -->
 	   <target name="FRODO" x="2238" y="1876"  lowThreshold="1.2" highThreshold="0.5"/>
 	   <!-- <target name="SPRAT" x="2077" y="2088"  lowThreshold="1.2" highThreshold="0.5"/> -->	<!-- x="2076.9" y="2088.4" -->
-	   <target name="SPRAT" x="2140" y="2095"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <!-- RJS 2015-07-09 after June 2015 mirror coating (previous values being replaced were 2140,2095)-->
+	   <target name="SPRAT" x="2170" y="2068"  lowThreshold="1.2" highThreshold="0.5"/>
+
+           <!-- IAS 2015-07-09 -->
+           <!--target name="LOTUS" x="1662" y="2408"  lowThreshold="1.2" highThreshold="0.5"/> -->        
+           <!-- IAS 2015-08-015 -->
+           <target name="LOTUS" x="1620" y="2394"  lowThreshold="1.2" highThreshold="0.5"/>        
+
        </acquisition>
 
      </capabilities>
@@ -241,6 +248,9 @@
 	   <!-- Use INT values for x and y -->
 	   <target name="SPRAT" x="479" y="179" lowThreshold="1.2" highThreshold="0.5" />
 	   <target name="FRODO" x="447" y="123" lowThreshold="1.2" highThreshold="0.5" />	<!-- x="446.7" y="122.6" -->
+	   <!-- RJS 2015-08-10 I think the magic pixel to acquire SPRAT to FRODO should be
+	   <target name="FRODO" x="411" y="159" lowThreshold="1.2" highThreshold="0.5" />
+	   -->
        </acquisition>
       </capabilities>
 

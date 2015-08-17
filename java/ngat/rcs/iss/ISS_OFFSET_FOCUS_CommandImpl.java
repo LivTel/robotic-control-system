@@ -19,6 +19,7 @@
  */
 package ngat.rcs.iss;
 
+import java.util.Date;
 import ngat.rcs.scm.collation.*;
 import ngat.net.*;
 import ngat.message.base.*;
@@ -46,7 +47,8 @@ public class ISS_OFFSET_FOCUS_CommandImpl extends ISS_CommandImpl {
 			double cfo = StatusPool.latest().mechanisms.focusOffset;
 			double rfo = ((OFFSET_FOCUS) receivedCommand).getFocusOffset();
 			double ifo = ISS.getCurrentFocusOffset();
-			System.err.println("Current Focus offset: " + cfo + ", Requested: " + rfo + ", From Obs: " + ifo);
+			Date nowDate = new Date();
+			System.err.println(""+nowDate+":Current Focus offset: " + cfo + ", Requested: " + rfo + ", From Obs: " + ifo);
 			// basically if the difference between current and requested + obs
 			// is > small then send
 			if (Math.abs((rfo + ifo) - cfo) < 0.001)

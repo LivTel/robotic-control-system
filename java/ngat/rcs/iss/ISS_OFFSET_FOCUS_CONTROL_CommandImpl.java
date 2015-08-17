@@ -45,7 +45,7 @@ public class ISS_OFFSET_FOCUS_CONTROL_CommandImpl extends ISS_CommandImpl {
 		super.processReceivedCommand(receivedCommand);
 
 		instrumentName = ((OFFSET_FOCUS_CONTROL) receivedCommand).getInstrumentName();
-		System.err.println("ISS: Processing OFFSET_FOCUS_CONTROl for: "+instrumentName);
+		System.err.println("ISS: Processing OFFSET_FOCUS_CONTROL for: "+instrumentName);
 		System.err.println("ISS: Beam instrument is currently: "+ISS.getBeamControlInstrument());
 		
 		if (ISS.getBeamControlInstrument() == null) {
