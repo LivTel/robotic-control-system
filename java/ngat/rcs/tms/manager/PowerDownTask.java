@@ -219,9 +219,11 @@ public class PowerDownTask extends ParallelTaskImpl {
 					InstrumentDescriptor iid = (InstrumentDescriptor) it.next();
 					if (iid != null) {
 						int rbLevel = payload.getRebootLevelForInstrument(iid);
-						taskList.addTask(new Reboot_Task(name + "/" + instrumentModeStr + "_" + iid.getInstrumentName()
+						if(rbLevel > 0)
+						{
+							taskList.addTask(new Reboot_Task(name + "/" + instrumentModeStr + "_" + iid.getInstrumentName()
 								+ "_L" + rbLevel, this, iid.getInstrumentName(), rbLevel));
-
+						}
 						// e.g. X_SHUTDOWN/REBOOT_RATCAM_L3
 					}
 				}
