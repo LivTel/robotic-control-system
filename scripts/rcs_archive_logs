@@ -8,7 +8,16 @@ set dd = `date -u +"%y_%m_%d"`
 
 cd $DEPLOY_LOG
 
-set list = `glob rcs_command*.txt rcs_ctrl*.txt rcs_cil*.txt rcs_task*.txt  rcs_oper*.txt  rcs_event* `
+set list = `glob rcs_command*.txt rcs_ctrl*.txt rcs_cil*.txt rcs_task*.txt  rcs_oper*.txt  rcs_event* /occ/tmp/rcs_lt.log `
+# The following log files are not included in the glob above. Do you want them kept?
+#       rcs_ers_*.txt
+#       rcs_iss_*.txt
+#       rcs_ems_*.txt
+#       scorelog_*.txt
+# The following logs no longer seem to even exist, at least on the date I checked. They could be intermittent
+#       rcs_command*.txt        has been replaced by rcs_cil*.txt?
+#       rcs_ctrl*.txt
+#       rcs_oper*.txt
 
 if ($status == 0) then
     set ct = 0
