@@ -1,4 +1,4 @@
-#!/bin/csh 
+#!/bin/tcsh 
 
 # -----------------------------------------------------
 # Launcher for: Robotic Control System Executive. (RCX).
@@ -212,7 +212,7 @@ if (${?ARCHIVE_LOGS}) then
 
   
     echo "Creating archive..." >>& $RCS_CONSOLE_LOG_FILE
-    tar cvf Ops_${tel}_rcs_${DAT}.tar  rcs*.txt  >>& $RCS_CONSOLE_LOG_FILE
+    tar cvf Ops_${tel}_rcs_${DAT}.tar  rcs*.{txt,log}  >>& $RCS_CONSOLE_LOG_FILE
     gzip -f Ops_${tel}_rcs_${DAT}.tar
     mv -fv Ops_${tel}_rcs_${DAT}.tar.gz $DEPLOY_LOG/archive/
 
