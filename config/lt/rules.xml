@@ -254,7 +254,7 @@
     <rule name = "CLOUD_HI" class = "timed">
       <period unit = "mins"> 10 </period>
       <criterion name = "C_CLOUD_HI" class = "GREATER">
-        <minimum> -8.0 </minimum>
+        <minimum> 115 </minimum>
         <filter> B_SKYAMB </filter>
       </criterion>
     </rule>
@@ -393,7 +393,7 @@
     <rule name = "CLOUD_LO_1" class = "timed">
       <period unit = "mins"> 15 </period>
       <criterion name = "C_CLOUD_LO1" class = "LESS">
-        <maximum> -9.0 </maximum>
+        <maximum> 115 </maximum>
         <filter> B_SKYAMB </filter>
       </criterion>
     </rule>
@@ -401,7 +401,7 @@
     <rule name = "CLOUD_LO_2" class = "timed">
       <period unit = "mins"> 10 </period>
       <criterion name = "C_CLOUD_LO2" class = "LESS">
-        <maximum> -11.0 </maximum>
+        <maximum> 115 </maximum>
         <filter> B_SKYAMB </filter>
       </criterion>
     </rule>
