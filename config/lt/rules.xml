@@ -502,6 +502,10 @@
         <any>224</any>
         <any>226</any>
         <any>234</any>
+        <!-- 470 is STATE_ERROR. However we can move the altitude in this state, so it is added here.
+             See fault #1166 for details.
+        -->
+        <any>470</any>
         <filter> A_ALT_STATE </filter>
       </criterion>
     </rule>
@@ -516,6 +520,10 @@
         <any>224</any>
         <any>226</any>
         <any>234</any>
+        <!-- 470 is STATE_ERROR. However we can move the rotator in this state, so it is added here.
+             See fault #1166 for details.
+        -->
+        <any>470</any>
         <filter> A_ROT_STATE </filter>
       </criterion>
     </rule>
