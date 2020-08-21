@@ -34,6 +34,9 @@ import ngat.phase2.Ringo2PolarimeterConfig;
 import ngat.phase2.Ringo2PolarimeterDetector;
 import ngat.phase2.Ringo3PolarimeterConfig;
 import ngat.phase2.Ringo3PolarimeterDetector;
+import ngat.phase2.MOPTOPPolarimeterConfig;
+import ngat.phase2.MOPTOPPolarimeterDetector;
+
 import ngat.phase2.SpratConfig;
 import ngat.phase2.SpratDetector;
 import ngat.phase2.THORConfig;
@@ -45,6 +48,7 @@ import ngat.phase2.XFilterSpec;
 import ngat.phase2.XImagerInstrumentConfig;
 import ngat.phase2.XImagingSpectrographInstrumentConfig;
 import ngat.phase2.XPolarimeterInstrumentConfig;
+import ngat.phase2.XMoptopInstrumentConfig;
 import ngat.phase2.XTipTiltImagerInstrumentConfig;
 import ngat.phase2.XBlueTwoSlitSpectrographInstrumentConfig;
 import ngat.phase2.XWindow;
@@ -363,6 +367,51 @@ public class ConfigTranslator {
 			}
 			throw new ConfigTranslationException("Unable to identify polarimeter from supplied config: " + config);
 
+		} else if (config instanceof XMoptopInstrumentConfig) {
+			XMoptopInstrumentConfig xmoptop = (XMoptopInstrumentConfig)config;
+			IDetectorConfig xdetector = xmoptop.getDetectorConfig();
+			
+			int xBin = xdetector.getXBin();
+			int yBin = xdetector.getYBin();
+			
+			int rotorSpeed = xmoptop.getRotorSpeed();
+			
+			XFilterSpec filterSpec = xmoptop.getFilterSpec();
+			if(filterSpec == null)
+				throw new ConfigTranslationException("Unable to find filter-spec for MOPTOP config: " + config);
+			
+			List filterList = filterSpec.getFilterList();
+
+			if (filterList == null)
+				throw new ConfigTranslationException("Unable to find filter list for MOPTOP config: " + config);
+
+			if(filterList.size() != 1)
+			{
+				throw new ConfigTranslationException("MOPTOP config: " + config+ " has wrong number of filters:"+
+						filterList.size());
+			}
+			
+			String filter = ((XFilterDef) filterList.get(0)).getFilterName();
+			
+			MOPTOPPolarimeterConfig moptopConfig = new MOPTOPPolarimeterConfig(config.getName());
+			// The filter is set in tryMoptopConfig
+			//moptopConfig.setFilterName(filter);
+			moptopConfig.setRotorSpeed(rotorSpeed);
+			
+			MOPTOPPolarimeterDetector moptopDetector0 = (MOPTOPPolarimeterDetector) moptopConfig.getDetector(0);
+			MOPTOPPolarimeterDetector moptopDetector1 = (MOPTOPPolarimeterDetector) moptopConfig.getDetector(1);
+			moptopDetector0.clearAllWindows();
+			moptopDetector0.setXBin(xBin);
+			moptopDetector0.setYBin(yBin);
+			moptopDetector1.clearAllWindows();
+			moptopDetector1.setXBin(xBin);
+			moptopDetector1.setYBin(yBin);
+			
+			if (tryMoptopConfig(moptopConfig, filter))
+				return moptopConfig;
+
+			throw new ConfigTranslationException("Unable to convert or verify supplied MOPTOP config: " + config);
+			
 		} else if (config instanceof XImagingSpectrographInstrumentConfig) {
 			
 			XImagingSpectrographInstrumentConfig xspec = (XImagingSpectrographInstrumentConfig) config;
@@ -480,6 +529,8 @@ public class ConfigTranslator {
 			return "RINGO2";
 		else if (config instanceof Ringo3PolarimeterConfig)
 			return "RINGO3";
+		else if (config instanceof MOPTOPPolarimeterConfig)
+			return "MOPTOP";
 		else if (config instanceof RISEConfig)
 			return "RISE";
 		else if (config instanceof THORConfig)
@@ -608,5 +659,41 @@ public class ConfigTranslator {
 		
 	}
 	
+	/**
+	 * This method checks that the specified filter exists in the Moptop filter set as supplied
+	 * by ireg.getCapabilitiesProvider(rid).getCapabilities(). If it does, it inserts the specified
+	 * filter into the specified config.
+	 * @param config The moptop polarimeter configuration.
+	 * @param filter The filter to insert into the config, if it exists in MOPTOP's filter set.
+	 * @return true if the filter exists in MOPTOP's filter set, false if it does not.
+	 */
+	private static boolean tryMoptopConfig(MOPTOPPolarimeterConfig config , String filter)
+	{
+		System.err.println("Try Moptop config: " + filter );
+		try
+		{
+			FilterDescriptor filterDescriptor = new FilterDescriptor(filter, "moptopfilter");
+			
+			InstrumentDescriptor rid = ireg.getDescriptor("MOPTOP");
+			// TODO MOPTOP is not an imager, change this to something else
+			MOPTOPPolarimeter moptop = (MOPTOPPolarimeter) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+		
+			FilterSet filterSet = moptop.getFilterSet("wheel");
+			System.err.println("filter descriptor =" + filterDescriptor);
+			System.err.println("filter wheel filter set =" + filterSet);
+			
+			if (filterSet.containsFilter(filterDescriptor)) 
+			{
+				config.setFilterName(filter);
+				return true;
+			}
+		} 
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+	}
 	
 }

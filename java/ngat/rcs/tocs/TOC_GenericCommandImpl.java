@@ -1460,10 +1460,61 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			}
 
 			instConfig = polConfig;
+
+		} else if (instId.equals("MOPTOP")) {
+			
+			// MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
+
+			if (parser.countTokens() < 4) {
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> MOPTOP <rotorSpeed> <filter> <xbin> <ybin>}";
+				processReply(reply);
+				return;
+			}
+			// construct config
+			XMoptopInstrumentConfig moptopConfig = new XMoptopInstrumentConfig("TOC_MOPTOP");
+			moptopConfig.setInstrumentName("MOPTOP");
+
+			// parse command parameters
+			String rotorSpeedString = parser.nextToken(); 
+			String filterString = parser.nextToken();
+			String xBinString = parser.nextToken();
+			String yBinString = parser.nextToken();
+
+			// rotor speed
+			if(rotorSpeedString.equalsIgnoreCase("slow"))
+				moptopConfig.setRotorSpeed(XMoptopInstrumentConfig.ROTOR_SPEED_SLOW);
+			else if(rotorSpeedString.equalsIgnoreCase("fast"))
+				moptopConfig.setRotorSpeed(XMoptopInstrumentConfig.ROTOR_SPEED_FAST);
+			else
+			{
+				reply = "ERROR ROTOR SPEED " + rotorSpeedString;
+				processReply(reply);
+				return;
+			}
+			// filter
+			XFilterSpec filters = new XFilterSpec();
+			filters.addFilter(new XFilterDef(filterString));
+			moptopConfig.setFilterSpec(filters);
+			// binning
+			try 
+			{
+				XDetectorConfig detector = new XDetectorConfig();
+				int xBin = Integer.parseInt(xBinString);
+				detector.setXBin(xBin);
+				int yBin = Integer.parseInt(yBinString);
+				detector.setYBin(yBin);
+				moptopConfig.setDetectorConfig(detector);
+			}
+			catch (NumberFormatException nx) 
+			{
+				reply = "ERROR BINNING " + nx;
+				processReply(reply);
+				return;
+			}
+			// set instConfig to constructed moptopConfig
+			instConfig = moptopConfig;
 		}
 
-		
-		
 		// check the real instrument id here
 		if (instConfig == null) {
 			processError("INSTRUMENT", "No instrument matches id: " + instId);
