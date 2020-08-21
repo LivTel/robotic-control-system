@@ -676,7 +676,7 @@ public class ConfigTranslator {
 			
 			InstrumentDescriptor rid = ireg.getDescriptor("MOPTOP");
 			// TODO MOPTOP is not an imager, change this to something else
-			MOPTOPPolarimeter moptop = (MOPTOPPolarimeter) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+			MoptopPolarimeter moptop = (MoptopPolarimeter) (ireg.getCapabilitiesProvider(rid).getCapabilities());
 		
 			FilterSet filterSet = moptop.getFilterSet("wheel");
 			System.err.println("filter descriptor =" + filterDescriptor);

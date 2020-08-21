@@ -14,45 +14,52 @@
 	<offset> 104.0 </offset>
       </rotator> 
 
-    <!--    <instrument name="RATCAM">
+<!--
+      <instrument name="RATCAM">
        <alias> RATCAM </alias>
        <mount> /mnt/rat-image </mount>
        <port> 3 </port>
        <reboot> 2 </reboot>
-    </instrument> -->
+       </instrument>
+-->
 
+<!--
     <instrument name="RINGO3">
        <alias> RINGO3 </alias>
-
-<!-- THIS IS WRONG R3 has 2 MOUNT POINTS BUT WE CANT COPE WITH THAT CONCEPT
-    SO TOCS WILL NOT WORK VERY WELL WITH RINGO3 -->
-
        <mount> /mnt/ringo3-image-temp </mount>
        <port> 7 </port>
        <reboot> 1 </reboot>
     </instrument>
-
-
-<instrument name="SPRAT">
-  <alias> SPRAT </alias>
-  <mount> /mnt/rise-image </mount>
+-->
+    
+    <instrument name="MOPTOP">
+       <alias> MOPTOP </alias>
+       <mount> /mnt/moptop-image </mount>
        <port> 7 </port>
        <reboot> 2 </reboot>
-</instrument>
+    </instrument>
 
-<instrument name="LOTUS">
-  <alias> LOTUS </alias>
-  <mount> /mnt/lotus-image </mount>
+
+    <instrument name="SPRAT">
+       <alias> SPRAT </alias>
+       <mount> /mnt/rise-image </mount>
        <port> 7 </port>
        <reboot> 2 </reboot>
-</instrument>
-
-<instrument name="IO:I">
-  <alias> IOI </alias>
-  <mount> /mnt/ioi-image </mount>
+    </instrument>
+<!--
+    <instrument name="LOTUS">
+       <alias> LOTUS </alias>
+       <mount> /mnt/lotus-image </mount>
+       <port> 7 </port>
+       <reboot> 2 </reboot>
+    </instrument>
+-->
+    <instrument name="IO:I">
+       <alias> IOI </alias>
+       <mount> /mnt/ioi-image </mount>
        <port> 3 </port>
        <reboot> 2 </reboot>
-</instrument>
+    </instrument>
 
     <instrument name="RISE">
        <alias> RISE </alias>
@@ -61,12 +68,14 @@
        <reboot> 2 </reboot>
     </instrument>
 
-<!--    <instrument name="IO:THOR">
+<!--
+    <instrument name="IO:THOR">
        <alias> THOR </alias>
        <mount> /mnt/thor-image </mount>
        <port> 0 </port>
        <reboot> 2 </reboot>
-    </instrument> -->
+    </instrument>
+-->
 
    <instrument name="IO:O">
        <alias> IOO  </alias>

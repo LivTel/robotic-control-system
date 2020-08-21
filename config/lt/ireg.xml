@@ -443,8 +443,51 @@
   </instrument>
 
 
+  <!-- ==================================== -->
+  <!-- MOPTOP                               -->
+  <!-- ==================================== -->
 
+  <instrument name="MOPTOP" type="MoptopPolarimeter" enabled="true">
 
+    <descriptor>
+      <name>MOPTOP</name>
+      <class>polarimeter</class>
+    </descriptor>
+
+    <subcomponent name = "1" class = "" prefix = ":" configurable = "false">
+      <temperature>
+        <suffix>.0</suffix>
+      </temperature>
+    </subcomponent>
+    <subcomponent name = "2" class = "" prefix = ":" configurable = "false">
+      <temperature>
+        <suffix>.1</suffix>
+      </temperature>
+    </subcomponent>
+
+    <config>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset> 0.0 </rotator-offset> 
+	<aperture-offset x="0" y="0" />
+      </capabilities>
+
+      <detector>
+	<array-size width="2048" height="2048" />
+	<plate-scale>0.21</plate-scale>
+      </detector>
+
+    </config>
+
+    <calibration>
+      <history file="/occ/rcs/instruments/moptop.calib.dat" />
+    </calibration>
+
+    <monitor host="192.168.1.28" port="7784" interval="30000" />
+    
+  </instrument>
 
   <!-- ==================================== -->
   <!-- FRODO                                -->
