@@ -114,7 +114,7 @@
 	<!-- RJS 2013-03-19 changed from -20, 10 to +20, 10 -->
 	<!-- RJS 2013-06-20 changed from +20, 10 to 0, 0 -->
 	<aperture-offset x="0" y="0" />
-	<acquisition priority="1">
+	<acquisition priority="2">
 	   <!-- Use INT values for x and y -->
            <target name="IO:O" x="2048" y="2048" lowThreshold="1.2" highThreshold="0.5" />
 	   <target name="RISE" x="2048" y="2048" lowThreshold="1.2" highThreshold="0.5" />
@@ -133,16 +133,34 @@
            <!-- <target name="FRODO" x="2228.0" y="1872.0" /> -->
 	   <!-- RJS 2014-09-15 simply put it back because the 2014-09-12 tweak did not seem to help -->
 	   <!-- <target name="FRODO" x="2220" y="1879"  lowThreshold="1.2" highThreshold="0.5"/> -->
-	   <!-- RJS 2015-07-03 -->
-	   <target name="FRODO" x="2238" y="1876"  lowThreshold="1.2" highThreshold="0.5"/>
-	   <!-- <target name="SPRAT" x="2077" y="2088"  lowThreshold="1.2" highThreshold="0.5"/> -->	<!-- x="2076.9" y="2088.4" -->
-	   <!-- RJS 2015-07-09 after June 2015 mirror coating (previous values being replaced were 2140,2095)-->
-	   <target name="SPRAT" x="2170" y="2068"  lowThreshold="1.2" highThreshold="0.5"/>
-
+	   <!-- RJS 2015-07-03 <target name="FRODO" x="2238" y="1876"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- <target name="FRODO" x="2216" y="1861"  lowThreshold="1.2" highThreshold="0.5"/> -->
+           <!-- <target name="FRODO" x="2236" y="1846"  lowThreshold="1.2" highThreshold="0.5"/> RJS 2019-07-22 Derived manually after IO:O shutter replacement -->
+	   <!-- RJS 2015-07-30 Tweaked via FrodoAperture and pixel mapping IOO-IFU <target name="FRODO" x="2245" y="1851"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 20190930 First attempt after mirror coating <target name="FRODO" x="2172" y="1928"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 20191007 Tweaked after a few nights of operations -->
+           <target name="FRODO" x="2173" y="1910"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <!-- <target name="SPRAT" x="2077" y="2088"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS June 2015 before mirror coating <target name="SPRAT" x="2140" y="2095" /> -->
+	   <!-- RJS 2015-07-09 after June 2015 mirror coating <target name="SPRAT" x="2170" y="2068"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2015-08-28 after Aug 2015 site visit <target name="SPRAT" x="2158" y="2064"  lowThreshold="1.2" highThreshold="0.5"/>  -->
+	   <!-- RJS 2016-07-29 on basis of two observations 20160721 <target name="SPRAT" x="2161" y="2058"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2017-01-30 After a few failed SPRATStand <target name="SPRAT" x="2161" y="2069"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2019-07-22 After IO:O shutter change target name="SPRAT" x="2207" y="2068"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2019-10-16 After mirror re-coating <target name="SPRAT" x="2117" y="2111"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2020-01-14 After SPRAT shutter was replaced Jan 2020 -->
+	   <target name="SPRAT" x="2122" y="2127"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <!-- 
+	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
+	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
+	     -  The pipeline needs to know where the target is to perform flux calibration but the magic pixel
+	     -  is not propagated in the FITS headers.
+	     -->
            <!-- IAS 2015-07-09 -->
            <!--target name="LOTUS" x="1662" y="2408"  lowThreshold="1.2" highThreshold="0.5"/> -->        
-           <!-- IAS 2015-08-015 -->
-           <target name="LOTUS" x="1620" y="2394"  lowThreshold="1.2" highThreshold="0.5"/>        
+           <!-- IAS 2015-08-15 <target name="LOTUS" x="1620" y="2394"  lowThreshold="1.2" highThreshold="0.5"/>         -->
+	   <!-- RJS 2016-07-13 -->
+           <target name="LOTUS" x="1620" y="2386"  lowThreshold="1.2" highThreshold="0.5"/>        
 
        </acquisition>
 
@@ -243,14 +261,23 @@
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
 	<rotator-offset>+91.72</rotator-offset> 
-	<aperture-offset x="0" y="-9" />
+	<!-- Config used for several years up to 2020-06-01 <aperture-offset x="0" y="-9" /> -->
+	<!-- RJS 2020-06-01 Initial test towards moving APERTUER to chip centre -->
+	<aperture-offset x="-10" y="0" />
 	<acquisition priority="1">
 	   <!-- Use INT values for x and y -->
-	   <target name="SPRAT" x="479" y="179" lowThreshold="1.2" highThreshold="0.5" />
-	   <target name="FRODO" x="447" y="123" lowThreshold="1.2" highThreshold="0.5" />	<!-- x="446.7" y="122.6" -->
-	   <!-- RJS 2015-08-10 I think the magic pixel to acquire SPRAT to FRODO should be
-	   <target name="FRODO" x="411" y="159" lowThreshold="1.2" highThreshold="0.5" />
-	   -->
+	   <target name="SPRAT" x="494" y="179" lowThreshold="1.2" highThreshold="0.5" />
+	   <!-- 
+	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
+	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
+	     -  The pipeline needs to know where the target is to perform flux calibration but the magic pixel
+	     -  is not propagated in the FITS headers.
+	     -->
+	   <!-- <target name="FRODO" x="447" y="123" lowThreshold="1.2" highThreshold="0.5" />	x="446.7" y="122.6" -->
+	   <!-- RJS 2015-08-10 <target name="FRODO" x="411" y="159" lowThreshold="1.2" highThreshold="0.5" /> -->
+	   <!-- RJS 2019-10-16 After mirror re-coating <target name="FRODO" x="410" y="161" lowThreshold="1.2" highThreshold="0.5" /> -->
+	   <!-- RJS 2020-01-21 After SPRAT shutter changed in Jan 2020 -->
+	   <target name="FRODO" x="418" y="162" lowThreshold="1.2" highThreshold="0.5" />
        </acquisition>
       </capabilities>
 
@@ -357,7 +384,7 @@
   <!-- RINGO3                               -->
   <!-- ==================================== -->
 
-  <instrument name="RINGO3" type="Polarimeter" enabled="true">
+  <instrument name="RINGO3" type="Polarimeter" enabled="false">
 
     <descriptor>
       <name>RINGO3</name>
@@ -450,8 +477,14 @@ configurable = "true">
       <capabilities>
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
-	<rotator-offset>0.0</rotator-offset> 
-	<aperture-offset x="-37" y="-34" />
+	<!-- Historically not used. Just wrote the IOO ROTSKYPA to FRODO <rotator-offset>0.0</rotator-offset>  -->
+        <!-- RJS 2017-01-31 First experiment to write a true ROTSKYPA into FRODO IFU. Note that it can only be correct
+	     for R or b since the iamges are flipped. This is an attempt to get it correct for r -->
+	<rotator-offset>227.0</rotator-offset> 
+	<!-- No idea where these initial values came from. Been this way for years <aperture-offset x="-37" y="-34" /> -->
+	<!-- RJS 2017-01-31 First guess by RJS at aperturte to blind point Frodo
+	     These numbers come from mean of first TWEAK for many Frodo acquisitions -->
+	<aperture-offset x="-13" y="+22" />
       </capabilities>
 
       <detector>

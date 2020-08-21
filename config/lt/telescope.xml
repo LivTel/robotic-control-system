@@ -72,7 +72,7 @@
        <alias> IOO  </alias>
        <mount> /mnt/o-image </mount>
        <port> 0 </port>
-       <reboot> 2 </reboot>
+       <reboot> 0 </reboot>
     </instrument>
 
     <instrument name="FRODO">
@@ -98,7 +98,8 @@
   <!-- <config> /occ/rcs/config/tweak_minus.dat </config> -->	<!-- ROTATIONAL OFFSET changed +46.3deg for  IO:O -->
   <!-- <config> /occ/rcs/config/tweak_zero.dat </config> --> <!-- As derived and correct on RATCam -->
   <!-- <config> /occ/rcs/config/tweak_plus.dat </config>  --> <!-- Rotated but IO:O, but the wrong way -->
-  <config> /occ/rcs/config/tweaks_20150412_for_ioo.dat </config> <!-- Derived on ratcam. Rotated for IO:O. Then modified by bug 2259, comment 17-19 -->
+  <!-- <config> /occ/rcs/config/tweaks_20150412_for_ioo.dat </config> --> <!-- Derived on ratcam. Rotated for IO:O. Then modified by bug 2259, comment 17-19 -->
+  <config> /occ/rcs/config/tweaks_20160201_for_ioo_p.dat </config> <!-- Compounded offsets on top of tweaks_20150412_for_ioo.dat after Dec 2015 TPOINT -->
   </adjuster>
 
 
