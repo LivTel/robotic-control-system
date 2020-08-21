@@ -466,27 +466,48 @@
     </subcomponent>
 
     <config>
-
-      <capabilities>
+      <filterset name="wheel">
+	<filter>
+	  <name>MOP-L</name>
+	  <class></class>
+	  <central-wavelength> 5500.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>MOP-R</name>
+	  <class></class>
+	  <central-wavelength> 6375.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>MOP-V</name>
+	  <class></class>
+	  <central-wavelength> 5300.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>MOP-B</name>
+	  <class></class>
+	  <central-wavelength> 4500.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>MOP-I</name>
+	  <class></class>
+	  <central-wavelength> 8220.0 </central-wavelength>
+	</filter>
+       </filterset>
+       <capabilities>
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
 	<rotator-offset> 0.0 </rotator-offset> 
 	<aperture-offset x="0" y="0" />
-      </capabilities>
-
-      <detector>
+       </capabilities>
+       <detector>
 	<array-size width="2048" height="2048" />
 	<plate-scale>0.21</plate-scale>
-      </detector>
-
+       </detector>
     </config>
-
     <calibration>
       <history file="/occ/rcs/instruments/moptop.calib.dat" />
     </calibration>
-
     <monitor host="192.168.1.28" port="7784" interval="30000" />
-    
   </instrument>
 
   <!-- ==================================== -->
