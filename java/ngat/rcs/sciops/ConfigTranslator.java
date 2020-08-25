@@ -15,6 +15,7 @@ import ngat.icm.InstrumentCapabilities;
 import ngat.icm.InstrumentCapabilitiesProvider;
 import ngat.icm.InstrumentDescriptor;
 import ngat.icm.InstrumentRegistry;
+import ngat.icm.MoptopPolarimeter;
 import ngat.phase2.CCDConfig;
 import ngat.phase2.CCDDetector;
 import ngat.phase2.FrodoSpecConfig;
