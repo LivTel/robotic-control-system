@@ -506,7 +506,7 @@
   <!-- FRODO                                -->
   <!-- ==================================== -->
 
-  <instrument name="FRODO" type="DualBeamSpectrograph" enabled="true">
+  <instrument name="FRODO" type="DualBeamSpectrograph" enabled="false">
 
     <descriptor>
       <name>FRODO</name>
