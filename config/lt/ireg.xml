@@ -488,7 +488,7 @@
        <capabilities>
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
-	<rotator-offset> 0.0 </rotator-offset> 
+	<rotator-offset> -87.162 </rotator-offset> 
 	<aperture-offset x="0" y="0" />
        </capabilities>
        <detector>
