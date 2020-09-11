@@ -35,6 +35,10 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 	 * <li>disk.usage.ringo3-1
 	 * <li>free.space.ringo3-2
 	 * <li>disk.usage.ringo3-2
+	 * <li>free.space.moptop1
+	 * <li>disk.usage.moptop1
+	 * <li>free.space.moptop2
+	 * <li>disk.usage.moptop3
 	 * <li>free.space.autoguider
 	 * <li>disk.usage.autoguider
 	 * </ul>
@@ -53,6 +57,10 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		diskStatus.addKeyword("disk.usage.ringo3-1", MappedStatusCategory.DOUBLE_DATA, "Disk usage on ringo3-1", "%");
 		diskStatus.addKeyword("free.space.ringo3-2", MappedStatusCategory.DOUBLE_DATA, "Free space on ringo3-2", "kilobytes");
 		diskStatus.addKeyword("disk.usage.ringo3-2", MappedStatusCategory.DOUBLE_DATA, "Disk usage on ringo3-2", "%");
+		diskStatus.addKeyword("free.space.moptop1", MappedStatusCategory.DOUBLE_DATA, "Free space on moptop1", "kilobytes");
+		diskStatus.addKeyword("disk.usage.moptop1", MappedStatusCategory.DOUBLE_DATA, "Disk usage on moptop1", "%");
+		diskStatus.addKeyword("free.space.moptop2", MappedStatusCategory.DOUBLE_DATA, "Free space on moptop2", "kilobytes");
+		diskStatus.addKeyword("disk.usage.moptop2", MappedStatusCategory.DOUBLE_DATA, "Disk usage on moptop2", "%");
 		diskStatus.addKeyword("free.space.autoguider", MappedStatusCategory.DOUBLE_DATA, "Free space on autoguider", "kilobytes");
 		diskStatus.addKeyword("disk.usage.autoguider", MappedStatusCategory.DOUBLE_DATA, "Disk usage on autoguider", "%");
 	}
@@ -99,6 +107,16 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		{
 			diskStatus.addData("free.space.ringo3-2",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.ringo3-2",status.getDiskPercentUsed());
+		}
+		else if((status.getMachineName().equals("moptop1"))&&(status.getDiskName().equals("/mnt/moptop-image/1")))
+		{
+			diskStatus.addData("free.space.moptop1",(double)(status.getDiskFreeSpace()));
+			diskStatus.addData("disk.usage.moptop1",status.getDiskPercentUsed());
+		}
+		else if((status.getMachineName().equals("moptop2"))&&(status.getDiskName().equals("/mnt/moptop-image/2")))
+		{
+			diskStatus.addData("free.space.moptop2",(double)(status.getDiskFreeSpace()));
+			diskStatus.addData("disk.usage.moptop2",status.getDiskPercentUsed());
 		}
 		else if((status.getMachineName().equals("autoguider1"))&&(status.getDiskName().equals("/mnt/autoguider-image")))
 		{
