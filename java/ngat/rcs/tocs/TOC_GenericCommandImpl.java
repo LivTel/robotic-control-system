@@ -307,7 +307,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		// ---------------
 		// ACQUIRE Command. (Acquire target).
 		// ---------------
-		(verb.equalsIgnoreCase("ACQUIRE <ra> <dec> <acq-mode>")) {
+		(verb.equalsIgnoreCase("ACQUIRE")) {
 
 			processACQUIRECommand(parser);
 
@@ -352,23 +352,29 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Offset telescope from current position by d-ra sec and d-dec arcsec."
 				+ "\nINSTR <sessionID> <instID> [instrument-params]"
 				+ "\n                   : Configure selected instrument. (Examples below)"
-				+ "\n  e.g. RATCAM <u-filter> <l-filter> <bin> [B][A}"
-				+ "\n                   : Configure the RATCam using the lower, upper filters and binning."
-				+ "\n  e.g. MEROPE <f0> <f1> [<f2>] <bin> [B][A}"
-				+ "\n                   : Configure the Merope using 2 or 3 filters and binning."
-				+ "\n  e.g. NUVSPEC <wavelength>"
-				+ "\n                   : Configure the NUVSpec using the selected wavelength"
-				+ "\n  e.g. MESSPEC <filter-slide>"
-				+ "\n                   : Configure the MESSpec with selected filter-slide position."
-				+ "\n  e.g. FRODOSPEC <red_grate> <red_wav> <blue_grate> <blue_wav> <window>"
-				+ "\n                   : Configure the FRODOSpec with assigned red and blue grating"
-				+ "\n                     selection and wavelengths plus a window size."
+				+ "\n  e.g. IO:O <filter> <lowerslide> <upperslide> <bin> [B][A]"
+				+ "\n                   : Configure IO:O using the filters and binning."
+				+ "\n  e.g. RISE <bin>"
+				+ "\n                   : Configure RISE using the specified binning."
+				+ "\n  e.g. MOPTOP <rotorSpeed> <filter> <xbin> <ybin>"
+				+ "\n                   : Configure Moptop using the specified rotor speed (slow|fast), filter and binning."
 				+ "\nEXPOSE <sessionID> <time> [<mult> | <at> ] <dpflag> "
 				+ "\n                   : Take exposure length <time> secs, <mult> runs, dp(rt) T/F."
 				+ "\nSTOP <sessionID> " + "\n                   : Stop axes tracking." + "\nQUIT <sessionID>"
 				+ "\n                   : End current SA session."
 				+ "\nSTATUS <cat> <key> : Various status info. E.g. instrument availablity."
 				+ "\nPOSITION <ra> <dec>: Compute alt/az for specified target position.";
+//				+ "\n  e.g. RATCAM <u-filter> <l-filter> <bin> [B][A}"
+//				+ "\n                   : Configure the RATCam using the lower, upper filters and binning."
+//				+ "\n  e.g. MEROPE <f0> <f1> [<f2>] <bin> [B][A}"
+//				+ "\n                   : Configure the Merope using 2 or 3 filters and binning."
+//				+ "\n  e.g. NUVSPEC <wavelength>"
+//				+ "\n                   : Configure the NUVSpec using the selected wavelength"
+//				+ "\n  e.g. MESSPEC <filter-slide>"
+//				+ "\n                   : Configure the MESSpec with selected filter-slide position."
+//				+ "\n  e.g. FRODOSPEC <red_grate> <red_wav> <blue_grate> <blue_wav> <window>"
+//				+ "\n                   : Configure the FRODOSpec with assigned red and blue grating"
+//				+ "\n                     selection and wavelengths plus a window size."
 		processReply(reply);
 	}
 
@@ -1194,7 +1200,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		// binning).
 		// ------------
 		if (instId.startsWith("RATCAM")) {
-			// RATCAM <lf> <uf> <bin> [B][A}
+			// RATCAM <lf> <uf> <bin> [B][A]
 
 			if (parser.countTokens() < 3) {
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RATCAM <l-filter> <u-filter> <bin> }";
@@ -1336,7 +1342,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			
 		} else if (instId.startsWith("RISE")) {
 						
-			// RISE <bin> [B][A}
+			// RISE <bin> [B][A]
 
 			if (parser.countTokens() < 1) {
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RISE <bin> }";
@@ -1415,7 +1421,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		} else if (instId.equals("RINGO2")) {
 
 
-			// RINGO2 <trig> <emgain> <xbin> <ybin> [B][A}
+			// RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
 
 			if (parser.countTokens() < 4) {
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RINGO2 <trig> <emgain> <xbin> <ybin> }";
