@@ -38,7 +38,7 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 	 * <li>free.space.moptop1
 	 * <li>disk.usage.moptop1
 	 * <li>free.space.moptop2
-	 * <li>disk.usage.moptop3
+	 * <li>disk.usage.moptop2
 	 * <li>free.space.autoguider
 	 * <li>disk.usage.autoguider
 	 * </ul>
