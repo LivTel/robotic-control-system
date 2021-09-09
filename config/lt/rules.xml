@@ -324,14 +324,6 @@
 	       </criterion>
 	     </rule>  
 
-	     <rule name = "HUM_LO_2" class = "timed">
-	       <period unit = "mins"> 30  </period>
-	       <criterion name = "C_HUM_LO2" class = "LESS">
-		 <maximum> 0.75 </maximum>
-		 <filter> M_HUM_SLOW </filter>
-	       </criterion>
-	     </rule>
-
 	     <!-- Temp > 0.1 -->
 	     <rule name = "X7_30" class = "timed">
 	       <period unit = "mins"> 30 </period>
@@ -344,7 +336,14 @@
 
 
     </rule>
-
+    
+    <rule name = "HUM_LO_2" class = "timed">
+      <period unit = "mins"> 30  </period>
+      <criterion name = "C_HUM_LO2" class = "LESS">
+	<maximum> 0.75 </maximum>
+	<filter> M_HUM_SLOW </filter>
+      </criterion>
+    </rule>
     
     <rule name = "WS_LO" class = "timed">
       <period unit = "mins"> 30 </period>
@@ -488,6 +487,10 @@
         <any>224</any>
         <any>226</any>
         <any>234</any>
+        <!-- 470 is STATE_ERROR. However we can move the altitude in this state, so it is added here.
+             See fault #1166 for details.
+        -->
+        <any>470</any>
         <filter> A_AZM_STATE </filter>
       </criterion>
     </rule>
