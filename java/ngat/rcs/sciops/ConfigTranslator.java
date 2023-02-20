@@ -24,6 +24,8 @@ import ngat.phase2.IDetectorConfig;
 import ngat.phase2.IInstrumentConfig;
 import ngat.phase2.IRCamConfig;
 import ngat.phase2.IRCamDetector;
+import ngat.phase2.RaptorConfig;
+import ngat.phase2.RaptorDetector;
 import ngat.phase2.InstrumentConfig;
 import ngat.phase2.LOTUSConfig;
 import ngat.phase2.LOTUSDetector;
@@ -31,13 +33,13 @@ import ngat.phase2.OConfig;
 import ngat.phase2.ODetector;
 import ngat.phase2.RISEConfig;
 import ngat.phase2.RISEDetector;
+import ngat.phase2.RaptorConfig;
 import ngat.phase2.Ringo2PolarimeterConfig;
 import ngat.phase2.Ringo2PolarimeterDetector;
 import ngat.phase2.Ringo3PolarimeterConfig;
 import ngat.phase2.Ringo3PolarimeterDetector;
 import ngat.phase2.MOPTOPPolarimeterConfig;
 import ngat.phase2.MOPTOPPolarimeterDetector;
-
 import ngat.phase2.SpratConfig;
 import ngat.phase2.SpratDetector;
 import ngat.phase2.THORConfig;
@@ -48,6 +50,7 @@ import ngat.phase2.XFilterDef;
 import ngat.phase2.XFilterSpec;
 import ngat.phase2.XImagerInstrumentConfig;
 import ngat.phase2.XImagingSpectrographInstrumentConfig;
+import ngat.phase2.XRaptorInstrumentConfig;
 import ngat.phase2.XPolarimeterInstrumentConfig;
 import ngat.phase2.XMoptopInstrumentConfig;
 import ngat.phase2.XTipTiltImagerInstrumentConfig;
@@ -177,6 +180,36 @@ public class ConfigTranslator {
 					return irc;
 				
 				return irc;
+				
+			} else if (ximager.getInstrumentName().equalsIgnoreCase("RAPTOR")) {
+				XRaptorInstrumentConfig xraptor = (XRaptorInstrumentConfig)config;
+				
+				int nudgematicOffsetSize = xraptor.getNudgematicOffsetSize();
+				int coaddExposureLength = xraptor.getCoaddExposureLength();
+
+				RaptorConfig raptorConfig = new RaptorConfig(config.getName());
+				raptorConfig.setNudgematicOffsetSize(nudgematicOffsetSize);
+				raptorConfig.setCoaddExposureLength(coaddExposureLength);
+				
+				RaptorDetector raptorDetector = (RaptorDetector)raptorConfig.getDetector(0);
+				raptorDetector.clearAllWindows();
+				raptorDetector.setXBin(xBin);
+				raptorDetector.setYBin(yBin);
+				
+				// what if no fspec ?
+				if (filterSpec == null)
+					filterSpec = new XFilterSpec();
+				
+				List filterList = filterSpec.getFilterList();
+				// what if no filters in fspec ?
+				if (filterList == null)
+					filterList = new Vector();
+				
+				String filter0 = ((XFilterDef) filterList.get(0)).getFilterName();
+				if (tryRaptorConfig(raptorConfig, filter0)) //mutates irc
+					return raptorConfig;
+				
+				return raptorConfig;
 				
 			} else if (ximager.getInstrumentName().equalsIgnoreCase("IO:O")) {
 
