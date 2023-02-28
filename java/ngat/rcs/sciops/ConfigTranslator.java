@@ -184,6 +184,8 @@ public class ConfigTranslator {
 			} else if (ximager.getInstrumentName().equalsIgnoreCase("RAPTOR")) {
 				XRaptorInstrumentConfig xraptor = (XRaptorInstrumentConfig)config;
 				
+				// Assume XRaptorInstrumentConfig constants exactly match
+				// RaptorConfig constants for Nudgematic offset size
 				int nudgematicOffsetSize = xraptor.getNudgematicOffsetSize();
 				int coaddExposureLength = xraptor.getCoaddExposureLength();
 
@@ -206,7 +208,7 @@ public class ConfigTranslator {
 					filterList = new Vector();
 				
 				String filter0 = ((XFilterDef) filterList.get(0)).getFilterName();
-				if (tryRaptorConfig(raptorConfig, filter0)) //mutates irc
+				if (tryRaptorConfig(raptorConfig, filter0)) //mutates raptorConfig
 					return raptorConfig;
 				
 				return raptorConfig;
@@ -559,6 +561,8 @@ public class ConfigTranslator {
 			return "O";
 		else if (config instanceof IRCamConfig)
 			return "SUPIRCAM";
+		else if (config instanceof RaptorConfig)
+			return "RAPTOR";
 		else if (config instanceof Ringo2PolarimeterConfig)
 			return "RINGO2";
 		else if (config instanceof Ringo3PolarimeterConfig)
@@ -693,6 +697,42 @@ public class ConfigTranslator {
 		
 	}
 	
+	/**
+	 * This method checks that the specified filter exists in the Raptor filter set as supplied
+	 * by ireg.getCapabilitiesProvider(rid).getCapabilities(). If it does, it inserts the specified
+	 * filter into the specified config.
+	 * @param config The Raptor configuration.
+	 * @param filter0 The filter to insert into the config, if it exists in RAPTOR's filter set.
+	 * @return true if the filter exists in RAPTOR's filter set, false if it does not.
+	 */
+	private static boolean tryRaptorConfig(RaptorConfig config , String filter0) 
+	{
+		System.err.println("Try raptor config: " + filter0 );
+		try 
+		{
+			FilterDescriptor fwheel = new FilterDescriptor(filter0, "raptorfilter");
+			
+			InstrumentDescriptor rid = ireg.getDescriptor("RAPTOR");
+			
+			Imager raptorImager = (Imager) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+		
+			FilterSet fsWheel = raptorImager.getFilterSet("wheel");
+			System.err.println("FWheel=" + fwheel);
+			
+			if (fsWheel.containsFilter(fwheel)) 
+			{
+				config.setFilterName(filter0);
+				return true;
+			}
+		} 
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+	}
+
 	/**
 	 * This method checks that the specified filter exists in the Moptop filter set as supplied
 	 * by ireg.getCapabilitiesProvider(rid).getCapabilities(). If it does, it inserts the specified

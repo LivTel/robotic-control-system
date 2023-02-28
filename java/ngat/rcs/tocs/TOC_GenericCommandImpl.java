@@ -358,6 +358,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Configure RISE using the specified binning."
 				+ "\n  e.g. MOPTOP <rotorSpeed> <filter> <xbin> <ybin>"
 				+ "\n                   : Configure Moptop using the specified rotor speed (slow|fast), filter and binning."
+				+ "\n  e.g. RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>"
+				+ "\n                   : Configure Raptor using the specified nudgematic offset size (small|large), coadd exposure length (100|1000), filter and binning."
 				+ "\nEXPOSE <sessionID> <time> [<mult> | <at> ] <dpflag> "
 				+ "\n                   : Take exposure length <time> secs, <mult> runs, dp(rt) T/F."
 				+ "\nSTOP <sessionID> " + "\n                   : Stop axes tracking." + "\nQUIT <sessionID>"
@@ -1174,11 +1176,38 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	}
 
 	/**
-	 * Process an INSTR command. Will need to manage the following tasks:
+	 * Process an INSTR command. This parses the INSTR command parameters and constructs a TOCInstrumentTask
+	 * task that is added to the tocAgent queue.
 	 * <ul>
-	 * <li>InstSelect.
-	 * <li>InstConfig.
+	 * <li>We check we have at least an instrument name specified.
+	 * <li>We call checkSession.
+	 * <li>We parse the first token as the instrument name.
+	 * <li>We construct a specific instance of an object that supports the IInstrumentConfig interface,
+	 *     based on the instrument name.
+	 * <li>We check we have successfully managed to construct an instConfig (supporting the IInstrumentConfig interface).
+	 * <li>We get the instrument status provider from the instrument registry for the specified instrument.
+	 * <li>We check the instrument isOnline and isFunctional from the instrument status.
+	 * <li>We construct an instance of the TOCInstrumentTask and add it to the tocAgent.
+	 * <li>We update the selectedInstId and currentInstConfig.
 	 * </ul>
+	 * The following INSTR command syntaxes are supported:
+	 * <ul>
+	 * <li>RATCAM <lf> <uf> <bin> [B][A]
+	 * <li>IO:O <filter> <lowerslide> <upperslide> <bin>
+	 * <li>IO:THOR <emgain> <bin> <xs> <xe> <ys> <ye>
+	 * <li>RISE <bin> [B][A]
+	 * <li>RINGO3 <trig> <emgain> <xbin> <ybin> [B][A]
+	 * <li>RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
+	 * <li>MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
+	 * <li>RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>
+	 * </ul>
+	 * @param parser An instance of StringTokenizer containing the INSTR command parameters, tokenised by spaces.
+	 * @see #tocAgent
+	 * @see #checkSession
+	 * @see #selectedInstId
+	 * @see #currentInstConfig
+	 * @see #handlerTask
+	 * @see #handlingTime
 	 */
 	public void processINSTRCommand(StringTokenizer parser) {
 		// We expect at least the instrument id.
@@ -1203,7 +1232,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// RATCAM <lf> <uf> <bin> [B][A]
 
 			if (parser.countTokens() < 3) {
-				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RATCAM <l-filter> <u-filter> <bin> }";
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RATCAM <l-filter> <u-filter> <bin>";
 				processReply(reply);
 				return;
 			}
@@ -1239,7 +1268,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// IO:O
 
 			if (parser.countTokens() < 3) {
-				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> IO:O <filter> <lowerslide> <upperslide> <bin> }";
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> IO:O <filter> <lowerslide> <upperslide> <bin>";
 				processReply(reply);
 				return;
 			}
@@ -1276,7 +1305,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			
 			
 			if (parser.countTokens() < 6) {
-				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> IO:THOR <emgain> <bin> <xs> <xe> <ys> <ye>}";
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> IO:THOR <emgain> <bin> <xs> <xe> <ys> <ye>";
 				processReply(reply);
 				return;
 			}
@@ -1371,7 +1400,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 		} else if (instId.equals("RINGO3")) {
 			
-			// RINGO3 <trig> <emgain> <xbin> <ybin> [B][A}
+			// RINGO3 <trig> <emgain> <xbin> <ybin> [B][A]
 
 			if (parser.countTokens() < 4) {
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RINGO3 <trig> <emgain> <xbin> <ybin> }";
@@ -1424,7 +1453,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
 
 			if (parser.countTokens() < 4) {
-				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RINGO2 <trig> <emgain> <xbin> <ybin> }";
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RINGO2 <trig> <emgain> <xbin> <ybin>";
 				processReply(reply);
 				return;
 			}
@@ -1472,7 +1501,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
 
 			if (parser.countTokens() < 4) {
-				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> MOPTOP <rotorSpeed> <filter> <xbin> <ybin>}";
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> MOPTOP <rotorSpeed> <filter> <xbin> <ybin>";
 				processReply(reply);
 				return;
 			}
@@ -1519,6 +1548,62 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			}
 			// set instConfig to constructed moptopConfig
 			instConfig = moptopConfig;
+		} 
+		else if (instId.equals("RAPTOR")) 
+		{
+			// RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>
+
+			if (parser.countTokens() < 3) {
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>";
+				processReply(reply);
+				return;
+			}
+			// construct config
+			XRaptorInstrumentConfig raptorConfig = new XRaptorInstrumentConfig("TOC_RAPTOR");
+			raptorConfig.setInstrumentName("RAPTOR");
+
+			// parse command parameters
+			String nudgematicOffsetSizeString = parser.nextToken(); 
+			String coaddExposureLengthString = parser.nextToken(); 
+			String filterString = parser.nextToken();
+
+			// nudgematic offset size
+			if(nudgematicOffsetSizeString.equalsIgnoreCase("none"))
+				raptorConfig.setNudgematicOffsetSize(XRaptorInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_NONE);
+			else if(nudgematicOffsetSizeString.equalsIgnoreCase("small"))
+				raptorConfig.setNudgematicOffsetSize(XRaptorInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_SMALL);
+			else if(nudgematicOffsetSizeString.equalsIgnoreCase("large"))
+				raptorConfig.setNudgematicOffsetSize(XRaptorInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_LARGE);
+			else
+			{
+				reply = "ERROR NUDGEMATIC OFFSET SIZE " + nudgematicOffsetSizeString;
+				processReply(reply);
+				return;
+			}
+			// coadd exposure length
+			try
+			{
+				int coaddExposureLength = Integer.parseInt(coaddExposureLengthString);
+
+				raptorConfig.setCoaddExposureLength(coaddExposureLength);
+			}
+			catch (NumberFormatException nx) 
+			{
+				reply = "ERROR COADD EXPOSURE LENGTH " + nx;
+				processReply(reply);
+				return;
+			}
+			// filter
+			XFilterSpec filters = new XFilterSpec();
+			filters.addFilter(new XFilterDef(filterString));
+			raptorConfig.setFilterSpec(filters);
+			// binning
+			XDetectorConfig detector = new XDetectorConfig();
+			detector.setXBin(1);
+			detector.setYBin(1);
+			raptorConfig.setDetectorConfig(detector);
+			// set instConfig to constructed raptorConfig
+			instConfig = raptorConfig;
 		}
 
 		// check the real instrument id here
