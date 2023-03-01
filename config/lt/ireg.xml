@@ -148,8 +148,11 @@
 	   <!-- RJS 2017-01-30 After a few failed SPRATStand <target name="SPRAT" x="2161" y="2069"  lowThreshold="1.2" highThreshold="0.5"/> -->
 	   <!-- RJS 2019-07-22 After IO:O shutter change target name="SPRAT" x="2207" y="2068"  lowThreshold="1.2" highThreshold="0.5"/> -->
 	   <!-- RJS 2019-10-16 After mirror re-coating <target name="SPRAT" x="2117" y="2111"  lowThreshold="1.2" highThreshold="0.5"/> -->
-	   <!-- RJS 2020-01-14 After SPRAT shutter was replaced Jan 2020 -->
-	   <target name="SPRAT" x="2122" y="2127"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <!-- RJS 2020-01-14 After SPRAT shutter was replaced Jan 2020 <target name="SPRAT" x="2122" y="2127"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2020-12-15 After IOO shutter was replaced Dec 2020 <target name="SPRAT" x="2117" y="2126"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2022-03-31 on basis of two test observations previous night.  All instruments were dismounted during March 2022 site trip.  <target name="SPRAT" x="2164" y="2150"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2022-07-29 SPRAT been off the telescope and replaced during shutter work. Average of four tests with RMS ±12 unbinned pix -->
+	   <target name="SPRAT" x="2158" y="2103"  lowThreshold="1.2" highThreshold="0.5"/>
 	   <!-- 
 	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
 	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
@@ -262,8 +265,13 @@
 	<focus-instrument>false</focus-instrument>
 	<rotator-offset>+91.72</rotator-offset> 
 	<!-- Config used for several years up to 2020-06-01 <aperture-offset x="0" y="-9" /> -->
-	<!-- RJS 2020-06-01 Initial test towards moving APERTUER to chip centre -->
-	<aperture-offset x="-10" y="0" />
+	<!-- RJS 2020-06-01 Initial test towards moving APERTUER to chip centre. Used until 2021-12-23 <aperture-offset x="-10" y="0" /> -->
+	<!-- RJS 2021-12-23 try to get target nearer chip centre with M2 crabbing control turned off.  <aperture-offset x="-60" y="0" /> -->
+	<!-- RJS 2022-01-04 Reverted back to historical values (-10,0) because today we fixed the TPOINT. I.e.
+             pointing of entire telescope has now been fixed so the 1arcmin shift here is not needed. <aperture-offset x="-10" y="0" />  -->
+	<!-- 2022-04-11 RJS Target landing at or just off the top edge of SPRAT CCD. Bug 2579.
+	     Increasing aperture from (-10,0) to (-35,0) -->
+	<aperture-offset x="-35" y="0" />
 	<acquisition priority="1">
 	   <!-- Use INT values for x and y -->
 	   <target name="SPRAT" x="494" y="179" lowThreshold="1.2" highThreshold="0.5" />
@@ -353,8 +361,11 @@
 	<!-- RJS. Change from 45 to -90 when RISE moved port in Nov 2012 -->
 	<rotator-offset>-44.4</rotator-offset> 
 	<!-- For old port. Moved Nov 2012 <aperture-offset x="30" y="-100" /> -->
-	<!-- Following installed RJS 2012-11-24 -->
-	<aperture-offset x="0" y="+50" />
+	<!-- Following installed RJS 2012-11-24 <aperture-offset x="0" y="+50" /> -->
+	<!-- Oct 2020, offset 0,50 made a star move diagonlly down-right in the CCD image.
+             Diagonal is correct because 45deg rot offset above. -->
+        <!-- Following RJS 2020-10-03. This is an incremental change. Another shift likely tomorrow. -->
+	<aperture-offset x="+30" y="+00" />
       </capabilities>
 
       <detector>
@@ -488,7 +499,9 @@
        <capabilities>
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
-	<rotator-offset> -87.162 </rotator-offset> 
+	<!-- Moptop[12] was -87.162 <rotator-offset> -87.162 </rotator-offset>  -->
+	<!-- RJS 2022-04-18 From three nights of moptop[34] data there is 90deg offset wrt moptop[12] -->
+	<rotator-offset> -177.162 </rotator-offset> 
 	<aperture-offset x="0" y="0" />
        </capabilities>
        <detector>
@@ -499,7 +512,7 @@
     <calibration>
       <history file="/occ/rcs/instruments/moptop.calib.dat" />
     </calibration>
-    <monitor host="192.168.1.28" port="7784" interval="30000" />
+    <monitor host="192.168.1.24" port="7784" interval="30000" />
   </instrument>
 
   <!-- ==================================== -->
