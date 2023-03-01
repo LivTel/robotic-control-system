@@ -273,7 +273,7 @@
  	<filter>
 	  <name>Y</name>
 	  <class></class>
-	  <central-wavelength> 5470.0 </central-wavelength>
+	  <central-wavelength> 10200.0 </central-wavelength>
 	</filter>
  	<filter>
 	  <name>Z</name>
