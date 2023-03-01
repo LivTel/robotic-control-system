@@ -208,8 +208,8 @@
   <!-- ==================================== -->
   <!-- IO_INFRARED                          -->
   <!-- ==================================== -->
-
-  <instrument name="IO:I" type="Imager" enabled="true">
+  <!--
+  <instrument name="IO:I" type="Imager" enabled="false">
 
     <descriptor>
       <name>IO:I</name>
@@ -244,7 +244,65 @@
 
     <monitor host="192.168.1.46" port="7373" interval="30000" />
 
+  </instrument>
+  -->
+  
+  <!-- ==================================== -->
+  <!-- Raptor                               -->
+  <!-- ==================================== -->
+
+  <instrument name="RAPTOR" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>Raptor</name>
+      <class>camera.infrared</class>
+    </descriptor>
+
+    <config>
+      <filterset name="wheel">
+	<filter>
+	  <name>H</name>
+	  <class></class>
+	  <central-wavelength> 16000.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>J</name>
+	  <class></class>
+	  <central-wavelength> 12500.0 </central-wavelength>
+	</filter>
+ 	<filter>
+	  <name>Y</name>
+	  <class></class>
+	  <central-wavelength> 5470.0 </central-wavelength>
+	</filter>
+ 	<filter>
+	  <name>Z</name>
+	  <class></class>
+	  <central-wavelength> 9000.0 </central-wavelength>
+	</filter>
+ 	<filter>
+	  <name>Mirror</name>
+	  <class></class>
+	  <central-wavelength> 13000.0 </central-wavelength>
+	</filter>
+       </filterset>
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>0.0</rotator-offset> 
+	<aperture-offset x="0" y="0" />
+      </capabilities>
+      <detector>
+	<array-size width="640" height="512" />
+	<plate-scale>0.3</plate-scale>
+      </detector>
+    </config>
     
+    <calibration>
+      <history file="/occ/rcs/instruments/raptor.calib.dat" />
+    </calibration>
+    
+    <monitor host="192.168.1.23" port="8280" interval="30000" />
   </instrument>
 
   <!-- ==================================== -->
