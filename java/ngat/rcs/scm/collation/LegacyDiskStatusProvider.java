@@ -43,6 +43,8 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 	 * <li>disk.usage.moptop3
 	 * <li>free.space.moptop4
 	 * <li>disk.usage.moptop4
+	 * <li>free.space.raptor
+	 * <li>disk.usage.raptor
 	 * <li>free.space.autoguider
 	 * <li>disk.usage.autoguider
 	 * </ul>
@@ -69,6 +71,8 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		diskStatus.addKeyword("disk.usage.moptop3", MappedStatusCategory.DOUBLE_DATA, "Disk usage on moptop3", "%");
 		diskStatus.addKeyword("free.space.moptop4", MappedStatusCategory.DOUBLE_DATA, "Free space on moptop4", "kilobytes");
 		diskStatus.addKeyword("disk.usage.moptop4", MappedStatusCategory.DOUBLE_DATA, "Disk usage on moptop4", "%");
+		diskStatus.addKeyword("free.space.raptor", MappedStatusCategory.DOUBLE_DATA, "Free space on raptor", "kilobytes");
+		diskStatus.addKeyword("disk.usage.raptor", MappedStatusCategory.DOUBLE_DATA, "Disk usage on raptor", "%");
 		diskStatus.addKeyword("free.space.autoguider", MappedStatusCategory.DOUBLE_DATA, "Free space on autoguider", "kilobytes");
 		diskStatus.addKeyword("disk.usage.autoguider", MappedStatusCategory.DOUBLE_DATA, "Disk usage on autoguider", "%");
 	}
@@ -135,6 +139,11 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		{
 			diskStatus.addData("free.space.moptop4",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.moptop4",status.getDiskPercentUsed());
+		}
+		else if((status.getMachineName().equals("raptor"))&&(status.getDiskName().equals("/mnt/raptor-image")))
+		{
+			diskStatus.addData("free.space.raptor",(double)(status.getDiskFreeSpace()));
+			diskStatus.addData("disk.usage.raptor",status.getDiskPercentUsed());
 		}
 		else if((status.getMachineName().equals("autoguider1"))&&(status.getDiskName().equals("/mnt/autoguider-image")))
 		{
