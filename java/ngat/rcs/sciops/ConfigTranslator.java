@@ -24,16 +24,15 @@ import ngat.phase2.IDetectorConfig;
 import ngat.phase2.IInstrumentConfig;
 import ngat.phase2.IRCamConfig;
 import ngat.phase2.IRCamDetector;
-import ngat.phase2.RaptorConfig;
-import ngat.phase2.RaptorDetector;
 import ngat.phase2.InstrumentConfig;
+import ngat.phase2.LiricConfig;
+import ngat.phase2.LiricDetector;
 import ngat.phase2.LOTUSConfig;
 import ngat.phase2.LOTUSDetector;
 import ngat.phase2.OConfig;
 import ngat.phase2.ODetector;
 import ngat.phase2.RISEConfig;
 import ngat.phase2.RISEDetector;
-import ngat.phase2.RaptorConfig;
 import ngat.phase2.Ringo2PolarimeterConfig;
 import ngat.phase2.Ringo2PolarimeterDetector;
 import ngat.phase2.Ringo3PolarimeterConfig;
@@ -50,7 +49,7 @@ import ngat.phase2.XFilterDef;
 import ngat.phase2.XFilterSpec;
 import ngat.phase2.XImagerInstrumentConfig;
 import ngat.phase2.XImagingSpectrographInstrumentConfig;
-import ngat.phase2.XRaptorInstrumentConfig;
+import ngat.phase2.XLiricInstrumentConfig;
 import ngat.phase2.XPolarimeterInstrumentConfig;
 import ngat.phase2.XMoptopInstrumentConfig;
 import ngat.phase2.XTipTiltImagerInstrumentConfig;
@@ -181,22 +180,22 @@ public class ConfigTranslator {
 				
 				return irc;
 				
-			} else if (ximager.getInstrumentName().equalsIgnoreCase("RAPTOR")) {
-				XRaptorInstrumentConfig xraptor = (XRaptorInstrumentConfig)config;
+			} else if (ximager.getInstrumentName().equalsIgnoreCase("LIRIC")) {
+				XLiricInstrumentConfig xliric = (XLiricInstrumentConfig)config;
 				
-				// Assume XRaptorInstrumentConfig constants exactly match
-				// RaptorConfig constants for Nudgematic offset size
-				int nudgematicOffsetSize = xraptor.getNudgematicOffsetSize();
-				int coaddExposureLength = xraptor.getCoaddExposureLength();
+				// Assume XLiricInstrumentConfig constants exactly match
+				// LiricConfig constants for Nudgematic offset size
+				int nudgematicOffsetSize = xliric.getNudgematicOffsetSize();
+				int coaddExposureLength = xliric.getCoaddExposureLength();
 
-				RaptorConfig raptorConfig = new RaptorConfig(config.getName());
-				raptorConfig.setNudgematicOffsetSize(nudgematicOffsetSize);
-				raptorConfig.setCoaddExposureLength(coaddExposureLength);
+				LiricConfig liricConfig = new LiricConfig(config.getName());
+				liricConfig.setNudgematicOffsetSize(nudgematicOffsetSize);
+				liricConfig.setCoaddExposureLength(coaddExposureLength);
 				
-				RaptorDetector raptorDetector = (RaptorDetector)raptorConfig.getDetector(0);
-				raptorDetector.clearAllWindows();
-				raptorDetector.setXBin(xBin);
-				raptorDetector.setYBin(yBin);
+				LiricDetector liricDetector = (LiricDetector)liricConfig.getDetector(0);
+				liricDetector.clearAllWindows();
+				liricDetector.setXBin(xBin);
+				liricDetector.setYBin(yBin);
 				
 				// what if no fspec ?
 				if (filterSpec == null)
@@ -208,10 +207,10 @@ public class ConfigTranslator {
 					filterList = new Vector();
 				
 				String filter0 = ((XFilterDef) filterList.get(0)).getFilterName();
-				if (tryRaptorConfig(raptorConfig, filter0)) //mutates raptorConfig
-					return raptorConfig;
+				if (tryLiricConfig(liricConfig, filter0)) //mutates liricConfig
+					return liricConfig;
 				
-				return raptorConfig;
+				return liricConfig;
 				
 			} else if (ximager.getInstrumentName().equalsIgnoreCase("IO:O")) {
 
@@ -561,8 +560,8 @@ public class ConfigTranslator {
 			return "O";
 		else if (config instanceof IRCamConfig)
 			return "SUPIRCAM";
-		else if (config instanceof RaptorConfig)
-			return "RAPTOR";
+		else if (config instanceof LiricConfig)
+			return "LIRIC";
 		else if (config instanceof Ringo2PolarimeterConfig)
 			return "RINGO2";
 		else if (config instanceof Ringo3PolarimeterConfig)
@@ -698,25 +697,25 @@ public class ConfigTranslator {
 	}
 	
 	/**
-	 * This method checks that the specified filter exists in the Raptor filter set as supplied
+	 * This method checks that the specified filter exists in the Liric filter set as supplied
 	 * by ireg.getCapabilitiesProvider(rid).getCapabilities(). If it does, it inserts the specified
 	 * filter into the specified config.
-	 * @param config The Raptor configuration.
-	 * @param filter0 The filter to insert into the config, if it exists in RAPTOR's filter set.
-	 * @return true if the filter exists in RAPTOR's filter set, false if it does not.
+	 * @param config The Liric configuration.
+	 * @param filter0 The filter to insert into the config, if it exists in LIRIC's filter set.
+	 * @return true if the filter exists in LIRIC's filter set, false if it does not.
 	 */
-	private static boolean tryRaptorConfig(RaptorConfig config , String filter0) 
+	private static boolean tryLiricConfig(LiricConfig config , String filter0) 
 	{
-		System.err.println("Try raptor config: " + filter0 );
+		System.err.println("Try liric config: " + filter0 );
 		try 
 		{
-			FilterDescriptor fwheel = new FilterDescriptor(filter0, "raptorfilter");
+			FilterDescriptor fwheel = new FilterDescriptor(filter0, "liricfilter");
 			
-			InstrumentDescriptor rid = ireg.getDescriptor("RAPTOR");
+			InstrumentDescriptor rid = ireg.getDescriptor("LIRIC");
 			
-			Imager raptorImager = (Imager) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+			Imager liricImager = (Imager) (ireg.getCapabilitiesProvider(rid).getCapabilities());
 		
-			FilterSet fsWheel = raptorImager.getFilterSet("wheel");
+			FilterSet fsWheel = liricImager.getFilterSet("wheel");
 			System.err.println("FWheel=" + fwheel);
 			
 			if (fsWheel.containsFilter(fwheel)) 
