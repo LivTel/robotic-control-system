@@ -248,13 +248,13 @@
   -->
   
   <!-- ==================================== -->
-  <!-- Raptor                               -->
+  <!-- LIRIC                               -->
   <!-- ==================================== -->
 
-  <instrument name="RAPTOR" type="Imager" enabled="true">
+  <instrument name="LIRIC" type="Imager" enabled="true">
 
     <descriptor>
-      <name>Raptor</name>
+      <name>Liric</name>
       <class>camera.infrared</class>
     </descriptor>
 
@@ -299,7 +299,7 @@
     </config>
     
     <calibration>
-      <history file="/occ/rcs/instruments/raptor.calib.dat" />
+      <history file="/occ/rcs/instruments/liric.calib.dat" />
     </calibration>
     
     <monitor host="192.168.1.23" port="8280" interval="30000" />

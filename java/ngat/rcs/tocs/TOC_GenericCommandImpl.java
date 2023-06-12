@@ -358,8 +358,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Configure RISE using the specified binning."
 				+ "\n  e.g. MOPTOP <rotorSpeed> <filter> <xbin> <ybin>"
 				+ "\n                   : Configure Moptop using the specified rotor speed (slow|fast), filter and binning."
-				+ "\n  e.g. RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>"
-				+ "\n                   : Configure Raptor using the specified nudgematic offset size (small|large), coadd exposure length (100|1000), filter and binning."
+				+ "\n  e.g. LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>"
+				+ "\n                   : Configure LIRIC using the specified nudgematic offset size (small|large), coadd exposure length (100|1000), filter and binning."
 				+ "\nEXPOSE <sessionID> <time> [<mult> | <at> ] <dpflag> "
 				+ "\n                   : Take exposure length <time> secs, <mult> runs, dp(rt) T/F."
 				+ "\nSTOP <sessionID> " + "\n                   : Stop axes tracking." + "\nQUIT <sessionID>"
@@ -1199,7 +1199,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	 * <li>RINGO3 <trig> <emgain> <xbin> <ybin> [B][A]
 	 * <li>RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
 	 * <li>MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
-	 * <li>RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>
+	 * <li>LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>
 	 * </ul>
 	 * @param parser An instance of StringTokenizer containing the INSTR command parameters, tokenised by spaces.
 	 * @see #tocAgent
@@ -1549,18 +1549,18 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// set instConfig to constructed moptopConfig
 			instConfig = moptopConfig;
 		} 
-		else if (instId.equals("RAPTOR")) 
+		else if (instId.equals("LIRIC")) 
 		{
-			// RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>
+			// LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>
 
 			if (parser.countTokens() < 3) {
-				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RAPTOR <nudgematicOffsetSize> <coaddExposureLength> <filter>";
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>";
 				processReply(reply);
 				return;
 			}
 			// construct config
-			XRaptorInstrumentConfig raptorConfig = new XRaptorInstrumentConfig("TOC_RAPTOR");
-			raptorConfig.setInstrumentName("RAPTOR");
+			XLiricInstrumentConfig liricConfig = new XLiricInstrumentConfig("TOC_LIRIC");
+			liricConfig.setInstrumentName("LIRIC");
 
 			// parse command parameters
 			String nudgematicOffsetSizeString = parser.nextToken(); 
@@ -1569,11 +1569,11 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 			// nudgematic offset size
 			if(nudgematicOffsetSizeString.equalsIgnoreCase("none"))
-				raptorConfig.setNudgematicOffsetSize(XRaptorInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_NONE);
+				liricConfig.setNudgematicOffsetSize(XLiricInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_NONE);
 			else if(nudgematicOffsetSizeString.equalsIgnoreCase("small"))
-				raptorConfig.setNudgematicOffsetSize(XRaptorInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_SMALL);
+				liricConfig.setNudgematicOffsetSize(XLiricInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_SMALL);
 			else if(nudgematicOffsetSizeString.equalsIgnoreCase("large"))
-				raptorConfig.setNudgematicOffsetSize(XRaptorInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_LARGE);
+				liricConfig.setNudgematicOffsetSize(XLiricInstrumentConfig.NUDGEMATIC_OFFSET_SIZE_LARGE);
 			else
 			{
 				reply = "ERROR NUDGEMATIC OFFSET SIZE " + nudgematicOffsetSizeString;
@@ -1585,7 +1585,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			{
 				int coaddExposureLength = Integer.parseInt(coaddExposureLengthString);
 
-				raptorConfig.setCoaddExposureLength(coaddExposureLength);
+				liricConfig.setCoaddExposureLength(coaddExposureLength);
 			}
 			catch (NumberFormatException nx) 
 			{
@@ -1596,14 +1596,14 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// filter
 			XFilterSpec filters = new XFilterSpec();
 			filters.addFilter(new XFilterDef(filterString));
-			raptorConfig.setFilterSpec(filters);
+			liricConfig.setFilterSpec(filters);
 			// binning
 			XDetectorConfig detector = new XDetectorConfig();
 			detector.setXBin(1);
 			detector.setYBin(1);
-			raptorConfig.setDetectorConfig(detector);
-			// set instConfig to constructed raptorConfig
-			instConfig = raptorConfig;
+			liricConfig.setDetectorConfig(detector);
+			// set instConfig to constructed liricConfig
+			instConfig = liricConfig;
 		}
 
 		// check the real instrument id here
