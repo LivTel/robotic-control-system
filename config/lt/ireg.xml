@@ -332,7 +332,10 @@
 	<aperture-offset x="-35" y="0" />
 	<acquisition priority="1">
 	   <!-- Use INT values for x and y -->
-	   <target name="SPRAT" x="494" y="179" lowThreshold="1.2" highThreshold="0.5" />
+	   <!-- ASP 2023-06-26 After SPRAT shutter replaced, Changed x=494 to 537 -->
+	   <!-- RJS 2023-06-30 Tweaked by 2pix, once we have good on-sky images. Now 535. -->
+	   <!-- ASP 2023-08-13 After camera plate rotated, Changed x=535 to 487 derived from W lamp slit image -->
+	   <target name="SPRAT" x="487" y="179" lowThreshold="1.2" highThreshold="0.5" />
 	   <!-- 
 	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
 	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
