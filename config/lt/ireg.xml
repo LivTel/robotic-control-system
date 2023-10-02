@@ -149,8 +149,10 @@
 	   <!-- RJS 2019-07-22 After IO:O shutter change target name="SPRAT" x="2207" y="2068"  lowThreshold="1.2" highThreshold="0.5"/> -->
 	   <!-- RJS 2019-10-16 After mirror re-coating <target name="SPRAT" x="2117" y="2111"  lowThreshold="1.2" highThreshold="0.5"/> -->
 	   <!-- RJS 2020-01-14 After SPRAT shutter was replaced Jan 2020 <target name="SPRAT" x="2122" y="2127"  lowThreshold="1.2" highThreshold="0.5"/> -->
-	   <!-- RJS 2020-12-15 After IOO shutter was replaced Dec 2020 -->
-	   <target name="SPRAT" x="2117" y="2126"  lowThreshold="1.2" highThreshold="0.5"/>
+	   <!-- RJS 2020-12-15 After IOO shutter was replaced Dec 2020 <target name="SPRAT" x="2117" y="2126"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2022-03-31 on basis of two test observations previous night.  All instruments were dismounted during March 2022 site trip.  <target name="SPRAT" x="2164" y="2150"  lowThreshold="1.2" highThreshold="0.5"/> -->
+	   <!-- RJS 2022-07-29 SPRAT been off the telescope and replaced during shutter work. Average of four tests with RMS ±12 unbinned pix -->
+	   <target name="SPRAT" x="2158" y="2103"  lowThreshold="1.2" highThreshold="0.5"/>
 	   <!-- 
 	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
 	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
@@ -206,8 +208,8 @@
   <!-- ==================================== -->
   <!-- IO_INFRARED                          -->
   <!-- ==================================== -->
-
-  <instrument name="IO:I" type="Imager" enabled="true">
+  <!--
+  <instrument name="IO:I" type="Imager" enabled="false">
 
     <descriptor>
       <name>IO:I</name>
@@ -242,14 +244,72 @@
 
     <monitor host="192.168.1.46" port="7373" interval="30000" />
 
+  </instrument>
+  -->
+  
+  <!-- ==================================== -->
+  <!-- LIRIC                               -->
+  <!-- ==================================== -->
+
+  <instrument name="LIRIC" type="Imager" enabled="true">
+
+    <descriptor>
+      <name>Liric</name>
+      <class>camera.infrared</class>
+    </descriptor>
+
+    <config>
+      <filterset name="wheel">
+	<filter>
+	  <name>H</name>
+	  <class></class>
+	  <central-wavelength> 16000.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>J</name>
+	  <class></class>
+	  <central-wavelength> 12500.0 </central-wavelength>
+	</filter>
+ 	<filter>
+	  <name>Y</name>
+	  <class></class>
+	  <central-wavelength> 10200.0 </central-wavelength>
+	</filter>
+ 	<filter>
+	  <name>Z</name>
+	  <class></class>
+	  <central-wavelength> 9000.0 </central-wavelength>
+	</filter>
+ 	<filter>
+	  <name>Mirror</name>
+	  <class></class>
+	  <central-wavelength> 13000.0 </central-wavelength>
+	</filter>
+       </filterset>
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider>
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>0.0</rotator-offset> 
+	<aperture-offset x="0" y="0" />
+      </capabilities>
+      <detector>
+	<array-size width="640" height="512" />
+	<plate-scale>0.3</plate-scale>
+      </detector>
+    </config>
     
+    <calibration>
+      <history file="/occ/rcs/instruments/liric.calib.dat" />
+    </calibration>
+    
+    <monitor host="192.168.1.23" port="8280" interval="30000" />
   </instrument>
 
   <!-- ==================================== -->
   <!-- SPRAT                               -->
   <!-- ==================================== -->
 
-  <instrument name="SPRAT" type="ImagingSpectrograph" enabled="false">
+  <instrument name="SPRAT" type="ImagingSpectrograph" enabled="true">
 
     <descriptor>
       <name>SPRAT</name>
@@ -266,11 +326,16 @@
 	<!-- RJS 2020-06-01 Initial test towards moving APERTUER to chip centre. Used until 2021-12-23 <aperture-offset x="-10" y="0" /> -->
 	<!-- RJS 2021-12-23 try to get target nearer chip centre with M2 crabbing control turned off.  <aperture-offset x="-60" y="0" /> -->
 	<!-- RJS 2022-01-04 Reverted back to historical values (-10,0) because today we fixed the TPOINT. I.e.
-             pointing of entire telescope has now been fixed so the 1arcmin shift here is not needed. -->
-	<aperture-offset x="-10" y="0" />
+             pointing of entire telescope has now been fixed so the 1arcmin shift here is not needed. <aperture-offset x="-10" y="0" />  -->
+	<!-- 2022-04-11 RJS Target landing at or just off the top edge of SPRAT CCD. Bug 2579.
+	     Increasing aperture from (-10,0) to (-35,0) -->
+	<aperture-offset x="-35" y="0" />
 	<acquisition priority="1">
 	   <!-- Use INT values for x and y -->
-	   <target name="SPRAT" x="494" y="179" lowThreshold="1.2" highThreshold="0.5" />
+	   <!-- ASP 2023-06-26 After SPRAT shutter replaced, Changed x=494 to 537 -->
+	   <!-- RJS 2023-06-30 Tweaked by 2pix, once we have good on-sky images. Now 535. -->
+	   <!-- ASP 2023-08-13 After camera plate rotated, Changed x=535 to 487 derived from W lamp slit image -->
+	   <target name="SPRAT" x="487" y="179" lowThreshold="1.2" highThreshold="0.5" />
 	   <!-- 
 	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
 	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
@@ -495,7 +560,9 @@
        <capabilities>
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
-	<rotator-offset> -87.162 </rotator-offset> 
+	<!-- Moptop[12] was -87.162 <rotator-offset> -87.162 </rotator-offset>  -->
+	<!-- RJS 2022-04-18 From three nights of moptop[34] data there is 90deg offset wrt moptop[12] -->
+	<rotator-offset> -177.162 </rotator-offset> 
 	<aperture-offset x="0" y="0" />
        </capabilities>
        <detector>

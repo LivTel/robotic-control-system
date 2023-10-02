@@ -25,6 +25,8 @@ import ngat.phase2.IInstrumentConfig;
 import ngat.phase2.IRCamConfig;
 import ngat.phase2.IRCamDetector;
 import ngat.phase2.InstrumentConfig;
+import ngat.phase2.LiricConfig;
+import ngat.phase2.LiricDetector;
 import ngat.phase2.LOTUSConfig;
 import ngat.phase2.LOTUSDetector;
 import ngat.phase2.OConfig;
@@ -37,7 +39,6 @@ import ngat.phase2.Ringo3PolarimeterConfig;
 import ngat.phase2.Ringo3PolarimeterDetector;
 import ngat.phase2.MOPTOPPolarimeterConfig;
 import ngat.phase2.MOPTOPPolarimeterDetector;
-
 import ngat.phase2.SpratConfig;
 import ngat.phase2.SpratDetector;
 import ngat.phase2.THORConfig;
@@ -48,6 +49,7 @@ import ngat.phase2.XFilterDef;
 import ngat.phase2.XFilterSpec;
 import ngat.phase2.XImagerInstrumentConfig;
 import ngat.phase2.XImagingSpectrographInstrumentConfig;
+import ngat.phase2.XLiricInstrumentConfig;
 import ngat.phase2.XPolarimeterInstrumentConfig;
 import ngat.phase2.XMoptopInstrumentConfig;
 import ngat.phase2.XTipTiltImagerInstrumentConfig;
@@ -177,6 +179,38 @@ public class ConfigTranslator {
 					return irc;
 				
 				return irc;
+				
+			} else if (ximager.getInstrumentName().equalsIgnoreCase("LIRIC")) {
+				XLiricInstrumentConfig xliric = (XLiricInstrumentConfig)config;
+				
+				// Assume XLiricInstrumentConfig constants exactly match
+				// LiricConfig constants for Nudgematic offset size
+				int nudgematicOffsetSize = xliric.getNudgematicOffsetSize();
+				int coaddExposureLength = xliric.getCoaddExposureLength();
+
+				LiricConfig liricConfig = new LiricConfig(config.getName());
+				liricConfig.setNudgematicOffsetSize(nudgematicOffsetSize);
+				liricConfig.setCoaddExposureLength(coaddExposureLength);
+				
+				LiricDetector liricDetector = (LiricDetector)liricConfig.getDetector(0);
+				liricDetector.clearAllWindows();
+				liricDetector.setXBin(xBin);
+				liricDetector.setYBin(yBin);
+				
+				// what if no fspec ?
+				if (filterSpec == null)
+					filterSpec = new XFilterSpec();
+				
+				List filterList = filterSpec.getFilterList();
+				// what if no filters in fspec ?
+				if (filterList == null)
+					filterList = new Vector();
+				
+				String filter0 = ((XFilterDef) filterList.get(0)).getFilterName();
+				if (tryLiricConfig(liricConfig, filter0)) //mutates liricConfig
+					return liricConfig;
+				
+				return liricConfig;
 				
 			} else if (ximager.getInstrumentName().equalsIgnoreCase("IO:O")) {
 
@@ -526,6 +560,8 @@ public class ConfigTranslator {
 			return "O";
 		else if (config instanceof IRCamConfig)
 			return "SUPIRCAM";
+		else if (config instanceof LiricConfig)
+			return "LIRIC";
 		else if (config instanceof Ringo2PolarimeterConfig)
 			return "RINGO2";
 		else if (config instanceof Ringo3PolarimeterConfig)
@@ -660,6 +696,42 @@ public class ConfigTranslator {
 		
 	}
 	
+	/**
+	 * This method checks that the specified filter exists in the Liric filter set as supplied
+	 * by ireg.getCapabilitiesProvider(rid).getCapabilities(). If it does, it inserts the specified
+	 * filter into the specified config.
+	 * @param config The Liric configuration.
+	 * @param filter0 The filter to insert into the config, if it exists in LIRIC's filter set.
+	 * @return true if the filter exists in LIRIC's filter set, false if it does not.
+	 */
+	private static boolean tryLiricConfig(LiricConfig config , String filter0) 
+	{
+		System.err.println("Try liric config: " + filter0 );
+		try 
+		{
+			FilterDescriptor fwheel = new FilterDescriptor(filter0, "liricfilter");
+			
+			InstrumentDescriptor rid = ireg.getDescriptor("LIRIC");
+			
+			Imager liricImager = (Imager) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+		
+			FilterSet fsWheel = liricImager.getFilterSet("wheel");
+			System.err.println("FWheel=" + fwheel);
+			
+			if (fsWheel.containsFilter(fwheel)) 
+			{
+				config.setFilterName(filter0);
+				return true;
+			}
+		} 
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+	}
+
 	/**
 	 * This method checks that the specified filter exists in the Moptop filter set as supplied
 	 * by ireg.getCapabilitiesProvider(rid).getCapabilities(). If it does, it inserts the specified
