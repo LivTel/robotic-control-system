@@ -270,17 +270,7 @@
 	  <class></class>
 	  <central-wavelength> 12500.0 </central-wavelength>
 	</filter>
- 	<filter>
-	  <name>Y</name>
-	  <class></class>
-	  <central-wavelength> 10200.0 </central-wavelength>
-	</filter>
- 	<filter>
-	  <name>Z</name>
-	  <class></class>
-	  <central-wavelength> 9000.0 </central-wavelength>
-	</filter>
- 	<filter>
+	<filter>
 	  <name>Mirror</name>
 	  <class></class>
 	  <central-wavelength> 13000.0 </central-wavelength>
