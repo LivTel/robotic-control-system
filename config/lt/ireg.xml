@@ -261,19 +261,24 @@
     <config>
       <filterset name="wheel">
 	<filter>
-	  <name>H</name>
+	  <name>FELH1500</name>
 	  <class></class>
 	  <central-wavelength> 16000.0 </central-wavelength>
 	</filter>
 	<filter>
-	  <name>J</name>
+	  <name>Barr-H</name>
+	  <class></class>
+	  <central-wavelength> 16000.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>Barr-J</name>
 	  <class></class>
 	  <central-wavelength> 12500.0 </central-wavelength>
 	</filter>
 	<filter>
 	  <name>Mirror</name>
 	  <class></class>
-	  <central-wavelength> 13000.0 </central-wavelength>
+	  <central-wavelength> 13500.0 </central-wavelength>
 	</filter>
        </filterset>
       <capabilities>
