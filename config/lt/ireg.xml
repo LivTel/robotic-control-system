@@ -71,10 +71,17 @@
 	  <central-wavelength> 6755.0 </central-wavelength>
 	</filter>
 	<filter>
+	  <name>CN</name>
+	  <class></class>
+	  <central-wavelength>3875</central-wavelength>
+	</filter>
+	<!--
+	<filter>
 	  <name>H-Alpha-6822</name>
 	  <class></class>
 	  <central-wavelength>6822.0 </central-wavelength>
 	</filter>
+	-->
       </filterset>
 
       <filterset name="lower_slide">
