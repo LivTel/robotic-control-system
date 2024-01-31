@@ -213,6 +213,9 @@ public class LT_RGO_SHOW_DONE_Translator implements Translator {
 				status.secMirrorDemand = parseDouble(24);
 				status.secMirrorPos = parseDouble(25);
 				status.focusOffset = parseDouble(26);
+				System.err.println(this.getClass().getName()+
+						   ":SHOW MECHANISMS::Parsing [SHOW MECHANISMS] Response 26 (focus offset): "+
+						   parseString(26)+" = "+parseDouble(26));
 				status.secMirrorStatus = TCS_Status.getCode(parseString(27));
 
 				status.primMirrorSysName = parseString(0);

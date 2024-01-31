@@ -1009,6 +1009,8 @@ public class FITS_HeaderInfo implements Observer {
 			current_FOCDMD.setValue(new Double(status.mechanisms.secMirrorDemand));
 			current_TELFOCUS.setValue(new Double(status.mechanisms.secMirrorPos));
 			current_DFOCUS.setValue(new Double(status.mechanisms.focusOffset));
+			issLog.log(2, "FITS Headers", "-", "update", "Setting DFOCUS value to: "+
+				   status.mechanisms.focusOffset);			
 			current_FOCSTAT.setValue(TCS_Status.codeString(status.mechanisms.secMirrorStatus));
 
 			current_MIRSYSST.setValue(TCS_Status.codeString(status.mechanisms.primMirrorSysStatus));

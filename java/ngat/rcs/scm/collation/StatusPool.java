@@ -504,7 +504,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 	}
 
 	private static void insertMechanisms(TCS_Status.Mechanisms update) {
-		// System.err.println("StatusPool::Inserting the MECH stuff");
+		System.err.println("StatusPool::Inserting the MECH stuff");
 		status.mechanisms.timeStamp = update.timeStamp;
 
 		status.mechanisms.azName = update.azName;
@@ -548,6 +548,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 		status.mechanisms.secMirrorDemand = update.secMirrorDemand;
 		status.mechanisms.secMirrorPos = update.secMirrorPos;
 		status.mechanisms.focusOffset = update.focusOffset;
+		System.err.println("StatusPool:: Received mechanism focus offset update: "+status.mechanisms.focusOffset);
 		status.mechanisms.secMirrorStatus = update.secMirrorStatus;
 
 		status.mechanisms.primMirrorSysName = update.primMirrorSysName;
