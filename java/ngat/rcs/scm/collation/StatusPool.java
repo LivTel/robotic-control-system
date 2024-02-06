@@ -547,6 +547,7 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 		status.mechanisms.secMirrorName = update.secMirrorName;
 		status.mechanisms.secMirrorDemand = update.secMirrorDemand;
 		status.mechanisms.secMirrorPos = update.secMirrorPos;
+		System.err.println("StatusPool:: Received mechanism sec mirror pos update: "+status.mechanisms.secMirrorPos);
 		status.mechanisms.focusOffset = update.focusOffset;
 		System.err.println("StatusPool:: Received mechanism focus offset update: "+status.mechanisms.focusOffset);
 		status.mechanisms.secMirrorStatus = update.secMirrorStatus;
@@ -712,7 +713,10 @@ public class StatusPool extends Observable implements TelescopeStatusUpdateListe
 				StatusPool.latest().mechanisms.timeStamp = telstatus.getStatusTimeStamp();
 				StatusPool.latest().mechanisms.secMirrorDemand = focusStatus.getDemandPosition();
 				StatusPool.latest().mechanisms.secMirrorPos = focusStatus.getCurrentPosition();
+				System.err.println("StatusPool::telescopeStatusUpdate:SMF:sec mirror pos: "+focusStatus.getCurrentPosition());
 				StatusPool.latest().mechanisms.secMirrorStatus = focusStatus.getMechanismState();
+				StatusPool.latest().mechanisms.focusOffset = focusStatus.getFocusOffset();
+				System.err.println("StatusPool::telescopeStatusUpdate:SMF:focus offset: "+focusStatus.getFocusOffset());
 				instance.notifyObservers(MECHANISMS_UPDATE_EVENT, this.status.mechanisms);
 			} else if
 				(focusName.equals("AGF")) {
