@@ -296,12 +296,12 @@
       <capabilities>
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
-	<rotator-offset>0.0</rotator-offset> 
-	<aperture-offset x="0" y="0" />
+	<rotator-offset>2.0</rotator-offset> 
+	<aperture-offset x="40" y="20" />
       </capabilities>
       <detector>
 	<array-size width="640" height="512" />
-	<plate-scale>0.3</plate-scale>
+	<plate-scale>0.293</plate-scale>
       </detector>
     </config>
     
