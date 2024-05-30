@@ -212,7 +212,6 @@
         <filter> M_WS_FAST </filter>
       </criterion>
     </rule>
-
     <rule name = "RAIN_ALERT" class = "timed">
       <period unit = "secs"> 30 </period>
       <criterion name = "C_RAIN_ALERT" class = "DEQ">
@@ -334,17 +333,16 @@
 	     </rule>  
       </rule>
 
-
     </rule>
-    
+
     <rule name = "HUM_LO_2" class = "timed">
       <period unit = "mins"> 30  </period>
       <criterion name = "C_HUM_LO2" class = "LESS">
-	<maximum> 0.75 </maximum>
-	<filter> M_HUM_SLOW </filter>
+        <maximum> 0.75 </maximum>
+        <filter> M_HUM_SLOW </filter>
       </criterion>
     </rule>
-    
+
     <rule name = "WS_LO" class = "timed">
       <period unit = "mins"> 30 </period>
       <criterion name = "C_WS_LO" class = "LESS">
@@ -352,7 +350,6 @@
         <filter> M_WS_SLOW </filter>
       </criterion>
     </rule>
-
     <rule name = "RAIN_CLEAR" class = "timed">
       <period unit = "mins"> 20 </period>
       <criterion name = "C_RAIN_CLEAR" class = "DEQ">
@@ -414,6 +411,12 @@
     </rule> -->
 
   </rule>
+
+<!--
+
+Make a rule for PMETRIC
+
+--> 
 
 
 
@@ -733,19 +736,22 @@
     </rule>
     <rule name = "EN1_IN_POSN" class = "timed">
       <period unit = "mins"> 1 </period>
-      <criterion name = "C_EN1_IN_POSN" class = "DEQ">
-        <equals>221</equals>
+      <criterion name = "C_EN1_IN_POSN" class = "ONE">
+        <any>221</any>
+	<!-- 234 is WARN, See Fault #2784 -->
+        <any>234</any>
         <filter> A_EN1_STATE </filter>
       </criterion>
     </rule>
     <rule name = "EN2_IN_POSN" class = "timed">
       <period unit = "mins"> 1 </period>
-      <criterion name = "C_EN2_IN_POSN" class = "DEQ">
-        <equals>221</equals>
+      <criterion name = "C_EN2_IN_POSN" class = "ONE">
+        <any>221</any>
+	<!-- 234 is WARN, See Fault #2784 -->
+        <any>234</any>
         <filter> A_EN2_STATE </filter>
       </criterion>
     </rule>
-
   </rule>
 
 

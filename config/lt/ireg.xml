@@ -5,7 +5,7 @@
   <!-- IO_OPTICAL                                -->
   <!-- ==================================== -->
 
-  <instrument name="IO:O" type="Imager" enabled = "true">
+  <instrument name="IO:O" type="Imager" enabled = "false">
 
     <descriptor>
       <name>IO:O</name>
@@ -297,7 +297,7 @@
 	<sky-model-provider>false</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
 	<rotator-offset>2.0</rotator-offset> 
-	<aperture-offset x="40" y="20" />
+	<aperture-offset x="60" y="0" />
       </capabilities>
       <detector>
 	<array-size width="640" height="512" />
