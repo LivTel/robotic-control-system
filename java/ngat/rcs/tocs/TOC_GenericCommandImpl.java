@@ -1200,6 +1200,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	 * <li>RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
 	 * <li>MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
 	 * <li>LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>
+	 * <li>SPRAT <slit:in|out> <grism:in|out> <grism:red|blue>
 	 * </ul>
 	 * @param parser An instance of StringTokenizer containing the INSTR command parameters, tokenised by spaces.
 	 * @see #tocAgent
@@ -1228,10 +1229,12 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		// RAT Command. (Configure the RATCam using the lower, upper filters and
 		// binning).
 		// ------------
-		if (instId.startsWith("RATCAM")) {
+		if (instId.startsWith("RATCAM")) 
+		{
 			// RATCAM <lf> <uf> <bin> [B][A]
 
-			if (parser.countTokens() < 3) {
+			if (parser.countTokens() < 3) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RATCAM <l-filter> <u-filter> <bin>";
 				processReply(reply);
 				return;
@@ -1247,13 +1250,16 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			filters.addFilter(new XFilterDef(lowerFilter));
 			filters.addFilter(new XFilterDef(upperFilter));
 			ccdConfig.setFilterSpec(filters);
-			try {
+			try 
+			{
 				int xyBins = Integer.parseInt(sbins);
 				XDetectorConfig detector = new XDetectorConfig();
 				detector.setXBin(xyBins);
 				detector.setYBin(xyBins);
 				ccdConfig.setDetectorConfig(detector);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR BINNING " + nx;
 				processReply(reply);
 				return;
@@ -1262,12 +1268,14 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			instConfig = ccdConfig;
 
 			
-		} else if
-		(instId.equalsIgnoreCase("IO:O")) {
+		} 
+		else if(instId.equalsIgnoreCase("IO:O")) 
+		{
 			
 			// IO:O
 
-			if (parser.countTokens() < 3) {
+			if (parser.countTokens() < 3) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> IO:O <filter> <lowerslide> <upperslide> <bin>";
 				processReply(reply);
 				return;
@@ -1286,13 +1294,16 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			filters.addFilter(new XFilterDef(upperNDFilter));
 			
 			oConfig.setFilterSpec(filters);
-			try {
+			try 
+			{
 				int xyBins = Integer.parseInt(sbins);
 				XDetectorConfig detector = new XDetectorConfig();
 				detector.setXBin(xyBins);
 				detector.setYBin(xyBins);
 				oConfig.setDetectorConfig(detector);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR BINNING " + nx;
 				processReply(reply);
 				return;
@@ -1300,11 +1311,13 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 			instConfig = oConfig;			
 			
-		} else if
-		(instId.equalsIgnoreCase("IO:THOR")) {
+		} 
+		else if (instId.equalsIgnoreCase("IO:THOR")) 
+		{
 			
 			
-			if (parser.countTokens() < 6) {
+			if (parser.countTokens() < 6) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> IO:THOR <emgain> <bin> <xs> <xe> <ys> <ye>";
 				processReply(reply);
 				return;
@@ -1317,14 +1330,18 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			thorConfig.setInstrumentName("IO:THOR");
 			
 			int gain = 1;		
-			try {
+			try 
+			{
 				gain = Integer.parseInt(strgain);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR GAIN: " + nx;
 				processReply(reply);
 				return;
 			}
-			if (gain < 0 || gain > 100) {
+			if (gain < 0 || gain > 100) 
+			{
 				reply = "ERROR GAIN: (1 <= gain <= 100)";
 				processReply(reply);
 				return;
@@ -1332,7 +1349,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			thorConfig.setGain(gain);
 			
 			XDetectorConfig detector = null;
-			try {
+			try 
+			{
 				int xyBins = Integer.parseInt(sbins);
 				detector = new XDetectorConfig();
 				detector.setXBin(xyBins);
@@ -1340,7 +1358,9 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				thorConfig.setDetectorConfig(detector);
 				XFilterSpec filters = new XFilterSpec();			
 				thorConfig.setFilterSpec(filters);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR BINNING " + nx;
 				processReply(reply);
 				return;
@@ -1351,7 +1371,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			String strXe = parser.nextToken();
 			String strYs = parser.nextToken();
 			String strYe = parser.nextToken();
-			try {
+			try 
+			{
 				int xs = Integer.parseInt(strXs);
 				int xe = Integer.parseInt(strXe);
 				int ys = Integer.parseInt(strYs);
@@ -1362,18 +1383,23 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				XWindow window = new XWindow(xs, ys, xe-xs, ye-ys);
 				detector.addWindow(window);
 		
-			} catch (Exception wx) {
+			} 
+			catch (Exception wx) 
+			{
 				reply = "ERROR WINDOW " + wx;
 				processReply(reply);
 			}
 			
 			instConfig = thorConfig;	
 			
-		} else if (instId.startsWith("RISE")) {
+		} 
+		else if (instId.startsWith("RISE")) 
+		{
 						
 			// RISE <bin> [B][A]
 
-			if (parser.countTokens() < 1) {
+			if (parser.countTokens() < 1) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RISE <bin> }";
 				processReply(reply);
 				return;
@@ -1384,13 +1410,16 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			XImagerInstrumentConfig riseConfig = new XImagerInstrumentConfig("TOC_RISE");
 			riseConfig.setInstrumentName("RISE");
 
-			try {
+			try 
+			{
 				int xyBins = Integer.parseInt(sbins);
 				XDetectorConfig detector = new XDetectorConfig();
 				detector.setXBin(xyBins);
 				detector.setYBin(xyBins);
 				riseConfig.setDetectorConfig(detector);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR BINNING " + nx;
 				processReply(reply);
 				return;
@@ -1398,11 +1427,14 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 			instConfig = riseConfig;
 
-		} else if (instId.equals("RINGO3")) {
+		} 
+		else if (instId.equals("RINGO3")) 
+		{
 			
 			// RINGO3 <trig> <emgain> <xbin> <ybin> [B][A]
 
-			if (parser.countTokens() < 4) {
+			if (parser.countTokens() < 4) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RINGO3 <trig> <emgain> <xbin> <ybin> }";
 				processReply(reply);
 				return;
@@ -1414,14 +1446,18 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 			int gain = 1;
 			String strgain = parser.nextToken();
-			try {
+			try 
+			{
 				gain = Integer.parseInt(strgain);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR GAIN: " + nx;
 				processReply(reply);
 				return;
 			}
-			if (gain < 0 || gain > 100) {
+			if (gain < 0 || gain > 100) 
+			{
 				reply = "ERROR GAIN: (1 <= gain <= 100)";
 				processReply(reply);
 				return;
@@ -1431,14 +1467,17 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			String sxbin = parser.nextToken();
 			String sybin = parser.nextToken();
 
-			try {
+			try 
+			{
 				XDetectorConfig detector = new XDetectorConfig();
 				int xBins = Integer.parseInt(sxbin);
 				detector.setXBin(xBins);
 				int yBins = Integer.parseInt(sybin);
 				detector.setYBin(yBins);
 				polConfig.setDetectorConfig(detector);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR BINNING " + nx;
 				processReply(reply);
 				return;
@@ -1447,12 +1486,15 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			instConfig = polConfig;
 			
 			
-		} else if (instId.equals("RINGO2")) {
+		} 
+		else if (instId.equals("RINGO2")) 
+		{
 
 
 			// RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
 
-			if (parser.countTokens() < 4) {
+			if (parser.countTokens() < 4) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> RINGO2 <trig> <emgain> <xbin> <ybin>";
 				processReply(reply);
 				return;
@@ -1464,14 +1506,18 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 			int gain = 1;
 			String strgain = parser.nextToken();
-			try {
+			try 
+			{
 				gain = Integer.parseInt(strgain);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR GAIN: " + nx;
 				processReply(reply);
 				return;
 			}
-			if (gain < 0 || gain > 100) {
+			if (gain < 0 || gain > 100) 
+			{
 				reply = "ERROR GAIN: (1 <= gain <= 100)";
 				processReply(reply);
 				return;
@@ -1481,14 +1527,17 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			String sxbin = parser.nextToken();
 			String sybin = parser.nextToken();
 
-			try {
+			try 
+			{
 				XDetectorConfig detector = new XDetectorConfig();
 				int xBins = Integer.parseInt(sxbin);
 				detector.setXBin(xBins);
 				int yBins = Integer.parseInt(sybin);
 				detector.setYBin(yBins);
 				polConfig.setDetectorConfig(detector);
-			} catch (NumberFormatException nx) {
+			} 
+			catch (NumberFormatException nx) 
+			{
 				reply = "ERROR BINNING " + nx;
 				processReply(reply);
 				return;
@@ -1496,11 +1545,14 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 			instConfig = polConfig;
 
-		} else if (instId.equals("MOPTOP")) {
+		} 
+		else if (instId.equals("MOPTOP")) 
+		{
 			
 			// MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
 
-			if (parser.countTokens() < 4) {
+			if (parser.countTokens() < 4) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> MOPTOP <rotorSpeed> <filter> <xbin> <ybin>";
 				processReply(reply);
 				return;
@@ -1553,7 +1605,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		{
 			// LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>
 
-			if (parser.countTokens() < 3) {
+			if (parser.countTokens() < 3) 
+			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>";
 				processReply(reply);
 				return;
@@ -1605,43 +1658,116 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// set instConfig to constructed liricConfig
 			instConfig = liricConfig;
 		}
+		else if (instId.equals("SPRAT")) 
+		{
+			// SPRAT <slit:in|out> <grism:in|out> <grism:red|blue>
+			if (parser.countTokens() < 3) 
+			{
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> SPRAT <slit:in|out> <grism:in|out> <grism:red|blue>";
+				processReply(reply);
+				return;
+			}
+			// construct config
+			XImagingSpectrographInstrumentConfig spratConfig = new XImagingSpectrographInstrumentConfig("TOC_SPRAT");
+			spratConfig.setInstrumentName("SPRAT");
+
+			// parse command parameters
+			String slitPositionString = parser.nextToken(); 
+			String grismPositionString = parser.nextToken(); 
+			String grismRotationString = parser.nextToken();
+
+			// slit position
+			if(slitPositionString.equalsIgnoreCase("in"))
+				spratConfig.setSlitPosition(XImagingSpectrographInstrumentConfig.SLIT_DEPLOYED);
+			else if(slitPositionString.equalsIgnoreCase("out"))
+				spratConfig.setSlitPosition(XImagingSpectrographInstrumentConfig.SLIT_STOWED);
+			else
+			{
+				reply = "ERROR SLIT POSITION " + slitPositionString;
+				processReply(reply);
+				return;
+			}
+			// grism position
+			if(grismPositionString.equalsIgnoreCase("in"))
+				spratConfig.setGrismPosition(XImagingSpectrographInstrumentConfig.GRISM_IN);
+			else if(grismPositionString.equalsIgnoreCase("out"))
+				spratConfig.setGrismPosition(XImagingSpectrographInstrumentConfig.GRISM_OUT);
+			else
+			{
+				reply = "ERROR GRISM POSITION " + grismPositionString;
+				processReply(reply);
+				return;
+			}
+
+			// grism rotation
+			if(grismRotationString.equalsIgnoreCase("red"))
+				spratConfig.setGrismRotation(XImagingSpectrographInstrumentConfig.GRISM_NOT_ROTATED);
+			else if(grismRotationString.equalsIgnoreCase("blue"))
+				spratConfig.setGrismRotation(XImagingSpectrographInstrumentConfig.GRISM_ROTATED);
+			else
+			{
+				reply = "ERROR GRISM ROTATION " + grismRotationString;
+				processReply(reply);
+				return;
+			}
+
+			// binning
+			XDetectorConfig detector = new XDetectorConfig();
+			detector.setXBin(1);
+			detector.setYBin(1);
+			spratConfig.setDetectorConfig(detector);
+			// set instConfig to constructed spratConfig
+			instConfig = spratConfig;
+		}
 
 		// check the real instrument id here
-		if (instConfig == null) {
+		if (instConfig == null) 
+		{
 			processError("INSTRUMENT", "No instrument matches id: " + instId);
 			return;
 		}
 
 		InstrumentStatusProvider isp = null;
-		try {
+		try 
+		{
 			InstrumentDescriptor iid = new InstrumentDescriptor(instId);
 			InstrumentRegistry ireg = RCS_Controller.controller.getInstrumentRegistry();
 			isp = ireg.getStatusProvider(iid);
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			e.printStackTrace();
 			processError("INSTRUMENT", "Instrument not found: " + instId);
 			return;
 		}
 
-		try {
+		try 
+		{
 			InstrumentStatus status = isp.getStatus();
-			if (!status.isOnline()) {
+			if (!status.isOnline()) 
+			{
 				processError("INSTRUMENT", instId + " is OFFLINE");
 				return;
 			}
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			e.printStackTrace();
 			processError("INSTRUMENT", instId + " unable to determine online status");
 			return;
 		}
 
-		try {
+		try 
+		{
 			InstrumentStatus status = isp.getStatus();
-			if (!status.isFunctional()) {
+			if (!status.isFunctional()) 
+			{
 				processError("INSTRUMENT", instId + " is NON-OPERATIONAL");
 				return;
 			}
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			e.printStackTrace();
 			processError("INSTRUMENT", instId + " unable to determine operational status");
 			return;
@@ -1664,9 +1790,11 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 		TOCInstrumentTask tinst = new TOCInstrumentTask(tocAgent.getName() + "/TOCInstrument", tocAgent, this,
 				instConfig);
-		if (!tocAgent.addNextJob(tinst)) {
+		if (!tocAgent.addNextJob(tinst)) 
+		{
 			processError("QUEUE_OVERFLOW", "Too many requests queued - try again later.");			
-		} else {
+		} else 
+		{
 			handlerTask = tinst;
 			handlingTime = DEFAULT_HANDLING_OVERHEAD + MAX_CONFIG_TIME;
 		}
