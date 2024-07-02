@@ -112,9 +112,10 @@ public class TOCFocalPlaneTask extends TOOP_ControlTask {
 	protected TaskList createTaskList()
 	{
 		taskLog.log(WARNING, 1, CLASS, name, "createTaskList", "Creating Focal Plane Task using instrument name: " + instrumentName);
-diddly
+
 		// select aperture for instrument.
 		InstrumentDescriptor iid = new InstrumentDescriptor(instrumentName);
+
 		try
 		{
 			int number = RCS_Controller.controller.getTelescope().getTelescopeSystem().getSciencePayload()

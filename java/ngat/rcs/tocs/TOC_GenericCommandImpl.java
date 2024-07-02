@@ -72,6 +72,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 	public static final long MAX_CONFIG_TIME = 200000L;
 
+	public static final long MAX_FOCALPLANE_TIME = 200000L;
+	
 	public static final long MAX_OFFSET_TIME = 200000L;
 
 	public static final long MAX_AG_TIME = 600000L;
@@ -155,7 +157,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		return handlingTime;
 	}
 
-	public void handleRequest() {
+	public void handleRequest() 
+	{
 
 		logger.log(1, CLASS, "-", "handleRequest", "Received TOC command: " + command);
 
@@ -172,174 +175,157 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		String verb = parser.nextToken();
 
 		// Only an ALERT is acceptable when TOCA is not in control.
-		if (verb.equalsIgnoreCase("ALERT")) {
+		if (verb.equalsIgnoreCase("ALERT")) 
+		{
 			processALERTCommand(parser);
-
-		} else if
-		// -------------
-		// HELP Command.
-		// -------------
-		(verb.equalsIgnoreCase("HELP")) {
-
+		}
+		else if (verb.equalsIgnoreCase("HELP"))
+		{
+			// -------------
+			// HELP Command.
+			// -------------
 			processHELPCommand(parser);
-
-		} else if
-		// -------------
-		// WHEN Command. ().
-		// -------------
-		(verb.equalsIgnoreCase("WHEN")) {
-
+		} 
+		else if	(verb.equalsIgnoreCase("WHEN")) 
+		{
+			// -------------
+			// WHEN Command.
+			// -------------
 			processWHENCommand(parser);
-
-		} else if
-		// ------------------
-		// GET_IMAGE Command.
-		// ------------------
-		(verb.equalsIgnoreCase("GET_IMAGE")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("GET_IMAGE")) 
+		{
+			// ------------------
+			// GET_IMAGE Command.
+			// ------------------
 			processGETIMAGECommand(parser);
-
-		} else if
-		// ---------------
-		// STATUS Command. (Return status for <cat> and <key>).
-		// ---------------
-		(verb.equalsIgnoreCase("STATUS")) {
-
+		}
+		else if (verb.equalsIgnoreCase("STATUS")) 
+		{
+			// ---------------
+			// STATUS Command. (Return status for <cat> and <key>).
+			// ---------------
 			processSTATUSCommand(parser);
-
-		} else if
-		// ---------------
-		// POSIT Command. (Position Calculations).
-		// ---------------
-		(verb.equalsIgnoreCase("POSITION")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("POSITION"))
+		{
+			// ---------------
+			// POSIT Command. (Position Calculations).
+			// ---------------
 			processPOSITIONCommand(parser);
-
-		} else if
-		// ---------------
-		// SHOW Command. (Show SA info).
-		// ---------------
-		(verb.equalsIgnoreCase("SHOW")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("SHOW")) 
+		{
+			// ---------------
+			// SHOW Command. (Show SA info).
+			// ---------------
 			processSHOWCommand(parser);
-
-		} else if
-		// ---------------
-		// INFO Command. (Assorted information).
-		// ---------------
-		(verb.equalsIgnoreCase("INFO")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("INFO"))
+		{
+			// ---------------
+			// INFO Command. (Assorted information).
+			// ---------------
 			processINFOCommand(parser);
-
-		} else if
-
-		(verb.equalsIgnoreCase("CHECK_OPER")) {
-
+		}
+		else if (verb.equalsIgnoreCase("CHECK_OPER")) 
+		{
 			processCHECK_OPERCommand(parser);
 		}
 
-		if
 		// --------------------------------------
 		// REJECT ACTIVE COMMANDS IF INITIALIZING
 		// --------------------------------------
-		(!TOC_Server.accepting()) {
+		if(!TOC_Server.accepting()) 
+		{
 			processError("TOCA_NOT_ACTIVE");
 
-		} else if
-		// -------------
-		// HELO Command. (Lets the TOC_Server identify (SA) client).
-		// -------------
-		(verb.equalsIgnoreCase("HELO")) {
-
+		}
+		else if (verb.equalsIgnoreCase("HELO"))
+		{
+			// -------------
+			// HELO Command. (Lets the TOC_Server identify (SA) client).
+			// -------------
 			processHELOCommand(parser);
-
-		} else if
-		// -------------
-		// INIT Command. ().
-		// -------------
-		(verb.equalsIgnoreCase("INIT")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("INIT")) 
+		{
+			// -------------
+			// INIT Command.
+			// -------------
 			processINITCommand(parser);
-
-		} else if
-		// -------------
-		// QUIT Command. (Disconnect this SA).
-		// -------------
-		(verb.equalsIgnoreCase("QUIT")) {
-
+		}
+		else if (verb.equalsIgnoreCase("QUIT")) 
+		{
+			// -------------
+			// QUIT Command. (Disconnect this SA).
+			// -------------
 			processQUITCommand(parser);
-
-		} else if
-		// -------------
-		// SLEW Command. (Slew telescope to RA (hh:mm:ss.SS) Dec
-		// (ddd:mm:ss.SS)).
-		// -------------
-		(verb.equalsIgnoreCase("SLEW")) {
-
+		}
+		else if (verb.equalsIgnoreCase("SLEW")) 
+		{
+			// -------------
+			// SLEW Command. (Slew telescope to RA (hh:mm:ss.SS) Dec
+			// (ddd:mm:ss.SS)).
+			// -------------
 			processSLEWCommand(parser);
-
-		} else if
-		// ---------------
-		// OFFSET Command. (Offset telescope from current position by d-ra sec
-		// and d-dec arcsec).
-		// ---------------
-		(verb.equalsIgnoreCase("OFFSET")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("OFFSET")) 
+		{
+			// ---------------
+			// OFFSET Command. (Offset telescope from current position by d-ra sec
+			// and d-dec arcsec).
+			// ---------------
 			processOFFSETCommand(parser);
-
-		} else if (verb.equalsIgnoreCase("INSTR")) {
+		} 
+		else if (verb.equalsIgnoreCase("INSTR")) 
+		{
 			// --------------
 			// INSTR Command.
 			// --------------
-
 			processINSTRCommand(parser);
-
-		} else if
-		// ---------------
-		// EXPOSE Command. (Take exposure length <time> secs, <mult> runs,
-		// dpflag T/F).
-		// ---------------
-		(verb.equalsIgnoreCase("EXPOSE")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("EXPOSE"))
+		{
+			// ---------------
+			// EXPOSE Command. (Take exposure length <time> secs, <mult> runs,
+			// dpflag T/F).
+			// ---------------
 			processEXPOSECommand(parser);
-
-		} else if
-		// ---------------
-		// ACQUIRE Command. (Acquire target).
-		// ---------------
-		(verb.equalsIgnoreCase("ACQUIRE")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("ACQUIRE")) 
+		{
+			// ---------------
+			// ACQUIRE Command. (Acquire target).
+			// ---------------
 			processACQUIRECommand(parser);
-
-		} else if
-		// ---------------
-		// STOP Command. (Stop all axes from tracking).
-		// ---------------
-		(verb.equalsIgnoreCase("STOP")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("STOP"))
+		{
+			// ---------------
+			// STOP Command. (Stop all axes from tracking).
+			// ---------------
 			processSTOPCommand(parser);
-
-		} else if
-		// ---------------
-		// AUTO Command. (Autoguide stuff).
-		// ---------------
-		(verb.equalsIgnoreCase("AUTO")) {
-
+		} 
+		else if (verb.equalsIgnoreCase("AUTO")) 
+		{
+			// ---------------
+			// AUTO Command. (Autoguide stuff).
+			// ---------------
 			processAUTOCommand(parser);
-
-		} else if
-		// ---------------
-		// AGRADIAL Command. (Autoguide move stuff).
-		// ---------------
-		(verb.equalsIgnoreCase("AGRADIAL")) {
-
+		}
+		else if (verb.equalsIgnoreCase("AGRADIAL"))
+		{
+			// ---------------
+			// AGRADIAL Command. (Autoguide move stuff).
+			// ---------------
 			processAGRADIALCommand(parser);
-
-		} else {
+		} 
+		else 
+		{
 			reply = "ERROR UNKNOWN_COMMAND " + command;
 			processReply(reply);
 		}
-
 	}
 
 	/** Process a HELP command. */
@@ -1174,7 +1160,41 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			handlingTime = DEFAULT_HANDLING_OVERHEAD + MAX_OFFSET_TIME;
 		}
 	}
+	
+	/**
+	 * Process a FOCALPLANE command.
+	 * @param parser An instance of StringTokenizer containing the FOCALPLANE command parameters,
+	 *               tokenised by spaces.
+	 * @see #tocAgent
+	 * @see #checkSession
+	 */
+	public void processFOCALPLANECommand(StringTokenizer parser) 
+	{
+		// We expect at least the instrument id.
 
+		if (parser.countTokens() < 2) {
+			reply = "ERROR FOCALPLANE No instrument specified";
+			processReply(reply);
+			return;
+		}
+		if (!checkSession(parser))
+			return;
+		String instumentName = parser.nextToken();
+		
+		TOCFocalPlaneTask focalPlaneTask = new TOCFocalPlaneTask(tocAgent.getName() + "/TOCFocalPlane",
+				tocAgent, this,instumentName);
+		if (!tocAgent.addNextJob(focalPlaneTask)) 
+		{
+			processError("QUEUE_OVERFLOW", "Too many requests queued - try again later.");			
+		} 
+		else 
+		{
+			handlerTask = focalPlaneTask;
+			handlingTime = DEFAULT_HANDLING_OVERHEAD + MAX_FOCALPLANE_TIME;
+		}
+		
+	}
+	
 	/**
 	 * Process an INSTR command. This parses the INSTR command parameters and constructs a TOCInstrumentTask
 	 * task that is added to the tocAgent queue.
