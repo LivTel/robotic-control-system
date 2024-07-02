@@ -157,6 +157,29 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		return handlingTime;
 	}
 
+	/**
+	 * Handle receiving a TOCA agent request.	
+	 * @see #processALERTCommand
+	 * @see #processHELPCommand
+	 * @see #processWHENCommand
+	 * @see #processGETIMAGECommand
+	 * @see #processSTATUSCommand
+	 * @see #processPOSITIONCommand
+	 * @see #processSHOWCommand
+	 * @see #processINFOCommand
+	 * @see #processCHECK_OPERCommand
+	 * @see #processHELOCommand
+	 * @see #processINITCommand
+	 * @see #processQUITCommand
+	 * @see #processSLEWCommand
+	 * @see #processOFFSETCommand
+	 * @see #processFOCALPLANECommand
+	 * @see #processINSTRCommand
+	 * @see #processACQUIRECommand
+	 * @see #processSTOPCommand
+	 * @see #processAUTOCommand
+	 * @see #processAGRADIALCommand
+	 */
 	public void handleRequest() 
 	{
 
@@ -285,6 +308,13 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// --------------
 			processINSTRCommand(parser);
 		} 
+		else if (verb.equalsIgnoreCase("FOCALPLANE")) 
+		{
+			// --------------
+			// FOCALPLANE Command.
+			// --------------
+			processFOCALPLANECommand(parser);
+		} 
 		else if (verb.equalsIgnoreCase("EXPOSE"))
 		{
 			// ---------------
@@ -336,6 +366,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Slew telescope to RA (hh:mm:ss.SS) Dec (ddd:mm:ss.SS)."
 				+ "\nOFFSET <sessionID> <d-ra> <d-dec> "
 				+ "\n                   : Offset telescope from current position by d-ra sec and d-dec arcsec."
+				+ "\nFOCALPLANE <sessionID> <instID> "
 				+ "\nINSTR <sessionID> <instID> [instrument-params]"
 				+ "\n                   : Configure selected instrument. (Examples below)"
 				+ "\n  e.g. IO:O <filter> <lowerslide> <upperslide> <bin> [B][A]"
@@ -346,6 +377,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Configure Moptop using the specified rotor speed (slow|fast), filter and binning."
 				+ "\n  e.g. LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>"
 				+ "\n                   : Configure LIRIC using the specified nudgematic offset size (small|large), coadd exposure length (100|1000), filter and binning."
+				+ "\n  e.g. SPRAT <slit position> <grism position> <grism rotation>"
+				+ "\n                   : Configure SPRAT using the specified slit position (in|out), grism position (in|out), grism rotation (red|blue)."
 				+ "\nEXPOSE <sessionID> <time> [<mult> | <at> ] <dpflag> "
 				+ "\n                   : Take exposure length <time> secs, <mult> runs, dp(rt) T/F."
 				+ "\nSTOP <sessionID> " + "\n                   : Stop axes tracking." + "\nQUIT <sessionID>"
