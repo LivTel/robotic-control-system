@@ -25,7 +25,7 @@ import ngat.rcs.iss.*;
 import ngat.phase2.*;
 
 /**
- * This Task manages a set of Tasks to perform an exposure.
+ * This Task manages a set of Tasks to perform an acquisition.
  * <dl>
  * <dt><b>RCS:</b>
  * <dd>$Id: TOCAcquireTask.java,v 1.1 2008/03/27 12:52:48 snf Exp snf $
