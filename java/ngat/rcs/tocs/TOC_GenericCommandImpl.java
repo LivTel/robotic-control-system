@@ -65,7 +65,9 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	public static final long DEFAULT_HANDLING_OVERHEAD = 90000L;
 
 	public static final long MAX_SLEW_TIME = 200000L;
-
+	
+	public static final long MAX_ARC_TIME = 200000L;
+	
 	public static final long MAX_ACQUIRE_TIME = 600000L;
 
 	public static final long MAX_STOP_TIME = 200000L;
@@ -175,6 +177,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	 * @see #processOFFSETCommand
 	 * @see #processFOCALPLANECommand
 	 * @see #processINSTRCommand
+	 * @see #processEXPOSECommand
+	 * @see #processARCCommand
 	 * @see #processACQUIRECommand
 	 * @see #processSTOPCommand
 	 * @see #processAUTOCommand
@@ -323,6 +327,13 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// ---------------
 			processEXPOSECommand(parser);
 		} 
+		else if (verb.equalsIgnoreCase("ARC"))
+		{
+			// ---------------
+			// ARC Command. (Take an ARC with the specified lamp (spectrogrph instruments only).
+			// ---------------
+			processARCCommand(parser);
+		} 
 		else if (verb.equalsIgnoreCase("ACQUIRE")) 
 		{
 			// ---------------
@@ -381,6 +392,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Configure SPRAT using the specified slit position (in|out), grism position (in|out), grism rotation (red|blue)."
 				+ "\nEXPOSE <sessionID> <time> [<mult> | <at> ] <dpflag> "
 				+ "\n                   : Take exposure length <time> secs, <mult> runs, dp(rt) T/F."
+				+ "\nARC <sessionID> <lampName> "
+				+ "\n                   : Take an ARC with the specified lamp (spectrograph instruments only)."
 				+ "\nSTOP <sessionID> " + "\n                   : Stop axes tracking." + "\nQUIT <sessionID>"
 				+ "\n                   : End current SA session."
 				+ "\nSTATUS <cat> <key> : Various status info. E.g. instrument availablity."
@@ -836,7 +849,9 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		processReply(reply);
 	}
 
-	/** Process an EXPOSE command. */
+	/** 
+	 * Process an EXPOSE command.
+	 */
 	public void processEXPOSECommand(StringTokenizer parser) {
 
 		if (parser.countTokens() < 4) {
@@ -905,6 +920,31 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		} else {
 			handlerTask = texp;
 			handlingTime = DEFAULT_HANDLING_OVERHEAD + (long) ((expose + readout) * runs);
+		}
+	}
+	/** 
+	 * Process an ARC command.
+	 */
+	public void processARCCommand(StringTokenizer parser) {
+
+		if (parser.countTokens() < 2) {
+			processError("MISSING_PARAMETERS", "Use: ARC <sessionID> <lamp name>");
+			return;
+		}
+
+		if (!checkSession(parser))
+			return;
+
+		String lampName = parser.nextToken();
+
+		TOCArcTask tocArcTask = new TOCArcTask(tocAgent.getName() + "/TOCArc", tocAgent, this, 
+				currentInstConfig.getInstrumentName(), lampName);
+
+		if (!tocAgent.addNextJob(tocArcTask)) {
+			processError("QUEUE_OVERFLOW", "Too many requests queued - try again later.");
+		} else {
+			handlerTask = tocArcTask;
+			handlingTime = DEFAULT_HANDLING_OVERHEAD + MAX_ARC_TIME;
 		}
 	}
 
