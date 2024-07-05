@@ -3,6 +3,8 @@ package ngat.rcs.tocs;
 import ngat.rcs.tms.*;
 import ngat.rcs.tms.executive.*;
 import ngat.rcs.iss.*;
+import ngat.message.GUI_RCS.ExposureInfo;
+import ngat.message.GUI_RCS.ReductionInfo;
 import ngat.phase2.*;
 
 /**
@@ -20,6 +22,10 @@ public class TOCArcTask extends TOOP_ControlTask
 	 * Which lamp to do the ARC with.
 	 */
 	String lamp = null;
+	/** 
+	 * Counts files received from the Arc exposure. 
+	 */
+	int countFiles = 0;
 
 	/**
 	 * Create a TOCArcTask.
@@ -114,4 +120,52 @@ public class TOCArcTask extends TOOP_ControlTask
 
 		return taskList;
 	}
+	
+	/**
+	 * Catch any DP/non-DP processed filenames from an Arc Exposure. 
+	 */
+	@Override
+	public void sigMessage(Task source, int type, Object message) 
+	{
+		System.err.println("SIGMESG: Type: " + type + " From: " + source + " : " + message);
+		switch (type) {
+		case Exposure_Task.EXPOSURE_DATA:
+
+			if (message instanceof ReductionInfo) 
+			{
+				countFiles++;
+
+				ReductionInfo rinfo = (ReductionInfo) message;
+				taskLog.log(WARNING, 1, CLASS, name, "sigMessage", "TOC ARC received reduced filename: "+
+							rinfo.getFileName());
+				if (countFiles == 1)
+					concatCompletionReply(" file1=" + rinfo.getFileName());
+				else
+					concatCompletionReply(" ,file" + countFiles + "=" + rinfo.getFileName());
+
+			} 
+			else if (message instanceof ExposureInfo) 
+			{
+				//countFiles++;
+
+				ExposureInfo einfo = (ExposureInfo) message;
+				taskLog.log(WARNING, 1, CLASS, name, "sigMessage", "TOC ARC received filename: "+
+						einfo.getFileName());
+			}
+			break;
+		case Exposure_Task.EXPOSURE_FILE:
+			//String tagName = (String) FITS_HeaderInfo.current_TAGID.getValue();
+			//String userName = (String) FITS_HeaderInfo.current_USERID.getValue();
+			//String propName = (String) FITS_HeaderInfo.current_PROPID.getValue();
+			//String grpName = (String) FITS_HeaderInfo.current_GROUPID.getValue();
+			//String obsName = exposure.getActionDescription();
+
+			//obsLog.log(1, "TOCA Program:" + tagName + " : " + userName + " : " + propName + " : " + grpName + " : "
+			//		+ obsName + ": Exposure Completed, File: " + message);
+			break;
+		default:
+			super.sigMessage(source, type, message);
+		}
+	}
+
 }
