@@ -76,6 +76,8 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 
 	public static final long MAX_FOCALPLANE_TIME = 200000L;
 	
+	public static final long MAX_ROTATOR_TIME = 600000L;
+
 	public static final long MAX_OFFSET_TIME = 200000L;
 
 	public static final long MAX_AG_TIME = 600000L;
@@ -313,6 +315,13 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			// ---------------
 			processOFFSETCommand(parser);
 		} 
+		else if (verb.equalsIgnoreCase("ROTATOR")) 
+		{
+			// --------------
+			// ROTATOR Command.
+			// --------------
+			processROTATORCommand(parser);
+		} 
 		else if (verb.equalsIgnoreCase("INSTR")) 
 		{
 			// --------------
@@ -386,7 +395,10 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 				+ "\n                   : Slew telescope to RA (hh:mm:ss.SS) Dec (ddd:mm:ss.SS)."
 				+ "\nOFFSET <sessionID> <d-ra> <d-dec> "
 				+ "\n                   : Offset telescope from current position by d-ra sec and d-dec arcsec."
+				+ "\nROTATOR <sessionID> <rotator mode> [<angle>] "
+				+ "\n                   : Override the INIT rotator mode, either float the rotator or drive it to a specific angle."
 				+ "\nFOCALPLANE <sessionID> <instID> "
+				+ "\n                   : Configure the telescope focal-plane (aperture offset) for the specified instrument."
 				+ "\nINSTR <sessionID> <instID> [instrument-params]"
 				+ "\n                   : Configure selected instrument. (Examples below)"
 				+ "\n  e.g. IO:O <filter> <lowerslide> <upperslide> <bin> [B][A]"
@@ -1277,6 +1289,80 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		} else {
 			handlerTask = tagrad;
 			handlingTime = DEFAULT_HANDLING_OVERHEAD + MAX_OFFSET_TIME;
+		}
+	}
+	
+	/**
+	 * Process a ROTATOR command.
+	 * @param parser An instance of StringTokenizer containing the ROTATOR command parameters,
+	 *               tokenised by spaces.
+	 * @see #tocAgent
+	 * @see #checkSession
+	 * @see #MAX_ROTATOR_TIME
+	 */
+	public void processROTATORCommand(StringTokenizer parser) 
+	{
+		int rotatorMode = TOCRotatorTask.ROTATOR_MODE_NONE;
+		double mountAngle = 0.0;
+		
+		// ROTATOR <rotator mode> [<angle>]
+		// We expect at least the rotator mode.
+		if (parser.countTokens() < 2) 
+		{
+			reply = "ERROR ROTATOR No rotator mode specified.";
+			processReply(reply);
+			return;
+		}
+		if (!checkSession(parser))
+			return;
+		// parse command arguments - rotator mode
+		String rotatorModeString = parser.nextToken();
+		if(rotatorModeString.equalsIgnoreCase("SKY"))
+			rotatorMode = TOCRotatorTask.ROTATOR_MODE_SKY;
+		else if(rotatorModeString.equalsIgnoreCase("MOUNT"))
+			rotatorMode = TOCRotatorTask.ROTATOR_MODE_MOUNT;
+		else if(rotatorModeString.equalsIgnoreCase("FLOAT"))
+			rotatorMode = TOCRotatorTask.ROTATOR_MODE_FLOAT;
+		else
+		{
+			processError("ILLEGAL_ROTATOR_MODE", rotatorModeString);
+			return;
+		}
+		// if we are using rotator mode mount parse the mount angle
+		if(rotatorMode == TOCRotatorTask.ROTATOR_MODE_MOUNT)
+		{
+			if (parser.countTokens() < 3) 
+			{
+				reply = "ERROR ROTATOR No rotator mount angle specified when rotator mode was MOUNT.";
+				processReply(reply);
+				return;
+			}
+			String mountAngleString = parser.nextToken(); // in degrees
+			double mountAngleDegrees = 0.0;
+
+			try 
+			{
+				mountAngleDegrees = Double.parseDouble(mountAngleString);
+			}
+			catch (NumberFormatException nx) 
+			{
+				reply = "ERROR ROTATOR Badly formatted mount angle - " + nx;
+				processReply(reply);
+			}
+			// TOCRotatorTask requires mount angle in radians
+			mountAngle = Math.toRadians(mountAngleDegrees);
+		}
+		// create rotator task
+		TOCRotatorTask rotatorTask = new TOCRotatorTask(tocAgent.getName() + "/TOCRotatorTask",
+				tocAgent, this,rotatorMode,mountAngle);
+		if (!tocAgent.addNextJob(rotatorTask)) 
+		{
+			processError("QUEUE_OVERFLOW", "Too many requests queued - try again later.");			
+		} 
+		else 
+		{
+			handlerTask = rotatorTask;
+			handlingTime = DEFAULT_HANDLING_OVERHEAD + MAX_ROTATOR_TIME;
 		}
 	}
 	
