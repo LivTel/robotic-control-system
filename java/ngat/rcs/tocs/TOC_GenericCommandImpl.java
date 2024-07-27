@@ -1303,11 +1303,13 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	public void processROTATORCommand(StringTokenizer parser) 
 	{
 		int rotatorMode = TOCRotatorTask.ROTATOR_MODE_NONE;
+		int tokenCount;
 		double mountAngle = 0.0;
 		
 		// ROTATOR <rotator mode> [<angle>]
 		// We expect at least the rotator mode.
-		if (parser.countTokens() < 2) 
+		tokenCount = parser.countTokens();
+		if (tokenCount < 2) 
 		{
 			reply = "ERROR ROTATOR No rotator mode specified.";
 			processReply(reply);
@@ -1331,7 +1333,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		// if we are using rotator mode mount parse the mount angle
 		if(rotatorMode == TOCRotatorTask.ROTATOR_MODE_MOUNT)
 		{
-			if (parser.countTokens() < 3) 
+			if (tokenCount < 3) 
 			{
 				reply = "ERROR ROTATOR No rotator mount angle specified when rotator mode was MOUNT.";
 				processReply(reply);
