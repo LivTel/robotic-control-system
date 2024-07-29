@@ -117,27 +117,27 @@ public class TOCInstrumentTask extends TOOP_ControlTask {
 		taskList.addTask(instConfigTask);
 
 		// select aperture for instrument.
-		// int number = Instruments.findApertureNumber(instId);
+		// Now done in the separate FOCALPLANE command (to allow for SPRAT instrument, which does
+		// not always require a aperture offset
+		//InstrumentDescriptor iid = new InstrumentDescriptor(instConfig.getInstrumentName());
+		//try {
+		//	int number = RCS_Controller.controller.getTelescope().getTelescopeSystem().getSciencePayload()
+		//			.getApertureNumberForInstrument(iid);
+		//	ApertureOffsetTask apertureOffsetTask = new ApertureOffsetTask("AppOff", this, number);
 
-		InstrumentDescriptor iid = new InstrumentDescriptor(instConfig.getInstrumentName());
-		try {
-			int number = RCS_Controller.controller.getTelescope().getTelescopeSystem().getSciencePayload()
-					.getApertureNumberForInstrument(iid);
-			ApertureOffsetTask apertureOffsetTask = new ApertureOffsetTask("AppOff", this, number);
+		//	taskList.addTask(apertureOffsetTask);
 
-			taskList.addTask(apertureOffsetTask);
+		//	taskLog.log(WARNING, 1, CLASS, name, "createTaskList", "Creating APT using apno: " + number);
 
-			taskLog.log(WARNING, 1, CLASS, name, "createTaskList", "Creating APT using apno: " + number);
-
-			taskList.sequence(instConfigTask, apertureOffsetTask);
-		} catch (Exception tx) {
-			taskLog.log(1, CLASS, name, "createTaskList", "Failed to create Task Sequence for TOCInstrument: " + tx);
-			failed = true;
-			errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
-			errorIndicator.setErrorString("Failed to create Task Sequence for TOCInstrument.");
-			errorIndicator.setException(tx);
-			return null;
-		}
+		//	taskList.sequence(instConfigTask, apertureOffsetTask);
+		//} catch (Exception tx) {
+		//	taskLog.log(1, CLASS, name, "createTaskList", "Failed to create Task Sequence for TOCInstrument: " + tx);
+		//	failed = true;
+		//	errorIndicator.setErrorCode(TaskList.TASK_SEQUENCE_ERROR);
+		//	errorIndicator.setErrorString("Failed to create Task Sequence for TOCInstrument.");
+		//	errorIndicator.setException(tx);
+		//	return null;
+		//}
 
 		return taskList;
 	}
