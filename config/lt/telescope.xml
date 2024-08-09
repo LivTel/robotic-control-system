@@ -42,7 +42,7 @@
 
     <instrument name="SPRAT">
        <alias> SPRAT </alias>
-       <mount> /mnt/rise-image </mount>
+       <mount> /mnt/sprat-image </mount>
        <port> 6 </port>
        <reboot> 2 </reboot>
     </instrument>
