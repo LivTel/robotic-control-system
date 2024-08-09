@@ -22,6 +22,10 @@ package ngat.rcs.tocs;
 import ngat.rcs.tms.*;
 import ngat.rcs.tms.executive.*;
 import ngat.rcs.iss.*;
+import ngat.astrometry.Position;
+import ngat.icm.InstrumentCapabilities;
+import ngat.icm.InstrumentCapabilitiesProvider;
+import ngat.icm.InstrumentDescriptor;
 import ngat.phase2.*;
 
 /**
@@ -113,8 +117,6 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 		super.onSubTaskDone(task);
 		acqImage = ((InstrumentAcquireTask) task).getLastAcquireImageFileName();
 
-		// TODO FUDGE, need to change TOC interface
-		ISS.setCurrentAcquisitionInstrumentName("RATCAM");
 	}
 
 	@Override
@@ -132,14 +134,16 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 	 * append any extra data here first.
 	 */
 	@Override
-	public void onCompletion() {
+	public void onCompletion() 
+	{
 
 		super.onCompletion();
 		taskLog.log(WARNING, 1, CLASS, name, "onInit", "** Completed TOC Acquire");
 
 		// record ACQ flag
 		String acqModeStr = "NONE";
-		switch (acqMode) {
+		switch (acqMode) 
+		{
 		case TelescopeConfig.ACQUIRE_MODE_BRIGHTEST:
 			acqModeStr = "BRIGHTEST";
 			break;
@@ -154,11 +158,59 @@ public class TOCAcquireTask extends TOOP_ControlTask {
 		FITS_HeaderInfo.current_ACQIMG.setValue(acqImage);
 	}
 
-	/** Overridden to carry out specific work after the init() method is called. */
+	/** 
+	 * Overridden to carry out specific work after the init() method is called. 
+	 * Here we need to set the ISS acquisition instrument, and configure the FITS header rotator sky correction,
+	 * so that OFFSET_X_Y calls back to the RCS from the acquisition instrument are rotated correctly,
+	 * and the FITS headers have the correct rotation so any WCS FITS have the correct input parameters.
+	 */
 	@Override
-	public void onInit() {
+	public void onInit() 
+	{
+		String acqModeStr = null;
+		InstrumentCapabilities acap = null;
+		InstrumentDescriptor aid = null;
+		InstrumentCapabilitiesProvider acp = null;
+		
 		super.onInit();
 		taskLog.log(WARNING, 1, CLASS, name, "onInit", "** Starting TOC Acquire using: " + acqInstId);
+		switch (acqMode) {
+		case TelescopeConfig.ACQUIRE_MODE_BRIGHTEST:
+			acqModeStr = "BRIGHTEST";
+			break;
+		case TelescopeConfig.ACQUIRE_MODE_WCS:
+			acqModeStr = "WCS_FIT";
+			break;
+		}
+
+		try 
+		{
+			aid = ireg.getDescriptor(acqInstId);
+			acp = ireg.getCapabilitiesProvider(aid);
+			acap = acp.getCapabilities();
+		} 
+		catch (Exception e) 
+		{
+			failed(650102, "Unknown acquisition instrument (" + acqInstId + ") for acquisition");
+			return;
+		}
+		taskLog.log(WARNING, 1, CLASS, name, "onInit", "Configuring ISS current acquisition Instrument to: " + acqInstId);
+		ISS.setCurrentAcquisitionInstrumentName(acqInstId);
+		taskLog.log(WARNING, 1, CLASS, name, "onInit", "Notified ISS of expected acquire instrument name: " + acqInstId);
+
+		double rotcorr = acap.getRotatorOffset();
+		taskLog.log(WARNING, 1, CLASS, name, "onInit", "Resetting instrument rotator alignment correction for: " + acqInstId + " to "
+				+ Position.toDegrees(rotcorr, 2));
+
+		FITS_HeaderInfo.setRotatorSkyCorrection(rotcorr);
+
+		// set ACQ headers
+		FITS_HeaderInfo.current_ACQINST.setValue(acqInstId);
+		FITS_HeaderInfo.current_ACQIMG.setValue("NONE");
+		FITS_HeaderInfo.current_ACQMODE.setValue(acqModeStr);
+		FITS_HeaderInfo.current_ACQXPIX.setValue(new String("NONE"));
+		FITS_HeaderInfo.current_ACQYPIX.setValue(new String("NONE"));
+		
 	}
 
 	/** Creates the TaskList for this TaskManager. */
