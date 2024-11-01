@@ -157,7 +157,7 @@ if (${?ARCHIVE_LOGS}) then
     if (! -d tmp) mkdir tmp
  
     # set list = `glob $RCS_ARCHIVE_LIST `
-    set list = `glob "rcs_task*.txt rcs_ems*.txt rcs_cil*.txt rcs_event*.txt rcs_ers*.txt /occ/tmp/rcs_lt.log" `
+    set list = `glob "rcs_task*.txt rcs_ems*.txt rcs_cil*.txt rcs_event*.txt rcs_ers*.txt rcs_ops*.txt /occ/tmp/rcs_lt.log" `
  
     if ($status == 0) then
 	set ct = 0
