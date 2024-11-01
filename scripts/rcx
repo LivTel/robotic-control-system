@@ -158,7 +158,12 @@ if (${?ARCHIVE_LOGS}) then
     if (! -d tmp) mkdir tmp
  
     # set list = `glob $RCS_ARCHIVE_LIST `
-    set list = `glob "rcs_task*.txt rcs_ems*.txt rcs_cil*.txt rcs_event*.txt rcs_ers*.txt rcs_ops*.txt /occ/tmp/rcs_lt.log" `
+    # Using glob to create this list causes the script to fail with 'set: No match' or similar when there are no log
+    # files to archive. This is because glob is an internal tcsh command
+    # We can use ls instead, which then sets $status correctly. However I think ls fails when the list gets too long
+    # (a tcsh command line length restriction)?
+    #set list = `glob "rcs_task*.txt rcs_ems*.txt rcs_cil*.txt rcs_event*.txt rcs_ers*.txt rcs_ops*.txt /occ/tmp/rcs_lt.log" `
+    set list = `ls -1 "rcs_task*.txt rcs_ems*.txt rcs_cil*.txt rcs_event*.txt rcs_ers*.txt rcs_ops*.txt /occ/tmp/rcs_lt.log" `
  
     if ($status == 0) then
 	set ct = 0
