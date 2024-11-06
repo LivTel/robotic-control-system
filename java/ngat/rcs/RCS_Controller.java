@@ -2401,7 +2401,7 @@ public class RCS_Controller implements Logging {
 
 		try {
 			tmmAgentConfigFile = rcs_config.getFile("agent.config.file", "config/agent.properties");
-			bootLog.log(1, CLASS, rcsId, "init", "Located TMM agent configuration file");
+			bootLog.log(1, CLASS, rcsId, "init", "Located TMM agent configuration file:"+tmmAgentConfigFile);
 
 		} catch (IOException iox) {
 			bootLog.log(FATAL, 1, CLASS, rcsId, "init", "Error configuring TaskOperations/agent config: ", null, iox);
