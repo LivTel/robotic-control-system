@@ -1543,6 +1543,44 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 			instConfig = oConfig;			
 			
 		} 
+		else if(instId.equalsIgnoreCase("LOCI")) 
+		{
+			
+			// LOCI
+			if (parser.countTokens() < 1) 
+			{
+				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> LOCI <filter> <bin>";
+				processReply(reply);
+				return;
+			}
+
+			String filter = parser.nextToken();		
+			String sbins = parser.nextToken();
+
+			XImagerInstrumentConfig lociConfig = new XImagerInstrumentConfig("TOC_LOCI");
+			lociConfig.setInstrumentName("LOCI");
+			XFilterSpec filters = new XFilterSpec();
+			filters.addFilter(new XFilterDef(filter));		
+			
+			lociConfig.setFilterSpec(filters);
+			try 
+			{
+				int xyBins = Integer.parseInt(sbins);
+				XDetectorConfig detector = new XDetectorConfig();
+				detector.setXBin(xyBins);
+				detector.setYBin(xyBins);
+				lociConfig.setDetectorConfig(detector);
+			} 
+			catch (NumberFormatException nx) 
+			{
+				reply = "ERROR BINNING " + nx;
+				processReply(reply);
+				return;
+			}
+
+			instConfig = lociConfig;			
+			
+		} 
 		else if (instId.equalsIgnoreCase("IO:THOR")) 
 		{
 			
