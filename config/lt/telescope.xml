@@ -70,6 +70,13 @@
        <reboot> 2 </reboot>
     </instrument>
 
+   <instrument name="LOCI">
+       <alias> LOCI  </alias>
+       <mount> /mnt/loci-image </mount>
+       <port> 0 </port> <!-- not yet known -->
+       <reboot> 2 </reboot>
+    </instrument>
+
     <instrument name="RISE">
        <alias> RISE </alias>
        <mount> /mnt/rise-image </mount>
