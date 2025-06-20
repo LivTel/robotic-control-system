@@ -27,6 +27,8 @@ import ngat.phase2.IRCamDetector;
 import ngat.phase2.InstrumentConfig;
 import ngat.phase2.LiricConfig;
 import ngat.phase2.LiricDetector;
+import ngat.phase2.LociConfig;
+import ngat.phase2.LociDetector;
 import ngat.phase2.LOTUSConfig;
 import ngat.phase2.LOTUSDetector;
 import ngat.phase2.OConfig;
@@ -248,6 +250,32 @@ public class ConfigTranslator {
 				// 3 f,a,b (as now)
 				
 				throw new ConfigTranslationException("Unable to convert or verify supplied IO:O config: " + config);
+
+			} else if (ximager.getInstrumentName().equalsIgnoreCase("LOCI")) {
+
+				LociConfig lociConfig = new LociConfig(config.getName());
+
+				LociDetector lociDetector = (LociDetector) lociConfig.getDetector(0);
+				lociDetector.clearAllWindows();
+				lociDetector.setXBin(xBin);
+				lociDetector.setYBin(yBin);
+
+				// what if no filterspec ?
+				if (filterSpec == null)
+					filterSpec = new XFilterSpec();
+				
+				List filterList = filterSpec.getFilterList();
+			
+				// what if no filters in filterspec ?
+				if (filterList == null)
+					filterList = new Vector();
+
+				String filter = ((XFilterDef) filterList.get(0)).getFilterName();
+				
+				if (tryLociConfig(lociConfig, filter))
+					return lociConfig;
+				
+				throw new ConfigTranslationException("Unable to convert or verify supplied LOCI config: " + config);
 
 			} else if (ximager.getInstrumentName().equalsIgnoreCase("RATCAM")) {
 
@@ -562,6 +590,8 @@ public class ConfigTranslator {
 			return "SUPIRCAM";
 		else if (config instanceof LiricConfig)
 			return "LIRIC";
+		else if (config instanceof LociConfig)
+			return "LOCI";
 		else if (config instanceof Ringo2PolarimeterConfig)
 			return "RINGO2";
 		else if (config instanceof Ringo3PolarimeterConfig)
@@ -665,6 +695,37 @@ public class ConfigTranslator {
 				return true;
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+	}
+	
+	/**
+	 * Test a supplied configuration with the supplied filters.
+	 * @param inst The instrument to try the config on.
+	 * @param config The config to try.
+	 * @param filter The filter to try (in the supplied config).
+	 * @return True if the config is valid.
+	 */
+	private static boolean tryLociConfig(LociConfig config, String filter) {
+		System.err.println("Try LOCI config: " + filter);
+		try 
+		{
+			FilterDescriptor fwheel    = new FilterDescriptor(filter, "ccdfilter");
+			InstrumentDescriptor rid = new InstrumentDescriptor("LOCI");
+			Imager ccd = (Imager) (ireg.getCapabilitiesProvider(rid).getCapabilities());
+		
+			FilterSet fsWheel = ccd.getFilterSet("wheel");
+			System.err.println("FWheel=" + fwheel);
+			if (fsWheel.containsFilter(fwheel)) 
+			{
+				config.setFilterName(filter);
+				return true;
+			}
+		}
+		catch (Exception e) 
+		{
 			e.printStackTrace();
 			return false;
 		}
