@@ -15,12 +15,12 @@
       </rotator> 
 
 <!--
-      <instrument name="RATCAM">
+    <instrument name="RATCAM">
        <alias> RATCAM </alias>
        <mount> /mnt/rat-image </mount>
        <port> 3 </port>
        <reboot> 2 </reboot>
-       </instrument>
+    </instrument>
 -->
 
 <!--
@@ -53,15 +53,15 @@
        <port> 7 </port>
        <reboot> 2 </reboot>
     </instrument>
-    -->
-    <!--
+-->
+<!--
     <instrument name="IO:I">
        <alias> IOI </alias>
        <mount> /mnt/ioi-image </mount>
        <port> 3 </port>
        <reboot> 2 </reboot>
     </instrument>
-    -->
+-->
     
     <instrument name="LIRIC">
        <alias> LIRIC </alias>
