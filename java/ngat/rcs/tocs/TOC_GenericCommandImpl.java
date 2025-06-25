@@ -1547,7 +1547,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 		{
 			
 			// LOCI
-			if (parser.countTokens() < 1) 
+			if (parser.countTokens() < 2) 
 			{
 				reply = "ERROR MISSING_PARAMETERS Use: INSTR <session> LOCI <filter> <bin>";
 				processReply(reply);
