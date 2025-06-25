@@ -1431,6 +1431,7 @@ public class TOC_GenericCommandImpl implements RequestHandler {
 	 * <li>RINGO2 <trig> <emgain> <xbin> <ybin> [B][A]
 	 * <li>MOPTOP <rotorSpeed> <filter> <xbin> <ybin>
 	 * <li>LIRIC <nudgematicOffsetSize> <coaddExposureLength> <filter>
+	 * <li>LOCI <filter> <bin>
 	 * <li>SPRAT <slit:in|out> <grism:in|out> <grism:red|blue>
 	 * </ul>
 	 * @param parser An instance of StringTokenizer containing the INSTR command parameters, tokenised by spaces.
