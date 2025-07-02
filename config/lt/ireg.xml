@@ -264,7 +264,7 @@
 	<aperture-offset x="0" y="0" />
 	<!-- Not yet calibrated
 	<acquisition priority="2">
-	   -- Use INT values for x and y 
+	   Use INT values for x and y 
            <target name="IO:O" x="2048" y="2048" lowThreshold="1.2" highThreshold="0.5" />
 	   <target name="RISE" x="2048" y="2048" lowThreshold="1.2" highThreshold="0.5" />
 	   <target name="SPRAT" x="2056" y="2077"  lowThreshold="1.2" highThreshold="0.5"/>
