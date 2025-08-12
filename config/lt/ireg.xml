@@ -279,7 +279,7 @@
     </config>
 
     <calibration>
-      <!-- Not yet possible
+      <!-- Just try doing evening skyflats for now
       <morning-skyflats>
 	<start-offset>
 	  1200000
@@ -289,7 +289,8 @@
 	</end-offset>
 	<window>2000000</window>
 	<interval>82400000</interval>
-      </morning-skyflats>
+	</morning-skyflats>
+	-->
       <evening-skyflats>
 	<start-offset>
 	  300000
@@ -301,7 +302,6 @@
 	<interval>82400000</interval>
       </evening-skyflats> 
       <priority> 5 </priority>
-      -->
       <history file="/occ/rcs/instruments/loci.calib.dat" />
     </calibration>
 
