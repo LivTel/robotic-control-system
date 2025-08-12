@@ -293,17 +293,17 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			eveningSkyflatsMaximumSolarElevation = Math.toRadians(config.getDoubleValue(
 					"evening.skyflats.max.solar.elevation", EVENING_SKYFLAT_MAX_SOLAR_ELEV));
 
-			taskLog.log(1, CLASS, name, "Config", "ESF Min duration: " + (eveningSkyFlatsMinimumDuration / 1000L) + "s");
+			taskLog.log(1, CLASS, name, "Config", "CCA ESF Min duration: " + (eveningSkyFlatsMinimumDuration / 1000L) + "s");
 			taskLog.log(1, CLASS, name, "Config",
-					"ESF Max Solar: Start at: " + Math.toDegrees(eveningSkyflatsMaximumSolarElevation) + "deg");
+					"CCA ESF Max Solar: Start at: " + Math.toDegrees(eveningSkyflatsMaximumSolarElevation) + "deg");
 			taskLog.log(1, CLASS, name, "Config",
-					"ESF Min Solar: Stops at: " + Math.toDegrees(eveningSkyflatsMinimumSolarElevation) + "deg");
+					"CCA ESF Min Solar: Stops at: " + Math.toDegrees(eveningSkyflatsMinimumSolarElevation) + "deg");
 
-			taskLog.log(1, CLASS, name, "Config", "MSF Min duration: " + (morningSkyFlatsMinimumDuration / 1000L) + "s");
+			taskLog.log(1, CLASS, name, "Config", "CCA MSF Min duration: " + (morningSkyFlatsMinimumDuration / 1000L) + "s");
 			taskLog.log(1, CLASS, name, "Config",
-					"MSF Min Solar: Start at: " + Math.toDegrees(morningSkyflatsMinimumSolarElevation) + "deg");
+					"CCA MSF Min Solar: Start at: " + Math.toDegrees(morningSkyflatsMinimumSolarElevation) + "deg");
 			taskLog.log(1, CLASS, name, "Config",
-					"MSF Max Solar: Stops at: " + Math.toDegrees(morningSkyflatsMaximumSolarElevation) + "deg");
+					"CCA MSF Max Solar: Stops at: " + Math.toDegrees(morningSkyflatsMaximumSolarElevation) + "deg");
 
 			long now = System.currentTimeMillis();
 
@@ -312,8 +312,8 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			calibWeightRandom = config.getDoubleValue("calib.weight.random", 0.5);
 			calibWeightPriority = config.getDoubleValue("calib.weight.priority", 0.0);
 
-			taskLog.log(1, CLASS, name, "Config", "Calib weights: Cs=" + calibWeightSameFlats + ", Co="
-					+ calibWeightOtherFlats + ", Cr=" + calibWeightRandom + ", Cp=" + calibWeightPriority);
+			taskLog.log(1, CLASS, name, "Config", "CCA Calib weights: same=" + calibWeightSameFlats + ", other="
+					+ calibWeightOtherFlats + ", random=" + calibWeightRandom + ", priority=" + calibWeightPriority);
 
 		} catch (Exception e) {
 			throw new IllegalArgumentException("Error parsing calibration-config: " + e);
@@ -328,7 +328,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 
 		// step forward for rest of night till sunrise and check ...
 
-		taskLog.log(1, "CAL::Checking ahead to see if wanting control...");
+		taskLog.log(1, "CCA::Checking ahead to see if wanting control...");
 		long t = time;
 		Position sun = Astrometry.getSolarPosition(time);
 		double sunElev = sun.getAltitude(time, obsSite);
@@ -352,7 +352,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 		try {
 			list = findAvailableJobs(time);
 			if (logsearch)
-				System.err.printf("At %tF %tT Found these jobs: %s", time, time, list.toString());
+				System.err.printf("CCA At %tF %tT Found these jobs: %s", time, time, list.toString());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -531,7 +531,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 		double sunlev = astro.getAltitude(sun, time);
 		double sunlevplus = astro.getAltitude(sun, time + 30 * 60 * 1000L);
 		if (logsearch)
-			System.err.printf("faj::Sunlev is now: %4.2f ->  %4.2f \n", Math.toDegrees(sunlev),
+			System.err.printf("CCA faj::Sunlev is now: %4.2f ->  %4.2f \n", Math.toDegrees(sunlev),
 					Math.toDegrees(sunlevplus));
 
 		long timeSinceStartAstroTwilight = 0L;
@@ -552,7 +552,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			// astro lib calls...
 			if (sunlev > morningSkyflatsMinimumSolarElevation && sunlev < morningSkyflatsMaximumSolarElevation) {
 				if (logsearch)
-					System.err.println("faj::Test for MSF...");
+					System.err.println("CCA faj::Test for MSF...");
 				// how long since SAT and until TSR
 				timeSinceStartAstroTwilight = astro.getTimeSinceLastRise(sun, ASTRO_TWILIGHT_LIMIT, time);
 				timeTillSunrise = astro.getTimeUntilNextRise(sun, 0.0, time);
@@ -567,7 +567,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 					InstrumentStatusProvider isp = ireg.getStatusProvider(id);
 					InstrumentStatus inst = isp.getStatus();
 					if (logsearch)
-						System.err.println("faj::check instrument: " + isp);
+						System.err.println("CCA faj::check instrument: " + isp);
 
 					// skip if the instrument is shagged !
 					if (!inst.isFunctional() || !inst.isOnline() || !inst.isEnabled())
@@ -577,7 +577,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 					InstrumentCalibration ical = cp.getCalibrationRequirements();
 					InstrumentCalibrationHistory ich = cp.getCalibrationHistory();
 					// if (logsearch)
-					System.err.println("faj::check calib: " + id.getInstrumentName() + " " + ical + " history: " + ich);
+					System.err.println("CCA faj::check calib: " + id.getInstrumentName() + " " + ical + " history: " + ich);
 
 					if (ical == null)
 						continue;
@@ -621,7 +621,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 
 			if (sunlev > eveningSkyflatsMinimumSolarElevation && sunlev < eveningSkyflatsMaximumSolarElevation) {
 				if (logsearch)
-					System.err.println("faj::Test for ESF...");
+					System.err.println("CCA faj::Test for ESF...");
 
 				// how long since SAT and until TSR
 				timeSinceSunset = astro.getTimeSinceLastSet(sun, 0.0, time);
@@ -647,7 +647,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 					InstrumentCalibration ical = cp.getCalibrationRequirements();
 					InstrumentCalibrationHistory ich = cp.getCalibrationHistory();
 					if (logsearch)
-						System.err.println("faj::check calib: " + id.getInstrumentName() + " " + ical + " history: "
+						System.err.println("CCA faj::check calib: " + id.getInstrumentName() + " " + ical + " history: "
 								+ ich);
 
 					if (ical == null)
@@ -703,7 +703,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			timeTillSunrise = astro.getTimeUntilNextRise(sun, 0.0, time);
 			timeSinceSunset = astro.getTimeSinceLastSet(sun, 0.0, time);
 			if (logsearch)
-				System.err.println("faj:checking for telfocus: ttSR = " + timeTillSunrise + " tsSS = "
+				System.err.println("CCA faj:checking for telfocus: ttSR = " + timeTillSunrise + " tsSS = "
 						+ timeSinceSunset);
 			if (telCalib.doTelfocusCalibration()
 					&& (time - telCalibHist.getLastTelfocusCalibration() > telCalib.getTelfocusCalibrationInterval())
@@ -757,7 +757,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			while (il.hasNext()) {
 
 				CalibrationOperation job = il.next();
-				taskLog.log(1, CLASS, name, "getNextJob", "Checking job: " + job);
+				taskLog.log(1, CLASS, name, "CCA getNextJob", "Checking job: " + job);
 				if (job.getScore() > bestscore) {
 					bestscore = job.getScore();
 					bestjob = job;
@@ -823,7 +823,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 
 		Catalog blanks = Astrometry.getCatalog(instId.getInstrumentName() + "_BLANK");
 
-		taskLog.log(1, "CAL:: Check calibration history for: " + instId + " " + ich);
+		taskLog.log(1, "CCA:: Check calibration history for: " + instId + " " + ich);
 
 		// see if this instrument is either offline or
 		// impaired.
@@ -832,15 +832,12 @@ public class CalibrationControlAgent extends DefaultModalTask {
 		InstrumentStatus inst = isp.getStatus();
 		// skip if the instrument is shagged !
 		if (!inst.isFunctional() || !inst.isOnline() || !inst.isEnabled())
-			throw new Exception("Instrument not available for MSF");
+			throw new Exception("CCA:: Instrument not available for MSF");
 
 		long timeAvailable = timeTillSunMax;
 
-		taskLog.log(
-				1,
-				"CAL:: create Msf task: sunat: " + sunlev + ", ttmax("
-						+ Math.toDegrees(morningSkyflatsMaximumSolarElevation) + ")deg " + (timeTillSunMax / 1000)
-						+ "s");
+		taskLog.log(1,"CCA:: create Msf task: sunat: " + sunlev + ", ttmax("
+			    + Math.toDegrees(morningSkyflatsMaximumSolarElevation) + ")deg " + (timeTillSunMax / 1000)+ "s");
 
 		XBeamSteeringConfig beam = null;
 		return new SkyFlatCalibrationTask(name + "/" + instId.getInstrumentName() + "_MORN_SKYFLAT", this, blanks,
@@ -870,7 +867,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 
 		Catalog blanks = Astrometry.getCatalog(instId.getInstrumentName() + "_BLANK");
 
-		taskLog.log(1, "CAL:: Check calibration history for: " + instId + " " + ich);
+		taskLog.log(1, "CCA:: Check calibration history for: " + instId + " " + ich);
 
 		// see if this instrument is either offline or
 		// impaired or disabled
@@ -880,13 +877,13 @@ public class CalibrationControlAgent extends DefaultModalTask {
 		// skip if the instrument is shagged !
 		// TODO TODO TDO disabled
 		if (!inst.isFunctional() || !inst.isOnline() || !inst.isEnabled())
-			throw new Exception("Instrument not available for ESF");
+			throw new Exception("CCA:: Instrument not available for ESF");
 
 		long timeAvailable = timeTillSunMin;
 
 		taskLog.log(
 				1,
-				"CAL:: create Esf task: sunat: " + sunlev + ", ttmax("
+				"CCA:: create Esf task: sunat: " + sunlev + ", ttmax("
 						+ Math.toDegrees(eveningSkyflatsMinimumSolarElevation) + ")deg " + (timeTillSunMin / 1000)
 						+ "s");
 
@@ -901,7 +898,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 	@Override
 	public void onInit() {
 		super.onInit();
-		opsLog.log(1, "Starting Calibration-Operations Mode.");
+		opsLog.log(1, "CCA:: Starting Calibration-Operations Mode.");
 		FITS_HeaderInfo.current_USRDEFOC.setValue(new Double(0.0));
 		FITS_HeaderInfo.clearAcquisitionHeaders();
 
@@ -911,7 +908,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 	@Override
 	public void onCompletion() {
 		super.onCompletion();
-		opsLog.log(1, "Completed Calibration-Operations Mode.");
+		opsLog.log(1, "CCA:: Completed Calibration-Operations Mode.");
 	}
 
 	/**
@@ -934,7 +931,7 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			// do stuff for individual instruments, ie need to make sure the
 			// relevant info is passed to these tasks
 			telCalibHist.setLastTelfocusCalibration(now);
-			opsLog.log(1, "Completed TELFOCUS calibration, updated calibration history");
+			opsLog.log(1, "CCA:: Completed TELFOCUS calibration, updated calibration history");
 		}
 
 	}
@@ -1054,7 +1051,5 @@ public class CalibrationControlAgent extends DefaultModalTask {
 			t -= 30000L;
 		}
 		return sunrise - t;
-
 	}
-
 }
