@@ -215,6 +215,101 @@
   </instrument>
 
   <!-- ==================================== -->
+  <!-- LOCI                                 -->
+  <!-- (Liverpool Optical Compact Imager)   -->
+  <!-- ==================================== -->
+
+  <instrument name="LOCI" type="Imager" enabled = "true">
+
+    <descriptor>
+      <name>LOCI</name>
+      <class>camera.optical</class>
+    </descriptor>
+
+    <config>
+      <filterset name="wheel">
+	<filter>
+	  <name>SDSS-U</name>
+	  <class></class>
+	  <central-wavelength> 3530.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-G</name>
+	  <class></class>
+	  <central-wavelength> 4820.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-R</name>
+	  <class></class>
+	  <central-wavelength> 6252.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-I</name>
+	  <class></class>
+	  <central-wavelength> 7782.0 </central-wavelength>
+	</filter>
+	<filter>
+	  <name>SDSS-Z</name>
+	  <class></class>
+	  <central-wavelength> 9000.0 </central-wavelength>
+	</filter>
+      </filterset>
+
+      <capabilities>
+	<sky-model-provider>false</sky-model-provider> <!-- Enable this later ? -->
+	<focus-instrument>false</focus-instrument>
+	<rotator-offset>-43.0</rotator-offset>
+	<!-- Fist attempt 5/8/24 from k_e_20250804_1_1_1_0.fits/h_e_20250804_61_1_1_9.fits -->
+	<aperture-offset x="-55" y="-17" />
+	<!-- Not yet calibrated
+	<acquisition priority="2">
+	   Use INT values for x and y 
+           <target name="IO:O" x="2048" y="2048" lowThreshold="1.2" highThreshold="0.5" />
+	   <target name="RISE" x="2048" y="2048" lowThreshold="1.2" highThreshold="0.5" />
+	   <target name="SPRAT" x="2056" y="2077"  lowThreshold="1.2" highThreshold="0.5"/>
+       </acquisition>
+       -->
+     </capabilities>
+
+      <detector>
+	<array-size width="2048" height="2048" />
+	<plate-scale>0.44</plate-scale> <!-- Currently not known -->
+      </detector>
+
+    </config>
+
+    <calibration>
+      <!-- Just try doing evening skyflats for now
+      <morning-skyflats>
+	<start-offset>
+	  1200000
+	</start-offset>
+	<end-offset>
+	  4000000
+	</end-offset>
+	<window>2000000</window>
+	<interval>82400000</interval>
+	</morning-skyflats>
+	-->
+      <evening-skyflats>
+	<start-offset>
+	  300000
+	</start-offset>
+	<end-offset>
+	  3600000
+	</end-offset>
+	<window>2700000</window>
+	<interval>82400000</interval>
+      </evening-skyflats> 
+      <priority> 5 </priority>
+      <history file="/occ/rcs/instruments/loci.calib.dat" />
+    </calibration>
+
+    <monitor host="192.168.1.28" port="7679" interval="20000" />		
+
+  </instrument>
+
+  <!-- ==================================== -->
   <!-- IO_INFRARED                          -->
   <!-- ==================================== -->
   <!--

@@ -45,6 +45,8 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 	 * <li>disk.usage.moptop4
 	 * <li>free.space.liric
 	 * <li>disk.usage.liric
+	 * <li>free.space.loci
+	 * <li>disk.usage.loci
 	 * <li>free.space.autoguider
 	 * <li>disk.usage.autoguider
 	 * </ul>
@@ -73,6 +75,8 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		diskStatus.addKeyword("disk.usage.moptop4", MappedStatusCategory.DOUBLE_DATA, "Disk usage on moptop4", "%");
 		diskStatus.addKeyword("free.space.liric", MappedStatusCategory.DOUBLE_DATA, "Free space on liric", "kilobytes");
 		diskStatus.addKeyword("disk.usage.liric", MappedStatusCategory.DOUBLE_DATA, "Disk usage on liric", "%");
+		diskStatus.addKeyword("free.space.loci", MappedStatusCategory.DOUBLE_DATA, "Free space on loci", "kilobytes");
+		diskStatus.addKeyword("disk.usage.loci", MappedStatusCategory.DOUBLE_DATA, "Disk usage on loci", "%");
 		diskStatus.addKeyword("free.space.autoguider", MappedStatusCategory.DOUBLE_DATA, "Free space on autoguider", "kilobytes");
 		diskStatus.addKeyword("disk.usage.autoguider", MappedStatusCategory.DOUBLE_DATA, "Disk usage on autoguider", "%");
 	}
@@ -144,6 +148,11 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		{
 			diskStatus.addData("free.space.liric",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.liric",status.getDiskPercentUsed());
+		}
+		else if((status.getMachineName().equals("loci"))&&(status.getDiskName().equals("/mnt/loci-image")))
+		{
+			diskStatus.addData("free.space.loci",(double)(status.getDiskFreeSpace()));
+			diskStatus.addData("disk.usage.loci",status.getDiskPercentUsed());
 		}
 		else if((status.getMachineName().equals("autoguider1"))&&(status.getDiskName().equals("/mnt/autoguider-image")))
 		{
