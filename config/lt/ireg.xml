@@ -293,7 +293,11 @@
 	-->
       <evening-skyflats>
 	<start-offset>
-	  300000
+<!-- This was 300000 but I have found instances where this is too early         
+     and we get count wrap-around causing the twilight calibration               
+     to get confused.                                                           
+-->                                                                             
+	  1200000
 	</start-offset>
 	<end-offset>
 	  3600000
