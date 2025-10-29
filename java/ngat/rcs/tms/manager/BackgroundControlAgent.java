@@ -272,7 +272,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 		primaryActive = (config.getProperty("primary.active") != null);
 		secondaryActive = (config.getProperty("secondary.active") != null);
 
-		primaryInstrumentName = config.getProperty("primary.instrument.name", "RATCAM");
+		primaryInstrumentName = config.getProperty("primary.instrument.name", "LOCI");
 		primaryInstId = ireg.getDescriptor(primaryInstrumentName);
 
 		secondaryInstrumentName = config.getProperty("secondary.instrument.name", "IO:O");
@@ -301,9 +301,9 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 		sunsetStartAngle = Math.toRadians(config.getDoubleValue("sunset.start.angle", DEFAULT_SUNSET_START_ANGLE));
 		try {
 
-			File primaryCatfile = new File(config.getProperty("primary.catalog", "config/ratcam_std.cat"));
+			File primaryCatfile = new File(config.getProperty("primary.catalog", "config/loci_std.cat"));
 
-			primaryCatalog = Astrometry.loadCatalog("RATCAM_STD", primaryCatfile);
+			primaryCatalog = Astrometry.loadCatalog("LOCI_STD", primaryCatfile);
 			taskLog.log(1, CLASS, name, "Config", "BGCA loaded " + primaryCatalog.size() + " targets from "
 					+ primaryCatalog.getCatalogName());
 
@@ -318,8 +318,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 			for (int ic = 0; ic < nconfigs; ic++) {
 
 				String cid = config.getProperty("primary.config." + ic + ".ID");
-				String lowerFilter = config.getProperty("primary.config." + ic + ".lower.filter");
-				String upperFilter = config.getProperty("primary.config." + ic + ".upper.filter");
+				String filter = config.getProperty("primary.config." + ic + ".filter");
 
 				XImagerInstrumentConfig ccdConfig = new XImagerInstrumentConfig(cid);
 
@@ -334,10 +333,8 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 				xdet.setXBin(bin);
 				xdet.setYBin(bin);
 				XFilterSpec fspec = new XFilterSpec();
-				XFilterDef lf = new XFilterDef(lowerFilter);
-				XFilterDef uf = new XFilterDef(upperFilter);
-				fspec.addFilter(lf);
-				fspec.addFilter(uf);
+				XFilterDef filterDef = new XFilterDef(filter);
+				fspec.addFilter(filterDef);
 				XImagerInstrumentConfig xcfg = new XImagerInstrumentConfig(cid);
 				xcfg.setFilterSpec(fspec);
 				xcfg.setInstrumentName(primaryInstrumentName);
