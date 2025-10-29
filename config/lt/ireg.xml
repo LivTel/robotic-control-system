@@ -256,7 +256,7 @@
       </filterset>
 
       <capabilities>
-	<sky-model-provider>false</sky-model-provider> <!-- Enable this later ? -->
+	<sky-model-provider>true</sky-model-provider>
 	<focus-instrument>false</focus-instrument>
 	<rotator-offset>-43.0</rotator-offset>
 	<!-- Fist attempt 5/8/24 from k_e_20250804_1_1_1_0.fits/h_e_20250804_61_1_1_9.fits -->
