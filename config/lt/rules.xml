@@ -220,10 +220,12 @@
       </criterion>
     </rule>
 
+<!-- See Bug 2900 -->
+
     <rule name = "MOIST_HI" class = "timed">
       <period unit = "secs"> 30 </period>
       <criterion name = "C_MOIST_HI" class = "GREATER">
-        <minimum> 0.1 </minimum>
+        <minimum> 1.1 </minimum>
         <filter> M_MOIST_FAST </filter>
       </criterion>
     </rule>
@@ -367,6 +369,7 @@
       </criterion>
     </rule>
 
+<!-- See Bug 2900 -->
 
     <rule name = "MOIST_LO" class = "timed">
       <period unit = "mins"> 30 </period>
