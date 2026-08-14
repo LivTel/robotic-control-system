@@ -89,10 +89,12 @@ switch ($1)
 	# otherwise we use default mode from rcw_args.
 
 	
-	if (! -e $RCW_CFG) then
+	if (! -r $RCW_CFG) then
 	    set mode = $INIT_MODE
+	    echo "${RCW_CFG} not found/not available, using default mode ${mode}."
 	else
 	    set mode = `cat ${RCW_CFG}`
+	    echo "Using ${RCW_CFG} to set mode to ${mode}."
 	endif
  
 	if ($mode =~ "ENG") then
