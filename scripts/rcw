@@ -91,10 +91,10 @@ switch ($1)
 	
 	if (! -r $RCW_CFG) then
 	    set mode = $INIT_MODE
-	    echo "${RCW_CFG} not found/not available, using default mode ${mode}."
+	    echo "${RCW_CFG} not found/not available, using default mode ${mode}." >>& $RCW_CONSOLE_LOG_FILE
 	else
 	    set mode = `cat ${RCW_CFG}`
-	    echo "Using ${RCW_CFG} to set mode to ${mode}."
+	    echo "Using ${RCW_CFG} to set mode to ${mode}." >>& $RCW_CONSOLE_LOG_FILE
 	endif
  
 	if ($mode =~ "ENG") then
@@ -126,6 +126,7 @@ switch ($1)
 		echo "Starting RCS in manual mode" occ  >>& $RCW_CONSOLE_LOG_FILE	
 		su -c "$DEPLOY_BIN/rcx manual" occ
 		set code = $status
+		echo "manual" > /occ/tmp/rcs_last_status
 		breaksw
 
 	    case ${START_ENG_CODE}:
@@ -133,6 +134,7 @@ switch ($1)
 		echo "Starting RCS in engineering mode" >>& $RCW_CONSOLE_LOG_FILE
 		su -c "$DEPLOY_BIN/rcx eng" occ  >>& $RCW_CONSOLE_LOG_FILE
 		set code = $status
+		echo "eng" > /occ/tmp/rcs_last_status
 		breaksw
 
 	    case ${START_AUTO_CODE}:
@@ -140,6 +142,7 @@ switch ($1)
 		echo "Starting RCS in automatic mode" >>& $RCW_CONSOLE_LOG_FILE
 		su -c "$DEPLOY_BIN/rcx auto" occ >>& $RCW_CONSOLE_LOG_FILE
 		set code = $status
+		echo "auto" > /occ/tmp/rcs_last_status
 		breaksw
 
 	    case ${HALT_CODE}:
