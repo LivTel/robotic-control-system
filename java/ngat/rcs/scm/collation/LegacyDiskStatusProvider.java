@@ -49,6 +49,8 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 	 * <li>disk.usage.loci
 	 * <li>free.space.autoguider
 	 * <li>disk.usage.autoguider
+	 * <li>free.space.o1
+	 * <li>disk.usage.o1
 	 * </ul>
 	 * @see #diskStatus
 	 */
@@ -79,6 +81,8 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		diskStatus.addKeyword("disk.usage.loci", MappedStatusCategory.DOUBLE_DATA, "Disk usage on loci", "%");
 		diskStatus.addKeyword("free.space.autoguider", MappedStatusCategory.DOUBLE_DATA, "Free space on autoguider", "kilobytes");
 		diskStatus.addKeyword("disk.usage.autoguider", MappedStatusCategory.DOUBLE_DATA, "Disk usage on autoguider", "%");
+		diskStatus.addKeyword("free.space.o1", MappedStatusCategory.DOUBLE_DATA, "Free space on o1", "kilobytes");
+		diskStatus.addKeyword("disk.usage.o1", MappedStatusCategory.DOUBLE_DATA, "Disk usage on o1", "%");
 	}
 	
 	/**
@@ -158,6 +162,11 @@ public class LegacyDiskStatusProvider implements StatusProvider, DiskStatusUpdat
 		{
 			diskStatus.addData("free.space.autoguider",(double)(status.getDiskFreeSpace()));
 			diskStatus.addData("disk.usage.autoguider",status.getDiskPercentUsed());
+		}
+		else if((status.getMachineName().equals("o1"))&&(status.getDiskName().equals("/mnt/o-image")))
+		{
+			diskStatus.addData("free.space.o1",(double)(status.getDiskFreeSpace()));
+			diskStatus.addData("disk.usage.o1",status.getDiskPercentUsed());
 		}
 	}
 }
