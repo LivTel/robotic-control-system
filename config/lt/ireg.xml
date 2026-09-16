@@ -161,7 +161,8 @@
 	   <!-- RJS 2022-07-29 SPRAT been off the telescope and replaced during shutter work. Average of four tests with RMS ±12 unbinned pix -->
 	   <!-- <target name="SPRAT" x="2158" y="2103"  lowThreshold="1.2" highThreshold="0.5"/> -->
 	   <!-- <target name="SPRAT" x="2034" y="2106"  lowThreshold="1.2" highThreshold="0.5"/> -->
-	   <target name="SPRAT" x="2056" y="2077"  lowThreshold="1.2" highThreshold="0.5"/>	<!-- 2056, 2077 is after 2024 mirror coating, but dispersion in tests was >10pix! -->
+	   <!-- <target name="SPRAT" x="2056" y="2077"  lowThreshold="1.2" highThreshold="0.5"/>	2056, 2077 is after 2024 mirror coating, but dispersion in tests was >10pix! -->
+	   <target name="SPRAT" x="1813" y="1989"  lowThreshold="1.2" highThreshold="0.5"/>	<!-- 1813, 1989 is after July 2026 cas motor replacement. Avg of 5 pointings. RMS=10pix -->
 	   <!-- 
 	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
 	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
@@ -293,10 +294,10 @@
 	-->
       <evening-skyflats>
 	<start-offset>
-<!-- This was 300000 but I have found instances where this is too early         
-     and we get count wrap-around causing the twilight calibration               
-     to get confused.                                                           
--->                                                                             
+<!-- This was 300000 but I have found instances where this is too early
+     and we get count wrap-around causing the twilight calibration
+     to get confused.
+-->
 	  1200000
 	</start-offset>
 	<end-offset>
@@ -436,15 +437,18 @@
 	<!-- RJS 2022-01-04 Reverted back to historical values (-10,0) because today we fixed the TPOINT. I.e.
              pointing of entire telescope has now been fixed so the 1arcmin shift here is not needed. <aperture-offset x="-10" y="0" />  -->
 	<!-- 2022-04-11 RJS Target landing at or just off the top edge of SPRAT CCD. Bug 2579.
-	     Increasing aperture from (-10,0) to (-35,0) -->
-	<aperture-offset x="-35" y="0" /> 
+	     Increasing aperture from (-10,0) to (-35,0)
+	     <aperture-offset x="-35" y="0" />  -->
+	<!-- July 2026 site trip. RJS & CMC. Cass motor replacement. Reverted aperture to 0,0 -->
+	<aperture-offset x="0" y="0" /> 
 	<acquisition priority="1">
 	   <!-- Use INT values for x and y -->
 	   <!-- ASP 2023-06-26 After SPRAT shutter replaced, Changed x=494 to 537 -->
 	   <!-- RJS 2023-06-30 Tweaked by 2pix, once we have good on-sky images. Now 535. -->
 	   <!-- ASP 2023-08-13 After camera plate rotated, Changed x=535 to 487 derived from W lamp slit image -->
 	   <!-- ASP 2023-11-04 new shutter + controller + PSU + cable. From W lamp slit image new x=493 -->
-	   <target name="SPRAT" x="493" y="179" lowThreshold="1.2" highThreshold="0.5" />
+	   <!-- ASP 2026-01-10 New shutter installed by IAS. From W lamp slit image old x=493, new x=519 -->
+	   <target name="SPRAT" x="519" y="179" lowThreshold="1.2" highThreshold="0.5" />
 	   <!-- 
 	     -  ALERT. If you change the sprat magic pixel here then you also need to change it in 
 	     -  lt-qc:/usr/local/bin/sprat_l2v2_docker_wrapper_par_retry.csh 
