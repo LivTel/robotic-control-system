@@ -137,7 +137,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 	private boolean secondaryActive;
 
 	/** Set to 1 or 2 to indicate if primary or secondary is to be preferred. */
-	private int groupPreference;
+	private int instrumentPreference;
 
 	private Map groupTargetMap;
 
@@ -201,7 +201,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 		sunTrack = new SolarCalculator();
 		moonTrack = new LunarCalculator(site);
 		// by default we prefer primary groups
-		groupPreference = 1;
+		instrumentPreference = 1;
 	}
 
 	/**
@@ -280,7 +280,7 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 		secondaryUpperBeamElementName = config.getProperty("secondary.upper.beam.element", "Clear");
 		secondaryLowerBeamElementName = config.getProperty("secondary.lower.beam.element", "AlMirror");
 
-		groupPreference = config.getIntValue("instrument.preference", 1);
+		instrumentPreference = config.getIntValue("instrument.preference", 1);
 
 		int bin = config.getIntValue("binning", 2);
 
@@ -700,19 +700,25 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 			//taskLog.log(1, CLASS, name, "getNextJob", "Status: "+ primaryInstId + " is: " + status);
 			if (!status.isOnline()) {
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + primaryInstrumentName
-						+ " is offline");
+						+ " is offline.");
 				primaryAvailable = false;
 			}
+			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
+				    " is online.");
 			if (!status.isEnabled()) {
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + primaryInstrumentName
-						+ " is disabled");
+						+ " is disabled.");
 				primaryAvailable = false;
 			}
+			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
+				    " is enabled.");
 			if (!status.isFunctional()) {
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + primaryInstrumentName
-						+ " is impaired");
+						+ " is impaired.");
 				primaryAvailable = false;
 			}
+			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
+				    " is functional.");
 		} catch (Exception e) {
 			e.printStackTrace();
 			taskLog.log(1, CLASS, name, "getNextJob", "Cannot determine status of primary background instrument: "
@@ -731,16 +737,22 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 						+ " is offline");
 				secondaryAvailable = false;
 			}
+			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
+				    " is online.");
 			if (!status.isEnabled()) {
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + secondaryInstrumentName
 						+ " is disabled");
 				secondaryAvailable = false;
 			}
+			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
+				    " is enabled.");
 			if (!status.isFunctional()) {
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + secondaryInstrumentName
 						+ " is impaired");
 				secondaryAvailable = false;
 			}
+			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
+				    " is functional.");
 		} catch (Exception e) {
 			e.printStackTrace();
 			taskLog.log(1, CLASS, name, "getNextJob", "Cannot determine status of background instrument: "
@@ -751,25 +763,49 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 		// if we prefer primary then check its ok and select a group
 		List useGroups = null;
 		Catalog catalog = null;
-		if (groupPreference == 1) {
-			if (primaryAvailable && primaryActive) {
+		taskLog.log(1,CLASS,name,"getNextJob","Instrument Preference: "+instrumentPreference);
+		if (instrumentPreference == 1)
+		{
+			if (primaryAvailable && primaryActive)
+			{
 				useGroups = primaryGroups;
 				catalog = primaryCatalog;
-			} else if (secondaryAvailable && secondaryActive) {
-				useGroups = secondaryGroups;
-				catalog = secondaryCatalog;
-			} else {
-				useGroups = null;
+				taskLog.log(1,CLASS,name,"getNextJob",
+					    "Using Primary Instrument: "+primaryInstrumentName);
 			}
-		} else {
-			if (secondaryAvailable && secondaryActive) {
+			else if (secondaryAvailable && secondaryActive)
+			{
 				useGroups = secondaryGroups;
 				catalog = secondaryCatalog;
-			} else if (primaryAvailable && primaryActive) {
+				taskLog.log(1,CLASS,name,"getNextJob",
+					    "Using Secondary Instrument: "+secondaryInstrumentName);
+			}
+			else
+			{
+				useGroups = null;
+				taskLog.log(1,CLASS,name,"getNextJob","No usable instrument found.");
+			}
+		}
+		else
+		{
+			if (secondaryAvailable && secondaryActive)
+			{
+				useGroups = secondaryGroups;
+				catalog = secondaryCatalog;
+				taskLog.log(1,CLASS,name,"getNextJob",
+					    "Using Secondary Instrument: "+secondaryInstrumentName);
+			}
+			else if (primaryAvailable && primaryActive)
+			{
 				useGroups = primaryGroups;
 				catalog = primaryCatalog;
-			} else {
+				taskLog.log(1,CLASS,name,"getNextJob",
+					    "Using Primary Instrument: "+primaryInstrumentName);
+			}
+			else
+			{
 				useGroups = null;
+				taskLog.log(1,CLASS,name,"getNextJob","No usable instrument found.");
 			}
 		}
 
