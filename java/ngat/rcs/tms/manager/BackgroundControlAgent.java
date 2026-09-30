@@ -698,28 +698,42 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 			InstrumentStatusProvider isp = ireg.getStatusProvider(primaryInstId);
 			InstrumentStatus status = isp.getStatus();
 			//taskLog.log(1, CLASS, name, "getNextJob", "Status: "+ primaryInstId + " is: " + status);
-			if (!status.isOnline()) {
+			if (!status.isOnline())
+			{
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + primaryInstrumentName
 						+ " is offline.");
 				primaryAvailable = false;
 			}
-			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
+			else
+			{
+				taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
 				    " is online.");
-			if (!status.isEnabled()) {
+			}
+			if (!status.isEnabled())
+			{
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + primaryInstrumentName
 						+ " is disabled.");
 				primaryAvailable = false;
 			}
-			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
-				    " is enabled.");
-			if (!status.isFunctional()) {
+			else
+			{
+				taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
+					    " is enabled.");
+			}
+			if (!status.isFunctional())
+			{
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + primaryInstrumentName
 						+ " is impaired.");
 				primaryAvailable = false;
 			}
-			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
-				    " is functional.");
-		} catch (Exception e) {
+			else
+			{
+				taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+primaryInstrumentName+
+					    " is functional.");
+			}
+		}
+		catch (Exception e)
+		{
 			e.printStackTrace();
 			taskLog.log(1, CLASS, name, "getNextJob", "Cannot determine status of primary background instrument: "
 					+ primaryInstrumentName);
@@ -732,28 +746,42 @@ public class BackgroundControlAgent extends DefaultModalTask implements EventSub
 			InstrumentStatusProvider isp = ireg.getStatusProvider(secondaryInstId);
 			InstrumentStatus status = isp.getStatus();
 			//taskLog.log(1, CLASS, name, "getNextJob", "Status : " + secondaryInstId + " is: " + status);
-			if (!status.isOnline()) {
+			if (!status.isOnline())
+			{
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + secondaryInstrumentName
 						+ " is offline");
 				secondaryAvailable = false;
 			}
-			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
-				    " is online.");
-			if (!status.isEnabled()) {
+			else
+			{
+				taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
+					    " is online.");
+			}
+			if (!status.isEnabled())
+			{
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + secondaryInstrumentName
 						+ " is disabled");
 				secondaryAvailable = false;
 			}
+			else
+			{
 			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
 				    " is enabled.");
-			if (!status.isFunctional()) {
+			}
+			if (!status.isFunctional())
+			{
 				taskLog.log(1, CLASS, name, "getNextJob", "Background Instrument: " + secondaryInstrumentName
 						+ " is impaired");
 				secondaryAvailable = false;
 			}
-			taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
-				    " is functional.");
-		} catch (Exception e) {
+			else
+			{
+				taskLog.log(1,CLASS,name,"getNextJob","Background Instrument: "+secondaryInstrumentName+
+					    " is functional.");
+			}
+		}
+		catch (Exception e)
+		{
 			e.printStackTrace();
 			taskLog.log(1, CLASS, name, "getNextJob", "Cannot determine status of background instrument: "
 					+ secondaryInstrumentName);
